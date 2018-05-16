@@ -305,6 +305,14 @@ public:
 			vertex = "vertex";
 			light = "light";
 		}
+
+		bool uses_stencil() const {
+			bool could_read = test != STENCIL_TEST_ALWAYS;
+			bool could_write = (pass != STENCIL_ACTION_KEEP && test != STENCIL_TEST_NEVER) ||
+					fail_depth != STENCIL_ACTION_KEEP ||
+					fail_stencil != STENCIL_ACTION_KEEP;
+			return could_read || (could_write && write_mask != 0);
+		}
 	};
 
 	struct Node {
@@ -678,6 +686,9 @@ public:
 		Vector<Function> functions;
 		Vector<Constant> vconstants;
 		Vector<Struct> vstructs;
+		Vector<StencilTest> stencils;
+		StencilTest front_stencil;
+		StencilTest back_stencil;
 
 		ShaderNode() :
 				Node(TYPE_SHADER) {}

@@ -421,8 +421,6 @@ String ShaderCompilerGLES3::_dump_node_code(const SL::Node *p_node, int p_level,
 				}
 			}
 
-			// structs
-
 			for (int i = 0; i < pnode->vstructs.size(); i++) {
 				SL::StructNode *st = pnode->vstructs[i].shader_struct;
 				String struct_code;
@@ -453,6 +451,12 @@ String ShaderCompilerGLES3::_dump_node_code(const SL::Node *p_node, int p_level,
 
 				r_gen_code.vertex_global += struct_code;
 				r_gen_code.fragment_global += struct_code;
+			}
+
+			if (p_actions.uses_stencil && p_actions.back_stencil && p_actions.front_stencil) {
+				*p_actions.back_stencil = pnode->back_stencil;
+				*p_actions.front_stencil = pnode->front_stencil;
+				*p_actions.uses_stencil = pnode->front_stencil.uses_stencil() || pnode->back_stencil.uses_stencil();
 			}
 
 			int max_texture_uniforms = 0;
