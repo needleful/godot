@@ -1459,6 +1459,12 @@ Error VariantParser::parse_tag_assign_eof(Stream *p_stream, int &line, String &r
 		if (p_stream->is_eof())
 			return ERR_FILE_EOF;
 
+		if (c == '\0')
+		{
+			r_err_str = "Invalid null character in stream";
+			return ERR_PARSE_ERROR;
+		}
+
 		if (c == ';') { //comment
 			while (true) {
 				CharType ch = p_stream->get_char();
