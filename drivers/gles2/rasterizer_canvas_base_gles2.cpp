@@ -250,7 +250,8 @@ void RasterizerCanvasBaseGLES2::draw_window_margins(int *black_margin, RID *blac
 	if (black_image[MARGIN_LEFT].is_valid()) {
 		_bind_canvas_texture(black_image[MARGIN_LEFT], RID());
 		Size2 sz(storage->texture_get_width(black_image[MARGIN_LEFT]), storage->texture_get_height(black_image[MARGIN_LEFT]));
-		draw_generic_textured_rect(Rect2(0, 0, black_margin[MARGIN_LEFT], window_h), Rect2(0, 0, sz.x, sz.y));
+		draw_generic_textured_rect(Rect2(0, 0, black_margin[MARGIN_LEFT], window_h),
+				Rect2(0, 0, (float)black_margin[MARGIN_LEFT] / sz.x, (float)(window_h) / sz.y));
 	} else if (black_margin[MARGIN_LEFT]) {
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, storage->resources.black_tex);
@@ -261,7 +262,8 @@ void RasterizerCanvasBaseGLES2::draw_window_margins(int *black_margin, RID *blac
 	if (black_image[MARGIN_RIGHT].is_valid()) {
 		_bind_canvas_texture(black_image[MARGIN_RIGHT], RID());
 		Size2 sz(storage->texture_get_width(black_image[MARGIN_RIGHT]), storage->texture_get_height(black_image[MARGIN_RIGHT]));
-		draw_generic_textured_rect(Rect2(window_w - black_margin[MARGIN_RIGHT], 0, black_margin[MARGIN_RIGHT], window_h), Rect2(0, 0, sz.x, sz.y));
+		draw_generic_textured_rect(Rect2(window_w - black_margin[MARGIN_RIGHT], 0, black_margin[MARGIN_RIGHT], window_h),
+				Rect2(0, 0, (float)black_margin[MARGIN_RIGHT] / sz.x, (float)window_h / sz.y));
 	} else if (black_margin[MARGIN_RIGHT]) {
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, storage->resources.black_tex);
@@ -273,7 +275,8 @@ void RasterizerCanvasBaseGLES2::draw_window_margins(int *black_margin, RID *blac
 		_bind_canvas_texture(black_image[MARGIN_TOP], RID());
 
 		Size2 sz(storage->texture_get_width(black_image[MARGIN_TOP]), storage->texture_get_height(black_image[MARGIN_TOP]));
-		draw_generic_textured_rect(Rect2(0, 0, window_w, black_margin[MARGIN_TOP]), Rect2(0, 0, sz.x, sz.y));
+		draw_generic_textured_rect(Rect2(0, 0, window_w, black_margin[MARGIN_TOP]),
+				Rect2(0, 0, (float)window_w / sz.x, (float)black_margin[MARGIN_TOP] / sz.y));
 
 	} else if (black_margin[MARGIN_TOP]) {
 		glActiveTexture(GL_TEXTURE0);
@@ -287,7 +290,8 @@ void RasterizerCanvasBaseGLES2::draw_window_margins(int *black_margin, RID *blac
 		_bind_canvas_texture(black_image[MARGIN_BOTTOM], RID());
 
 		Size2 sz(storage->texture_get_width(black_image[MARGIN_BOTTOM]), storage->texture_get_height(black_image[MARGIN_BOTTOM]));
-		draw_generic_textured_rect(Rect2(0, window_h - black_margin[MARGIN_BOTTOM], window_w, black_margin[MARGIN_BOTTOM]), Rect2(0, 0, sz.x, sz.y));
+		draw_generic_textured_rect(Rect2(0, window_h - black_margin[MARGIN_BOTTOM], window_w, black_margin[MARGIN_BOTTOM]),
+				Rect2(0, 0, (float)window_w / sz.x, (float)black_margin[MARGIN_BOTTOM] / sz.y));
 
 	} else if (black_margin[MARGIN_BOTTOM]) {
 
@@ -471,6 +475,7 @@ void RasterizerCanvasBaseGLES2::_draw_polygon(const int *p_indices, int p_index_
 	if (storage->config.support_32_bits_indices) { //should check for
 		glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(int) * p_index_count, p_indices);
 		glDrawElements(GL_TRIANGLES, p_index_count, GL_UNSIGNED_INT, 0);
+		storage->info.render._2d_draw_call_count++;
 	} else {
 		uint16_t *index16 = (uint16_t *)alloca(sizeof(uint16_t) * p_index_count);
 		for (int i = 0; i < p_index_count; i++) {
@@ -478,6 +483,7 @@ void RasterizerCanvasBaseGLES2::_draw_polygon(const int *p_indices, int p_index_
 		}
 		glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(uint16_t) * p_index_count, index16);
 		glDrawElements(GL_TRIANGLES, p_index_count, GL_UNSIGNED_SHORT, 0);
+		storage->info.render._2d_draw_call_count++;
 	}
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -522,6 +528,7 @@ void RasterizerCanvasBaseGLES2::_draw_generic(GLuint p_primitive, int p_vertex_c
 	}
 
 	glDrawArrays(p_primitive, 0, p_vertex_count);
+	storage->info.render._2d_draw_call_count++;
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
@@ -573,6 +580,7 @@ void RasterizerCanvasBaseGLES2::_draw_generic_indices(GLuint p_primitive, const 
 	if (storage->config.support_32_bits_indices) { //should check for
 		glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(int) * p_index_count, p_indices);
 		glDrawElements(p_primitive, p_index_count, GL_UNSIGNED_INT, 0);
+		storage->info.render._2d_draw_call_count++;
 	} else {
 		uint16_t *index16 = (uint16_t *)alloca(sizeof(uint16_t) * p_index_count);
 		for (int i = 0; i < p_index_count; i++) {
@@ -580,6 +588,7 @@ void RasterizerCanvasBaseGLES2::_draw_generic_indices(GLuint p_primitive, const 
 		}
 		glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(uint16_t) * p_index_count, index16);
 		glDrawElements(p_primitive, p_index_count, GL_UNSIGNED_SHORT, 0);
+		storage->info.render._2d_draw_call_count++;
 	}
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -647,6 +656,7 @@ void RasterizerCanvasBaseGLES2::_draw_gui_primitive(int p_points, const Vector2 
 	}
 
 	glDrawArrays(prim[p_points], 0, p_points);
+	storage->info.render._2d_draw_call_count++;
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
@@ -1002,7 +1012,7 @@ void RasterizerCanvasBaseGLES2::finalize() {
 
 RasterizerCanvasBaseGLES2::RasterizerCanvasBaseGLES2() {
 #ifdef GLES_OVER_GL
-	use_nvidia_rect_workaround = GLOBAL_GET("rendering/quality/2d/gles2_use_nvidia_rect_flicker_workaround");
+	use_nvidia_rect_workaround = GLOBAL_GET("rendering/quality/2d/use_nvidia_rect_flicker_workaround");
 #else
 	// Not needed (a priori) on GLES devices
 	use_nvidia_rect_workaround = false;

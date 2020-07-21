@@ -379,29 +379,9 @@ void TextEdit::_update_scrollbars() {
 		total_width += cache.minimap_width;
 	}
 
-	bool use_hscroll = true;
-	bool use_vscroll = true;
-
-	// Thanks yessopie for this clever bit of logic.
-	if (total_rows <= visible_rows && total_width <= visible_width) {
-
-		use_hscroll = false;
-		use_vscroll = false;
-	} else {
-
-		if (total_rows > visible_rows && total_width <= visible_width) {
-			use_hscroll = false;
-		}
-
-		if (total_rows <= visible_rows && total_width > visible_width) {
-			use_vscroll = false;
-		}
-	}
-
 	updating_scrolls = true;
 
-	if (use_vscroll) {
-
+	if (total_rows > visible_rows) {
 		v_scroll->show();
 		v_scroll->set_max(total_rows + get_visible_rows_offset());
 		v_scroll->set_page(visible_rows + get_visible_rows_offset());
@@ -420,8 +400,7 @@ void TextEdit::_update_scrollbars() {
 		v_scroll->hide();
 	}
 
-	if (use_hscroll && !is_wrap_enabled()) {
-
+	if (total_width > visible_width && !is_wrap_enabled()) {
 		h_scroll->show();
 		h_scroll->set_max(total_width);
 		h_scroll->set_page(visible_width);
@@ -933,7 +912,7 @@ void TextEdit::_notification(int p_what) {
 				// calculate viewport size and y offset
 				int viewport_height = (draw_amount - 1) * minimap_line_height;
 				int control_height = _get_control_height() - viewport_height;
-				int viewport_offset_y = round(get_scroll_pos_for_line(first_visible_line) * control_height) / ((v_scroll->get_max() <= minimap_visible_lines) ? (minimap_visible_lines - draw_amount) : (v_scroll->get_max() - draw_amount));
+				int viewport_offset_y = round(get_scroll_pos_for_line(first_visible_line + 1) * control_height) / ((v_scroll->get_max() <= minimap_visible_lines) ? (minimap_visible_lines - draw_amount) : (v_scroll->get_max() - draw_amount));
 
 				// calculate the first line.
 				int num_lines_before = round((viewport_offset_y) / minimap_line_height);
@@ -1135,8 +1114,7 @@ void TextEdit::_notification(int p_what) {
 
 					int ofs_y = (i * get_row_height() + cache.line_spacing / 2) + ofs_readonly;
 					ofs_y -= cursor.wrap_ofs * get_row_height();
-					if (smooth_scroll_enabled)
-						ofs_y += (-get_v_scroll_offset()) * get_row_height();
+					ofs_y -= get_v_scroll_offset() * get_row_height();
 
 					// Check if line contains highlighted word.
 					int highlighted_text_col = -1;
@@ -1150,7 +1128,7 @@ void TextEdit::_notification(int p_what) {
 						highlighted_text_col = _get_column_pos_of_word(highlighted_text, str, SEARCH_MATCH_CASE | SEARCH_WHOLE_WORDS, 0);
 
 					if (select_identifiers_enabled && highlighted_word.length() != 0) {
-						if (_is_char(highlighted_word[0])) {
+						if (_is_char(highlighted_word[0]) || highlighted_word[0] == '.') {
 							highlighted_word_col = _get_column_pos_of_word(highlighted_word, fullstr, SEARCH_MATCH_CASE | SEARCH_WHOLE_WORDS, 0);
 						}
 					}
@@ -2286,14 +2264,14 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 			if (mb->get_button_index() == BUTTON_WHEEL_UP && !mb->get_command()) {
 				if (mb->get_shift()) {
 					h_scroll->set_value(h_scroll->get_value() - (100 * mb->get_factor()));
-				} else {
+				} else if (v_scroll->is_visible()) {
 					_scroll_up(3 * mb->get_factor());
 				}
 			}
 			if (mb->get_button_index() == BUTTON_WHEEL_DOWN && !mb->get_command()) {
 				if (mb->get_shift()) {
 					h_scroll->set_value(h_scroll->get_value() + (100 * mb->get_factor()));
-				} else {
+				} else if (v_scroll->is_visible()) {
 					_scroll_down(3 * mb->get_factor());
 				}
 			}
@@ -6212,6 +6190,10 @@ void TextEdit::_push_current_op() {
 	current_op.type = TextOperation::TYPE_NONE;
 	current_op.text = "";
 	current_op.chain_forward = false;
+
+	if (undo_stack.size() > undo_stack_max_size) {
+		undo_stack.pop_front();
+	}
 }
 
 void TextEdit::set_indent_using_spaces(const bool p_use_spaces) {
@@ -7030,6 +7012,7 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_line_count"), &TextEdit::get_line_count);
 	ClassDB::bind_method(D_METHOD("get_text"), &TextEdit::get_text);
 	ClassDB::bind_method(D_METHOD("get_line", "line"), &TextEdit::get_line);
+	ClassDB::bind_method(D_METHOD("set_line", "line", "new_text"), &TextEdit::set_line);
 
 	ClassDB::bind_method(D_METHOD("center_viewport_to_cursor"), &TextEdit::center_viewport_to_cursor);
 	ClassDB::bind_method(D_METHOD("cursor_set_column", "column", "adjust_viewport"), &TextEdit::cursor_set_column, DEFVAL(true));
@@ -7189,6 +7172,8 @@ void TextEdit::_bind_methods() {
 
 	GLOBAL_DEF("gui/timers/text_edit_idle_detect_sec", 3);
 	ProjectSettings::get_singleton()->set_custom_property_info("gui/timers/text_edit_idle_detect_sec", PropertyInfo(Variant::REAL, "gui/timers/text_edit_idle_detect_sec", PROPERTY_HINT_RANGE, "0,10,0.01,or_greater")); // No negative numbers.
+	GLOBAL_DEF("gui/common/text_edit_undo_stack_max_size", 1024);
+	ProjectSettings::get_singleton()->set_custom_property_info("gui/common/text_edit_undo_stack_max_size", PropertyInfo(Variant::INT, "gui/common/text_edit_undo_stack_max_size", PROPERTY_HINT_RANGE, "0,10000,1,or_greater")); // No negative numbers.
 }
 
 TextEdit::TextEdit() {
@@ -7268,6 +7253,7 @@ TextEdit::TextEdit() {
 
 	current_op.type = TextOperation::TYPE_NONE;
 	undo_enabled = true;
+	undo_stack_max_size = GLOBAL_GET("gui/common/text_edit_undo_stack_max_size");
 	undo_stack_pos = NULL;
 	setting_text = false;
 	last_dblclk = 0;

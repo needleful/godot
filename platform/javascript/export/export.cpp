@@ -94,6 +94,9 @@ public:
 		} else if (req[1] == basereq + ".js") {
 			filepath += ".js";
 			ctype = "application/javascript";
+		} else if (req[1] == basereq + ".worker.js") {
+			filepath += ".worker.js";
+			ctype = "application/javascript";
 		} else if (req[1] == basereq + ".pck") {
 			filepath += ".pck";
 			ctype = "application/octet-stream";
@@ -249,6 +252,7 @@ void EditorExportPlatformJavaScript::_fix_html(Vector<uint8_t> &p_html, const Re
 
 		String current_line = lines[i];
 		current_line = current_line.replace("$GODOT_BASENAME", p_name);
+		current_line = current_line.replace("$GODOT_PROJECT_NAME", ProjectSettings::get_singleton()->get_setting("application/config/name"));
 		current_line = current_line.replace("$GODOT_HEAD_INCLUDE", p_preset->get("html/head_include"));
 		current_line = current_line.replace("$GODOT_DEBUG_ENABLED", p_debug ? "true" : "false");
 		str_export += current_line + "\n";
@@ -434,6 +438,10 @@ Error EditorExportPlatformJavaScript::export_project(const Ref<EditorExportPrese
 		} else if (file == "godot.js") {
 
 			file = p_path.get_file().get_basename() + ".js";
+		} else if (file == "godot.worker.js") {
+
+			file = p_path.get_file().get_basename() + ".worker.js";
+
 		} else if (file == "godot.wasm") {
 
 			file = p_path.get_file().get_basename() + ".wasm";
@@ -567,6 +575,7 @@ Error EditorExportPlatformJavaScript::run(const Ref<EditorExportPreset> &p_prese
 		// Export generates several files, clean them up on failure.
 		DirAccess::remove_file_or_error(basepath + ".html");
 		DirAccess::remove_file_or_error(basepath + ".js");
+		DirAccess::remove_file_or_error(basepath + ".worker.js");
 		DirAccess::remove_file_or_error(basepath + ".pck");
 		DirAccess::remove_file_or_error(basepath + ".png");
 		DirAccess::remove_file_or_error(basepath + ".wasm");

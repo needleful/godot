@@ -30,6 +30,13 @@
 
 package org.godotengine.godot;
 
+import org.godotengine.godot.input.GodotEditText;
+import org.godotengine.godot.plugin.GodotPlugin;
+import org.godotengine.godot.plugin.GodotPluginRegistry;
+import org.godotengine.godot.utils.GodotNetUtils;
+import org.godotengine.godot.utils.PermissionsUtil;
+import org.godotengine.godot.xr.XRMode;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActivityManager;
@@ -61,11 +68,6 @@ import android.os.Messenger;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.Settings.Secure;
-import android.support.annotation.CallSuper;
-import android.support.annotation.Keep;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.FragmentActivity;
 import android.view.Display;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -80,6 +82,13 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+
+import androidx.annotation.CallSuper;
+import androidx.annotation.Keep;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.FragmentActivity;
+
 import com.google.android.vending.expansion.downloader.DownloadProgressInfo;
 import com.google.android.vending.expansion.downloader.DownloaderClientMarshaller;
 import com.google.android.vending.expansion.downloader.DownloaderServiceMarshaller;
@@ -87,6 +96,7 @@ import com.google.android.vending.expansion.downloader.Helpers;
 import com.google.android.vending.expansion.downloader.IDownloaderClient;
 import com.google.android.vending.expansion.downloader.IDownloaderService;
 import com.google.android.vending.expansion.downloader.IStub;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -96,13 +106,8 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
+
 import javax.microedition.khronos.opengles.GL10;
-import org.godotengine.godot.input.GodotEditText;
-import org.godotengine.godot.plugin.GodotPlugin;
-import org.godotengine.godot.plugin.GodotPluginRegistry;
-import org.godotengine.godot.utils.GodotNetUtils;
-import org.godotengine.godot.utils.PermissionsUtil;
-import org.godotengine.godot.xr.XRMode;
 
 public abstract class Godot extends FragmentActivity implements SensorEventListener, IDownloaderClient {
 
@@ -366,7 +371,7 @@ public abstract class Godot extends FragmentActivity implements SensorEventListe
 
 		// Include the returned non-null views in the Godot view hierarchy.
 		for (GodotPlugin plugin : pluginRegistry.getAllPlugins()) {
-			View pluginView = plugin.onMainCreateView(this);
+			View pluginView = plugin.onMainCreate(this);
 			if (pluginView != null) {
 				layout.addView(pluginView);
 			}
@@ -449,7 +454,8 @@ public abstract class Godot extends FragmentActivity implements SensorEventListe
 		return deviceInfo.reqGlEsVersion;
 	}
 
-	private String[] getCommandLine() {
+	@CallSuper
+	protected String[] getCommandLine() {
 		InputStream is;
 		try {
 			is = getAssets().open("_cl_");

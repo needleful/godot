@@ -44,7 +44,6 @@
 #include "servers/audio_server.h"
 #include "servers/visual/rasterizer.h"
 #include "servers/visual_server.h"
-//#include "servers/visual/visual_server_wrap_mt.h"
 
 #include <X11/Xcursor/Xcursor.h>
 #include <X11/Xlib.h>
@@ -131,11 +130,14 @@ class OS_X11 : public OS_Unix {
 		int opcode;
 		Vector<int> touch_devices;
 		Map<int, Vector2> absolute_devices;
-		Map<int, Vector3> pen_devices;
+		Map<int, Vector2> pen_pressure_range;
+		Map<int, Vector2> pen_tilt_x_range;
+		Map<int, Vector2> pen_tilt_y_range;
 		XIEventMask all_event_mask;
 		XIEventMask all_master_event_mask;
 		Map<int, Vector2> state;
 		double pressure;
+		bool pressure_supported;
 		Vector2 tilt;
 		Vector2 mouse_pos_to_filter;
 		Vector2 relative_motion;
@@ -219,7 +221,8 @@ protected:
 
 	void _window_changed(XEvent *event);
 
-	bool is_window_maximize_allowed();
+	bool window_maximize_check(const char *p_atom_name) const;
+	bool is_window_maximize_allowed() const;
 
 public:
 	virtual String get_name() const;
@@ -326,6 +329,11 @@ public:
 	virtual Error move_to_trash(const String &p_path);
 
 	virtual LatinKeyboardVariant get_latin_keyboard_variant() const;
+	virtual int keyboard_get_layout_count() const;
+	virtual int keyboard_get_current_layout() const;
+	virtual void keyboard_set_current_layout(int p_index);
+	virtual String keyboard_get_layout_language(int p_index) const;
+	virtual String keyboard_get_layout_name(int p_index) const;
 
 	void update_real_mouse_position();
 	OS_X11();

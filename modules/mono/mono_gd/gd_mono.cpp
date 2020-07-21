@@ -128,13 +128,13 @@ void gd_mono_profiler_init() {
 	}
 }
 
-#if defined(DEBUG_ENABLED)
-
 void gd_mono_debug_init() {
 
-	mono_debug_init(MONO_DEBUG_FORMAT_MONO);
-
 	CharString da_args = OS::get_singleton()->get_environment("GODOT_MONO_DEBUGGER_AGENT").utf8();
+
+	if (da_args.length()) {
+		OS::get_singleton()->set_environment("GODOT_MONO_DEBUGGER_AGENT", String());
+	}
 
 #ifdef TOOLS_ENABLED
 	int da_port = GLOBAL_DEF("mono/debugger_agent/port", 23685);
@@ -158,6 +158,10 @@ void gd_mono_debug_init() {
 		return; // Exported games don't use the project settings to setup the debugger agent
 #endif
 
+	// Debugging enabled
+
+	mono_debug_init(MONO_DEBUG_FORMAT_MONO);
+
 	// --debugger-agent=help
 	const char *options[] = {
 		"--soft-breakpoints",
@@ -166,7 +170,6 @@ void gd_mono_debug_init() {
 	mono_jit_parse_options(2, (char **)options);
 }
 
-#endif // defined(DEBUG_ENABLED)
 #endif // !defined(JAVASCRIPT_ENABLED)
 
 #if defined(JAVASCRIPT_ENABLED)
@@ -174,6 +177,7 @@ MonoDomain *gd_initialize_mono_runtime() {
 	const char *vfs_prefix = "managed";
 	int enable_debugging = 0;
 
+	// TODO: Provide a way to enable debugging on WASM release builds.
 #ifdef DEBUG_ENABLED
 	enable_debugging = 1;
 #endif
@@ -184,9 +188,7 @@ MonoDomain *gd_initialize_mono_runtime() {
 }
 #else
 MonoDomain *gd_initialize_mono_runtime() {
-#ifdef DEBUG_ENABLED
 	gd_mono_debug_init();
-#endif
 
 #if defined(IPHONE_ENABLED) || defined(ANDROID_ENABLED)
 	// I don't know whether this actually matters or not
@@ -423,6 +425,9 @@ void GDMono::initialize_load_assemblies() {
 #if defined(TOOLS_ENABLED)
 	bool tool_assemblies_loaded = _load_tools_assemblies();
 	CRASH_COND_MSG(!tool_assemblies_loaded, "Mono: Failed to load '" TOOLS_ASM_NAME "' assemblies.");
+
+	if (Main::is_project_manager())
+		return;
 #endif
 
 	// Load the project's main assembly. This doesn't necessarily need to succeed.
@@ -1388,7 +1393,10 @@ bool _GodotSharp::is_runtime_initialized() {
 
 void _GodotSharp::_reload_assemblies(bool p_soft_reload) {
 #ifdef GD_MONO_HOT_RELOAD
-	CSharpLanguage::get_singleton()->reload_assemblies(p_soft_reload);
+	// This method may be called more than once with `call_deferred`, so we need to check
+	// again if reloading is needed to avoid reloading multiple times unnecessarily.
+	if (CSharpLanguage::get_singleton()->is_assembly_reloading_needed())
+		CSharpLanguage::get_singleton()->reload_assemblies(p_soft_reload);
 #endif
 }
 

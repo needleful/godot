@@ -67,10 +67,15 @@ class RasterizerCanvasGLES2 : public RasterizerCanvasBaseGLES2 {
 			b = p_c.b;
 			a = p_c.a;
 		}
+		bool operator==(const BatchColor &p_c) const {
+			return (r == p_c.r) && (g == p_c.g) && (b == p_c.b) && (a == p_c.a);
+		}
+		bool operator!=(const BatchColor &p_c) const { return (*this == p_c) == false; }
 		bool equals(const Color &p_c) const {
 			return (r == p_c.r) && (g == p_c.g) && (b == p_c.b) && (a == p_c.a);
 		}
 		const float *get_data() const { return &r; }
+		String to_string() const;
 	};
 
 	struct BatchVertex {
@@ -108,6 +113,18 @@ class RasterizerCanvasGLES2 : public RasterizerCanvasBaseGLES2 {
 		RID RID_normal;
 		TileMode tile_mode;
 		BatchVector2 tex_pixel_size;
+		uint32_t flags;
+	};
+
+	// items in a list to be sorted prior to joining
+	struct BSortItem {
+		// have a function to keep as pod, rather than operator
+		void assign(const BSortItem &o) {
+			item = o.item;
+			z_index = o.z_index;
+		}
+		Item *item;
+		int z_index;
 	};
 
 	// batch item may represent 1 or more items
@@ -117,6 +134,13 @@ class RasterizerCanvasGLES2 : public RasterizerCanvasBaseGLES2 {
 
 		Rect2 bounding_rect;
 
+		// note the z_index  may only be correct for the first of the joined item references
+		// this has implications for light culling with z ranged lights.
+		int16_t z_index;
+
+		// these are defined in RasterizerStorageGLES2::Shader::CanvasItem::BatchFlags
+		uint16_t flags;
+
 		// we are always splitting items with lots of commands,
 		// and items with unhandled primitives (default)
 		bool use_hardware_transform() const { return num_item_refs == 1; }
@@ -125,6 +149,17 @@ class RasterizerCanvasGLES2 : public RasterizerCanvasBaseGLES2 {
 	struct BItemRef {
 		Item *item;
 		Color final_modulate;
+	};
+
+	struct BLightRegion {
+		void reset() {
+			light_bitfield = 0;
+			shadow_bitfield = 0;
+			too_many_lights = false;
+		}
+		uint64_t light_bitfield;
+		uint64_t shadow_bitfield;
+		bool too_many_lights; // we can only do light region optimization if there are 64 or less lights
 	};
 
 	struct BatchData {
@@ -158,6 +193,9 @@ class RasterizerCanvasGLES2 : public RasterizerCanvasBaseGLES2 {
 		RasterizerArrayGLES2<BItemJoined> items_joined;
 		RasterizerArrayGLES2<BItemRef> item_refs;
 
+		// items are sorted prior to joining
+		RasterizerArrayGLES2<BSortItem> sort_items;
+
 		// counts
 		int total_quads;
 
@@ -165,6 +203,13 @@ class RasterizerCanvasGLES2 : public RasterizerCanvasBaseGLES2 {
 		// if the colors are causing an excessive number of batches, we switch
 		// to alternate batching method and add color to the vertex format.
 		int total_color_changes;
+
+		// if the shader is using MODULATE, we prevent baking color so the final_modulate can
+		// be read in the shader.
+		// if the shader is reading VERTEX, we prevent baking vertex positions with extra matrices etc
+		// to prevent the read position being incorrect.
+		// These flags are defined in RasterizerStorageGLES2::Shader::CanvasItem::BatchFlags
+		uint32_t joined_item_batch_flags;
 
 		// measured in pixels, recalculated each frame
 		float scissor_threshold_area;
@@ -174,6 +219,10 @@ class RasterizerCanvasGLES2 : public RasterizerCanvasBaseGLES2 {
 		String frame_string;
 		uint32_t next_diagnose_tick;
 		uint64_t diagnose_frame_number;
+
+		// whether to join items across z_indices - this can interfere with z ranged lights,
+		// so has to be disabled in some circumstances
+		bool join_across_z_indices;
 
 		// global settings
 		bool settings_use_batching; // the current use_batching (affected by flash)
@@ -185,6 +234,23 @@ class RasterizerCanvasGLES2 : public RasterizerCanvasBaseGLES2 {
 		int settings_batch_buffer_num_verts;
 		bool settings_scissor_lights;
 		float settings_scissor_threshold; // 0.0 to 1.0
+		int settings_item_reordering_lookahead;
+		bool settings_use_single_rect_fallback;
+		int settings_light_max_join_items;
+
+		// uv contraction
+		bool settings_uv_contract;
+		float settings_uv_contract_amount;
+
+		// only done on diagnose frame
+		void reset_stats() {
+			stats_items_sorted = 0;
+			stats_light_items_joined = 0;
+		}
+
+		// frame stats (just for monitoring and debugging)
+		int stats_items_sorted;
+		int stats_light_items_joined;
 	} bdata;
 
 	struct RenderItemState {
@@ -201,6 +267,7 @@ class RasterizerCanvasGLES2 : public RasterizerCanvasBaseGLES2 {
 		// used for joining items only
 		BItemJoined *joined_item;
 		bool join_batch_break;
+		BLightRegion light_region;
 
 		// 'item group' is data over a single call to canvas_render_items
 		int item_group_z;
@@ -216,10 +283,12 @@ class RasterizerCanvasGLES2 : public RasterizerCanvasBaseGLES2 {
 			curr_batch = 0;
 			batch_tex_id = -1;
 			texpixel_size = Vector2(1, 1);
+			contract_uvs = false;
 		}
 		Batch *curr_batch;
 		int batch_tex_id;
 		bool use_hardware_transform;
+		bool contract_uvs;
 		Vector2 texpixel_size;
 		Color final_modulate;
 		TransformMode transform_mode;
@@ -236,6 +305,7 @@ public:
 	virtual void canvas_render_items_end();
 	virtual void canvas_render_items(Item *p_item_list, int p_z, const Color &p_modulate, Light *p_light, const Transform2D &p_base_transform);
 	virtual void canvas_begin();
+	virtual void canvas_end();
 
 private:
 	// legacy codepath .. to remove after testing
@@ -245,9 +315,11 @@ private:
 	// high level batch funcs
 	void canvas_render_items_implementation(Item *p_item_list, int p_z, const Color &p_modulate, Light *p_light, const Transform2D &p_base_transform);
 	void render_joined_item(const BItemJoined &p_bij, RenderItemState &r_ris);
+	void record_items(Item *p_item_list, int p_z);
 	void join_items(Item *p_item_list, int p_z);
+	void join_sorted_items();
 	bool try_join_item(Item *p_ci, RenderItemState &r_ris, bool &r_batch_break);
-	void render_joined_item_commands(const BItemJoined &p_bij, Item *p_current_clip, bool &r_reclip, RasterizerStorageGLES2::Material *p_material);
+	void render_joined_item_commands(const BItemJoined &p_bij, Item *p_current_clip, bool &r_reclip, RasterizerStorageGLES2::Material *p_material, bool p_lit);
 	void render_batches(Item::Command *const *p_commands, Item *p_current_clip, bool &r_reclip, RasterizerStorageGLES2::Material *p_material);
 	bool prefill_joined_item(FillState &r_fill_state, int &r_command_start, Item *p_item, Item *p_current_clip, bool &r_reclip, RasterizerStorageGLES2::Material *p_material);
 	void flush_render_batches(Item *p_first_item, Item *p_current_clip, bool &r_reclip, RasterizerStorageGLES2::Material *p_material);
@@ -267,13 +339,21 @@ private:
 	TransformMode _find_transform_mode(const Transform2D &p_tr) const;
 	_FORCE_INLINE_ void _prefill_default_batch(FillState &r_fill_state, int p_command_num, const Item &p_item);
 
+	// sorting
+	void sort_items();
+	bool sort_items_from(int p_start);
+	bool _sort_items_match(const BSortItem &p_a, const BSortItem &p_b) const;
+
 	// light scissoring
 	bool _light_find_intersection(const Rect2 &p_item_rect, const Transform2D &p_light_xform, const Rect2 &p_light_rect, Rect2 &r_cliprect) const;
 	bool _light_scissor_begin(const Rect2 &p_item_rect, const Transform2D &p_light_xform, const Rect2 &p_light_rect) const;
 	void _calculate_scissor_threshold_area();
 
-	// debug
+	// no need to compile these in in release, they are unneeded outside the editor and only add to executable size
+#ifdef DEBUG_ENABLED
 	void diagnose_batches(Item::Command *const *p_commands);
+	String get_command_type_string(const Item::Command &p_command) const;
+#endif
 
 public:
 	void initialize();
@@ -299,31 +379,14 @@ _FORCE_INLINE_ void RasterizerCanvasGLES2::_prefill_default_batch(FillState &r_f
 #endif
 			// we do have a pending extra transform command to flush
 			// either the extra transform is in the prior command, or not, in which case we need 2 batches
-			//			if (r_fill_state.transform_extra_command_number_p1 == p_command_num) {
-			// this should be most common case
 			r_fill_state.curr_batch->num_commands += 2;
-			//			} else {
-			//				// mad ordering .. does this even happen?
-			//				int extra_command = r_fill_state.transform_extra_command_number_p1 - 1; // plus 1 based
-
-			//				// send the extra to the GPU in a batch
-			//				r_fill_state.curr_batch = _batch_request_new();
-			//				r_fill_state.curr_batch->type = Batch::BT_DEFAULT;
-			//				r_fill_state.curr_batch->first_command = extra_command;
-			//				r_fill_state.curr_batch->num_commands = 1;
-
-			//				// start default batch
-			//				r_fill_state.curr_batch = _batch_request_new();
-			//				r_fill_state.curr_batch->type = Batch::BT_DEFAULT;
-			//				r_fill_state.curr_batch->first_command = p_command_num;
-			//				r_fill_state.curr_batch->num_commands = 1;
-			//			}
 
 			r_fill_state.transform_extra_command_number_p1 = 0; // mark as sent
 			r_fill_state.extra_matrix_sent = true;
 
 			// the original mode should always be hardware transform ..
 			// test this assumption
+			//CRASH_COND(r_fill_state.orig_transform_mode != TM_NONE);
 			r_fill_state.transform_mode = r_fill_state.orig_transform_mode;
 
 			// do we need to restore anything else?
@@ -391,6 +454,35 @@ _FORCE_INLINE_ RasterizerCanvasGLES2::TransformMode RasterizerCanvasGLES2::_find
 	}
 
 	return TM_ALL;
+}
+
+_FORCE_INLINE_ bool RasterizerCanvasGLES2::_sort_items_match(const BSortItem &p_a, const BSortItem &p_b) const {
+	const Item *a = p_a.item;
+	const Item *b = p_b.item;
+
+	if (b->commands.size() != 1)
+		return false;
+
+	// tested outside function
+	//	if (a->commands.size() != 1)
+	//		return false;
+
+	const Item::Command &cb = *b->commands[0];
+	if (cb.type != Item::Command::TYPE_RECT)
+		return false;
+
+	const Item::Command &ca = *a->commands[0];
+	// tested outside function
+	//	if (ca.type != Item::Command::TYPE_RECT)
+	//		return false;
+
+	const Item::CommandRect *rect_a = static_cast<const Item::CommandRect *>(&ca);
+	const Item::CommandRect *rect_b = static_cast<const Item::CommandRect *>(&cb);
+
+	if (rect_a->texture != rect_b->texture)
+		return false;
+
+	return true;
 }
 
 #endif // RASTERIZERCANVASGLES2_H

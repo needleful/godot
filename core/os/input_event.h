@@ -61,6 +61,8 @@ enum ButtonList {
 
 enum JoystickList {
 
+	JOY_INVALID_OPTION = -1,
+
 	JOY_BUTTON_0 = 0,
 	JOY_BUTTON_1 = 1,
 	JOY_BUTTON_2 = 2,
@@ -328,7 +330,7 @@ protected:
 
 public:
 	void set_factor(float p_factor);
-	float get_factor();
+	float get_factor() const;
 
 	void set_button_index(int p_index);
 	int get_button_index() const;

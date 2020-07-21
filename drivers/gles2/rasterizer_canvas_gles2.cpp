@@ -60,15 +60,26 @@ RasterizerCanvasGLES2::BatchData::BatchData() {
 	settings_colored_vertex_format_threshold = 0.0f;
 	settings_batch_buffer_num_verts = 0;
 	scissor_threshold_area = 0.0f;
+	joined_item_batch_flags = 0;
 	diagnose_frame = false;
 	next_diagnose_tick = 10000;
 	diagnose_frame_number = 9999999999; // some high number
+	join_across_z_indices = true;
+	settings_item_reordering_lookahead = 0;
 
 	settings_use_batching_original_choice = false;
 	settings_flash_batching = false;
 	settings_diagnose_frame = false;
 	settings_scissor_lights = false;
 	settings_scissor_threshold = -1.0f;
+	settings_use_single_rect_fallback = false;
+	settings_light_max_join_items = 16;
+
+	settings_uv_contract = false;
+	settings_uv_contract_amount = 0.0f;
+
+	stats_items_sorted = 0;
+	stats_light_items_joined = 0;
 }
 
 void RasterizerCanvasGLES2::RenderItemState::reset() {
@@ -83,6 +94,19 @@ void RasterizerCanvasGLES2::RenderItemState::reset() {
 	final_modulate = Color(-1.0, -1.0, -1.0, -1.0); // just something unlikely
 
 	joined_item = nullptr;
+}
+
+// just translate the color into something easily readable and not too verbose
+String RasterizerCanvasGLES2::BatchColor::to_string() const {
+	String sz = "{";
+	const float *data = get_data();
+	for (int c = 0; c < 4; c++) {
+		float f = data[c];
+		int val = ((f * 255.0f) + 0.5f);
+		sz += String(Variant(val)) + " ";
+	}
+	sz += "}";
+	return sz;
 }
 
 RasterizerStorageGLES2::Texture *RasterizerCanvasGLES2::_get_canvas_texture(const RID &p_texture) const {
@@ -144,10 +168,12 @@ int RasterizerCanvasGLES2::_batch_find_or_create_tex(const RID &p_texture, const
 	if (texture) {
 		new_batch_tex.tex_pixel_size.x = 1.0 / texture->width;
 		new_batch_tex.tex_pixel_size.y = 1.0 / texture->height;
+		new_batch_tex.flags = texture->flags;
 	} else {
 		// maybe doesn't need doing...
 		new_batch_tex.tex_pixel_size.x = 1.0;
 		new_batch_tex.tex_pixel_size.y = 1.0;
+		new_batch_tex.flags = 0;
 	}
 
 	if (p_tile) {
@@ -225,8 +251,9 @@ bool RasterizerCanvasGLES2::prefill_joined_item(FillState &r_fill_state, int &r_
 	int command_count = p_item->commands.size();
 	Item::Command *const *commands = p_item->commands.ptr();
 
-	// just a local, might be more efficient in a register (check)
+	// locals, might be more efficient in a register (check)
 	Vector2 texpixel_size = r_fill_state.texpixel_size;
+	const float uv_epsilon = bdata.settings_uv_contract_amount;
 
 	// checking the color for not being white makes it 92/90 times faster in the case where it is white
 	bool multiply_final_modulate = false;
@@ -303,7 +330,7 @@ bool RasterizerCanvasGLES2::prefill_joined_item(FillState &r_fill_state, int &r_
 					// because joined items with more than 1, the command * will be incorrect
 					// NOTE - this is assuming that use_hardware_transform means that it is a non-joined item!!
 					// If that assumption is incorrect this will go horribly wrong.
-					if (r_fill_state.use_hardware_transform) {
+					if (bdata.settings_use_single_rect_fallback && r_fill_state.use_hardware_transform) {
 						bool is_single_rect = false;
 						int command_num_next = command_num + 1;
 						if (command_num_next < command_count) {
@@ -361,7 +388,12 @@ bool RasterizerCanvasGLES2::prefill_joined_item(FillState &r_fill_state, int &r_
 
 				if (change_batch) {
 					// put the tex pixel size  in a local (less verbose and can be a register)
-					bdata.batch_textures[r_fill_state.batch_tex_id].tex_pixel_size.to(texpixel_size);
+					const BatchTex &batchtex = bdata.batch_textures[r_fill_state.batch_tex_id];
+					batchtex.tex_pixel_size.to(texpixel_size);
+
+					if (bdata.settings_uv_contract) {
+						r_fill_state.contract_uvs = (batchtex.flags & VS::TEXTURE_FLAG_FILTER) == 0;
+					}
 
 					// need to preserve texpixel_size between items
 					r_fill_state.texpixel_size = texpixel_size;
@@ -424,15 +456,34 @@ bool RasterizerCanvasGLES2::prefill_joined_item(FillState &r_fill_state, int &r_
 				}
 
 				// uvs
-				Rect2 src_rect = (rect->flags & CANVAS_RECT_REGION) ? Rect2(rect->source.position * texpixel_size, rect->source.size * texpixel_size) : Rect2(0, 0, 1, 1);
+				Vector2 src_min;
+				Vector2 src_max;
+				if (rect->flags & CANVAS_RECT_REGION) {
+					src_min = rect->source.position;
+					src_max = src_min + rect->source.size;
+
+					src_min *= texpixel_size;
+					src_max *= texpixel_size;
+
+					// nudge offset for the maximum to prevent precision error on GPU reading into line outside the source rect
+					// this is very difficult to get right.
+					if (r_fill_state.contract_uvs) {
+						src_min.x += uv_epsilon;
+						src_min.y += uv_epsilon;
+						src_max.x -= uv_epsilon;
+						src_max.y -= uv_epsilon;
+					}
+				} else {
+					src_min = Vector2(0, 0);
+					src_max = Vector2(1, 1);
+				}
 
 				// 10% faster calculating the max first
-				Vector2 pos_max = src_rect.position + src_rect.size;
 				Vector2 uvs[4] = {
-					src_rect.position,
-					Vector2(pos_max.x, src_rect.position.y),
-					pos_max,
-					Vector2(src_rect.position.x, pos_max.y),
+					src_min,
+					Vector2(src_max.x, src_min.y),
+					src_max,
+					Vector2(src_min.x, src_max.y),
 				};
 
 				if (rect->flags & CANVAS_RECT_TRANSPOSE) {
@@ -494,37 +545,44 @@ void RasterizerCanvasGLES2::_batch_translate_to_colored() {
 	for (int n = 0; n < bdata.batches.size(); n++) {
 		const Batch &source_batch = bdata.batches[n];
 
-		bool needs_new_batch;
+		bool needs_new_batch = true;
 
 		if (dest_batch) {
-			// is the dest batch the same except for the color?
-			if ((dest_batch->batch_texture_id == source_batch.batch_texture_id) && (dest_batch->type == source_batch.type)) {
-				// add to previous batch
-				dest_batch->num_commands += source_batch.num_commands;
-				needs_new_batch = false;
+			if (dest_batch->type == source_batch.type) {
+				if (source_batch.type == Batch::BT_RECT) {
+					if (dest_batch->batch_texture_id == source_batch.batch_texture_id) {
+						// add to previous batch
+						dest_batch->num_commands += source_batch.num_commands;
+						needs_new_batch = false;
 
-				// create the colored verts (only if not default)
-				if (source_batch.type != Batch::BT_DEFAULT) {
-					int first_vert = source_batch.first_quad * 4;
-					int end_vert = 4 * (source_batch.first_quad + source_batch.num_commands);
+						// create the colored verts (only if not default)
+						int first_vert = source_batch.first_quad * 4;
+						int end_vert = 4 * (source_batch.first_quad + source_batch.num_commands);
 
-					for (int v = first_vert; v < end_vert; v++) {
-						const BatchVertex &bv = bdata.vertices[v];
-						BatchVertexColored *cv = bdata.vertices_colored.request();
+						for (int v = first_vert; v < end_vert; v++) {
+							const BatchVertex &bv = bdata.vertices[v];
+							BatchVertexColored *cv = bdata.vertices_colored.request();
 #ifdef DEBUG_ENABLED
-						CRASH_COND(!cv);
+							CRASH_COND(!cv);
 #endif
-						cv->pos = bv.pos;
-						cv->uv = bv.uv;
-						cv->col = source_batch.color;
-					}
+							cv->pos = bv.pos;
+							cv->uv = bv.uv;
+							cv->col = source_batch.color;
+						}
+					} // textures match
+				} else {
+					// default
+					// we can still join, but only under special circumstances
+					// does this ever happen? not sure at this stage, but left for future expansion
+					uint32_t source_last_command = source_batch.first_command + source_batch.num_commands;
+					if (source_last_command == dest_batch->first_command) {
+						dest_batch->num_commands += source_batch.num_commands;
+						needs_new_batch = false;
+					} // if the commands line up exactly
 				}
-			} else {
-				needs_new_batch = true;
-			}
-		} else {
-			needs_new_batch = true;
-		}
+			} // if both batches are the same type
+
+		} // if dest batch is valid
 
 		if (needs_new_batch) {
 			dest_batch = bdata.batches_temp.request();
@@ -569,15 +627,21 @@ void RasterizerCanvasGLES2::_batch_render_rects(const Batch &p_batch, Rasterizer
 		sizeof_vert = sizeof(BatchVertexColored);
 	}
 
+	// batch tex
+	const BatchTex &tex = bdata.batch_textures[p_batch.batch_texture_id];
+
+	// make sure to set all conditionals BEFORE binding the shader
 	state.canvas_shader.set_conditional(CanvasShaderGLES2::USE_TEXTURE_RECT, false);
+
+	// force repeat is set if non power of 2 texture, and repeat is needed if hardware doesn't support npot
+	if (tex.tile_mode == BatchTex::TILE_FORCE_REPEAT) {
+		state.canvas_shader.set_conditional(CanvasShaderGLES2::USE_FORCE_REPEAT, true);
+	}
 
 	if (state.canvas_shader.bind()) {
 		_set_uniforms();
 		state.canvas_shader.use_material((void *)p_material);
 	}
-
-	// batch tex
-	const BatchTex &tex = bdata.batch_textures[p_batch.batch_texture_id];
 
 	_bind_canvas_texture(tex.RID_texture, tex.RID_normal);
 
@@ -601,16 +665,18 @@ void RasterizerCanvasGLES2::_batch_render_rects(const Batch &p_batch, Rasterizer
 		glEnableVertexAttribArray(VS::ARRAY_COLOR);
 	}
 
-	switch (tex.tile_mode) {
-		case BatchTex::TILE_FORCE_REPEAT: {
-			state.canvas_shader.set_conditional(CanvasShaderGLES2::USE_FORCE_REPEAT, true);
-		} break;
-		case BatchTex::TILE_NORMAL: {
+	// We only want to set the GL wrapping mode if the texture is not already tiled (i.e. set in Import).
+	// This  is an optimization left over from the legacy renderer.
+	// If we DID set tiling in the API, and reverted to clamped, then the next draw using this texture
+	// may use clamped mode incorrectly.
+	bool tex_is_already_tiled = tex.flags & VS::TEXTURE_FLAG_REPEAT;
+
+	if (tex.tile_mode == BatchTex::TILE_NORMAL) {
+		// if the texture is imported as tiled, no need to set GL state, as it will already be bound with repeat
+		if (!tex_is_already_tiled) {
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		} break;
-		default: {
-		} break;
+		}
 	}
 
 	// we need to convert explicitly from pod Vec2 to Vector2 ...
@@ -631,8 +697,11 @@ void RasterizerCanvasGLES2::_batch_render_rects(const Batch &p_batch, Rasterizer
 			state.canvas_shader.set_conditional(CanvasShaderGLES2::USE_FORCE_REPEAT, false);
 		} break;
 		case BatchTex::TILE_NORMAL: {
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			// if the texture is imported as tiled, no need to revert GL state
+			if (!tex_is_already_tiled) {
+				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			}
 		} break;
 		default: {
 		} break;
@@ -646,31 +715,114 @@ void RasterizerCanvasGLES2::_batch_render_rects(const Batch &p_batch, Rasterizer
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
+#ifdef DEBUG_ENABLED
+String RasterizerCanvasGLES2::get_command_type_string(const Item::Command &p_command) const {
+	String sz = "";
+
+	switch (p_command.type) {
+		default:
+			break;
+		case Item::Command::TYPE_LINE: {
+			sz = "l";
+		} break;
+		case Item::Command::TYPE_POLYLINE: {
+			sz = "PL";
+		} break;
+		case Item::Command::TYPE_RECT: {
+			sz = "r";
+		} break;
+		case Item::Command::TYPE_NINEPATCH: {
+			sz = "n";
+		} break;
+		case Item::Command::TYPE_PRIMITIVE: {
+			sz = "PR";
+		} break;
+		case Item::Command::TYPE_POLYGON: {
+			sz = "p";
+		} break;
+		case Item::Command::TYPE_MESH: {
+			sz = "m";
+		} break;
+		case Item::Command::TYPE_MULTIMESH: {
+			sz = "MM";
+		} break;
+		case Item::Command::TYPE_PARTICLES: {
+			sz = "PA";
+		} break;
+		case Item::Command::TYPE_CIRCLE: {
+			sz = "c";
+		} break;
+		case Item::Command::TYPE_TRANSFORM: {
+			sz = "t";
+
+			// add a bit more info in debug build
+			const Item::CommandTransform *transform = static_cast<const Item::CommandTransform *>(&p_command);
+			const Transform2D &mat = transform->xform;
+
+			sz += " ";
+			sz += String(Variant(mat.elements[2]));
+			sz += " ";
+		} break;
+		case Item::Command::TYPE_CLIP_IGNORE: {
+			sz = "CI";
+		} break;
+	} // switch
+
+	return sz;
+}
+
 void RasterizerCanvasGLES2::diagnose_batches(Item::Command *const *p_commands) {
 	int num_batches = bdata.batches.size();
 
+	BatchColor curr_color;
+	curr_color.set(Color(-1, -1, -1, -1));
+	bool first_color_change = true;
+
 	for (int batch_num = 0; batch_num < num_batches; batch_num++) {
 		const Batch &batch = bdata.batches[batch_num];
-		bdata.frame_string += "\t\tbatch ";
+		bdata.frame_string += "\t\t\tbatch ";
 
 		switch (batch.type) {
 			case Batch::BT_RECT: {
 				bdata.frame_string += "R ";
+				bdata.frame_string += itos(batch.first_command) + "-";
 				bdata.frame_string += itos(batch.num_commands);
-				bdata.frame_string += " [" + itos(batch.batch_texture_id) + "]";
+
+				int tex_id = (int)bdata.batch_textures[batch.batch_texture_id].RID_texture.get_id();
+				bdata.frame_string += " [" + itos(batch.batch_texture_id) + " - " + itos(tex_id) + "]";
+
+				bdata.frame_string += " " + batch.color.to_string();
+
 				if (batch.num_commands > 1) {
-					bdata.frame_string += " MULTI\n";
-				} else {
-					bdata.frame_string += "\n";
+					bdata.frame_string += " MULTI";
 				}
+				if (curr_color != batch.color) {
+					curr_color = batch.color;
+					if (!first_color_change) {
+						bdata.frame_string += " color";
+					} else {
+						first_color_change = false;
+					}
+				}
+				bdata.frame_string += "\n";
 			} break;
 			default: {
 				bdata.frame_string += "D ";
-				bdata.frame_string += itos(batch.num_commands) + "\n";
+				bdata.frame_string += itos(batch.first_command) + "-";
+				bdata.frame_string += itos(batch.num_commands) + " ";
+
+				int num_show = MIN(batch.num_commands, 16);
+				for (int n = 0; n < num_show; n++) {
+					const Item::Command &comm = *p_commands[batch.first_command + n];
+					bdata.frame_string += get_command_type_string(comm) + " ";
+				}
+
+				bdata.frame_string += "\n";
 			} break;
 		}
 	}
 }
+#endif
 
 void RasterizerCanvasGLES2::render_batches(Item::Command *const *p_commands, Item *p_current_clip, bool &r_reclip, RasterizerStorageGLES2::Material *p_material) {
 
@@ -750,7 +902,6 @@ void RasterizerCanvasGLES2::render_batches(Item::Command *const *p_commands, Ite
 								}
 #endif
 							}
-							storage->info.render._2d_draw_call_count++;
 						} break;
 
 						case Item::Command::TYPE_RECT: {
@@ -890,6 +1041,7 @@ void RasterizerCanvasGLES2::render_batches(Item::Command *const *p_commands, Ite
 									state.canvas_shader.set_uniform(CanvasShaderGLES2::SRC_RECT, Color(0, 0, 1, 1));
 
 									glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+									storage->info.render._2d_draw_call_count++;
 								} else {
 
 									bool untile = false;
@@ -932,6 +1084,7 @@ void RasterizerCanvasGLES2::render_batches(Item::Command *const *p_commands, Ite
 									state.canvas_shader.set_uniform(CanvasShaderGLES2::SRC_RECT, Color(src_rect.position.x, src_rect.position.y, src_rect.size.x, src_rect.size.y));
 
 									glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+									storage->info.render._2d_draw_call_count++;
 
 									if (untile) {
 										glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -944,7 +1097,6 @@ void RasterizerCanvasGLES2::render_batches(Item::Command *const *p_commands, Ite
 							}
 
 							state.canvas_shader.set_conditional(CanvasShaderGLES2::USE_FORCE_REPEAT, false);
-							storage->info.render._2d_draw_call_count++;
 
 						} break;
 
@@ -1152,7 +1304,6 @@ void RasterizerCanvasGLES2::render_batches(Item::Command *const *p_commands, Ite
 							_bind_canvas_texture(RID(), RID());
 
 							_draw_polygon(indices, num_points * 3, num_points + 1, points, NULL, &circle->color, true);
-							storage->info.render._2d_draw_call_count++;
 						} break;
 
 						case Item::Command::TYPE_POLYGON: {
@@ -1185,7 +1336,6 @@ void RasterizerCanvasGLES2::render_batches(Item::Command *const *p_commands, Ite
 								glDisable(GL_LINE_SMOOTH);
 							}
 #endif
-							storage->info.render._2d_draw_call_count++;
 						} break;
 						case Item::Command::TYPE_MESH: {
 
@@ -1417,7 +1567,7 @@ void RasterizerCanvasGLES2::render_batches(Item::Command *const *p_commands, Ite
 										offset += to_draw * 2;
 									}
 								} else {
-									_draw_generic(GL_LINES, pline->lines.size(), pline->lines.ptr(), NULL, pline->line_colors.ptr(), pline->line_colors.size() == 1);
+									_draw_generic(GL_LINE_STRIP, pline->lines.size(), pline->lines.ptr(), NULL, pline->line_colors.ptr(), pline->line_colors.size() == 1);
 								}
 
 #ifdef GLES_OVER_GL
@@ -1425,7 +1575,6 @@ void RasterizerCanvasGLES2::render_batches(Item::Command *const *p_commands, Ite
 									glDisable(GL_LINE_SMOOTH);
 #endif
 							}
-							storage->info.render._2d_draw_call_count++;
 						} break;
 
 						case Item::Command::TYPE_PRIMITIVE: {
@@ -1455,7 +1604,6 @@ void RasterizerCanvasGLES2::render_batches(Item::Command *const *p_commands, Ite
 							}
 
 							_draw_gui_primitive(primitive->points.size(), primitive->points.ptr(), primitive->colors.ptr(), primitive->uvs.ptr());
-							storage->info.render._2d_draw_call_count++;
 						} break;
 
 						case Item::Command::TYPE_TRANSFORM: {
@@ -1512,7 +1660,7 @@ void RasterizerCanvasGLES2::render_batches(Item::Command *const *p_commands, Ite
 	bdata.reset_flush();
 }
 
-void RasterizerCanvasGLES2::render_joined_item_commands(const BItemJoined &p_bij, Item *p_current_clip, bool &r_reclip, RasterizerStorageGLES2::Material *p_material) {
+void RasterizerCanvasGLES2::render_joined_item_commands(const BItemJoined &p_bij, Item *p_current_clip, bool &r_reclip, RasterizerStorageGLES2::Material *p_material, bool p_lit) {
 
 	Item *item = 0;
 	Item *first_item = bdata.item_refs[p_bij.first_item_ref].item;
@@ -1522,10 +1670,23 @@ void RasterizerCanvasGLES2::render_joined_item_commands(const BItemJoined &p_bij
 	fill_state.use_hardware_transform = p_bij.use_hardware_transform();
 	fill_state.extra_matrix_sent = false;
 
+	// in the special case of custom shaders that read from VERTEX (i.e. vertex position)
+	// we want to disable software transform of extra matrix
+	if (bdata.joined_item_batch_flags & RasterizerStorageGLES2::Shader::CanvasItem::PREVENT_VERTEX_BAKING) {
+		fill_state.extra_matrix_sent = true;
+	}
+
 	for (unsigned int i = 0; i < p_bij.num_item_refs; i++) {
 		const BItemRef &ref = bdata.item_refs[p_bij.first_item_ref + i];
 		item = ref.item;
-		fill_state.final_modulate = ref.final_modulate;
+
+		if (!p_lit) {
+			// if not lit we use the complex calculated final modulate
+			fill_state.final_modulate = ref.final_modulate;
+		} else {
+			// if lit we ignore canvas modulate and just use the item modulate
+			fill_state.final_modulate = item->final_modulate;
+		}
 
 		int command_count = item->commands.size();
 		int command_start = 0;
@@ -1572,7 +1733,9 @@ void RasterizerCanvasGLES2::flush_render_batches(Item *p_first_item, Item *p_cur
 	bdata.use_colored_vertices = false;
 
 	// only check whether to convert if there are quads (prevent divide by zero)
-	if (bdata.total_quads) {
+	// and we haven't decided to prevent color baking (due to e.g. MODULATE
+	// being used in a shader)
+	if (bdata.total_quads && !(bdata.joined_item_batch_flags & RasterizerStorageGLES2::Shader::CanvasItem::PREVENT_COLOR_BAKING)) {
 		// minus 1 to prevent single primitives (ratio 1.0) always being converted to colored..
 		// in that case it is slightly cheaper to just have the color as part of the batch
 		float ratio = (float)(bdata.total_color_changes - 1) / (float)bdata.total_quads;
@@ -1592,9 +1755,11 @@ void RasterizerCanvasGLES2::flush_render_batches(Item *p_first_item, Item *p_cur
 
 	Item::Command *const *commands = p_first_item->commands.ptr();
 
+#ifdef DEBUG_ENABLED
 	if (bdata.diagnose_frame) {
 		diagnose_batches(commands);
 	}
+#endif
 
 	render_batches(commands, p_current_clip, r_reclip, p_material);
 }
@@ -1614,6 +1779,199 @@ void RasterizerCanvasGLES2::_canvas_item_render_commands(Item *p_item, Item *p_c
 	render_batches(commands, p_current_clip, r_reclip, p_material);
 }
 
+void RasterizerCanvasGLES2::record_items(Item *p_item_list, int p_z) {
+	while (p_item_list) {
+		BSortItem *s = bdata.sort_items.request_with_grow();
+
+		s->item = p_item_list;
+		s->z_index = p_z;
+
+		p_item_list = p_item_list->next;
+	}
+}
+
+void RasterizerCanvasGLES2::sort_items() {
+	// turned off?
+	if (!bdata.settings_item_reordering_lookahead) {
+		return;
+	}
+
+	for (int s = 0; s < bdata.sort_items.size() - 2; s++) {
+		if (sort_items_from(s)) {
+#ifdef DEBUG_ENABLED
+			bdata.stats_items_sorted++;
+#endif
+		}
+	}
+}
+
+bool RasterizerCanvasGLES2::sort_items_from(int p_start) {
+#ifdef DEBUG_ENABLED
+	ERR_FAIL_COND_V((p_start + 1) >= bdata.sort_items.size(), false)
+#endif
+
+	const BSortItem &start = bdata.sort_items[p_start];
+	int start_z = start.z_index;
+
+	// check start is the right type for sorting
+	if (start.item->commands.size() != 1) {
+		return false;
+	}
+	const Item::Command &command_start = *start.item->commands[0];
+	if (command_start.type != Item::Command::TYPE_RECT) {
+		return false;
+	}
+
+	BSortItem &second = bdata.sort_items[p_start + 1];
+	if (second.z_index != start_z) {
+		// no sorting across z indices (for now)
+		return false;
+	}
+
+	// if the neighbours are already a good match
+	if (_sort_items_match(start, second)) // order is crucial, start first
+	{
+		return false;
+	}
+
+	// local cached aabb
+	Rect2 second_AABB = second.item->global_rect_cache;
+
+	// if the start and 2nd items overlap, can do no more
+	if (start.item->global_rect_cache.intersects(second_AABB)) {
+		return false;
+	}
+
+	// which neighbour to test
+	int test_last = 2 + bdata.settings_item_reordering_lookahead;
+	for (int test = 2; test < test_last; test++) {
+		int test_sort_item_id = p_start + test;
+
+		// if we've got to the end of the list, can't sort any more, give up
+		if (test_sort_item_id >= bdata.sort_items.size()) {
+			return false;
+		}
+
+		BSortItem *test_sort_item = &bdata.sort_items[test_sort_item_id];
+
+		// across z indices?
+		if (test_sort_item->z_index != start_z) {
+			return false;
+		}
+
+		Item *test_item = test_sort_item->item;
+
+		// if the test item overlaps the second item, we can't swap, AT ALL
+		// because swapping an item OVER this one would cause artefacts
+		if (second_AABB.intersects(test_item->global_rect_cache)) {
+			return false;
+		}
+
+		// do they match?
+		if (!_sort_items_match(start, *test_sort_item)) // order is crucial, start first
+		{
+			continue;
+		}
+
+		// we can only swap if there are no AABB overlaps with sandwiched neighbours
+		bool ok = true;
+
+		// start from 2, no need to check 1 as the second has already been checked against this item
+		// in the intersection test above
+		for (int sn = 2; sn < test; sn++) {
+			BSortItem *sandwich_neighbour = &bdata.sort_items[p_start + sn];
+			if (test_item->global_rect_cache.intersects(sandwich_neighbour->item->global_rect_cache)) {
+				ok = false;
+				break;
+			}
+		}
+		if (!ok) {
+			continue;
+		}
+
+		// it is ok to exchange them!
+		BSortItem temp;
+		temp.assign(second);
+		second.assign(*test_sort_item);
+		test_sort_item->assign(temp);
+
+		return true;
+	} // for test
+
+	return false;
+}
+
+void RasterizerCanvasGLES2::join_sorted_items() {
+	sort_items();
+
+	int z = VS::CANVAS_ITEM_Z_MIN;
+	_render_item_state.item_group_z = z;
+
+	for (int s = 0; s < bdata.sort_items.size(); s++) {
+		const BSortItem &si = bdata.sort_items[s];
+		Item *ci = si.item;
+
+		// change z?
+		if (si.z_index != z) {
+			z = si.z_index;
+
+			// may not be required
+			_render_item_state.item_group_z = z;
+
+			// if z ranged lights are present, sometimes we have to disable joining over z_indices.
+			// we do this here.
+			// Note this restriction may be able to be relaxed with light bitfields, investigate!
+			if (!bdata.join_across_z_indices) {
+				_render_item_state.join_batch_break = true;
+			}
+		}
+
+		bool join;
+
+		if (_render_item_state.join_batch_break) {
+			// always start a new batch for this item
+			join = false;
+
+			// could be another batch break (i.e. prevent NEXT item from joining this)
+			// so we still need to run try_join_item
+			// even though we know join is false.
+			// also we need to run try_join_item for every item because it keeps the state up to date,
+			// if we didn't run it the state would be out of date.
+			try_join_item(ci, _render_item_state, _render_item_state.join_batch_break);
+		} else {
+			join = try_join_item(ci, _render_item_state, _render_item_state.join_batch_break);
+		}
+
+		// assume the first item will always return no join
+		if (!join) {
+			_render_item_state.joined_item = bdata.items_joined.request_with_grow();
+			_render_item_state.joined_item->first_item_ref = bdata.item_refs.size();
+			_render_item_state.joined_item->num_item_refs = 1;
+			_render_item_state.joined_item->bounding_rect = ci->global_rect_cache;
+			_render_item_state.joined_item->z_index = z;
+			_render_item_state.joined_item->flags = bdata.joined_item_batch_flags;
+
+			// add the reference
+			BItemRef *r = bdata.item_refs.request_with_grow();
+			r->item = ci;
+			// we are storing final_modulate in advance per item reference
+			// for baking into vertex colors.
+			// this may not be ideal... as we are increasing the size of item reference,
+			// but it is stupidly complex to calculate later, which would probably be slower.
+			r->final_modulate = _render_item_state.final_modulate;
+		} else {
+			CRASH_COND(_render_item_state.joined_item == 0);
+			_render_item_state.joined_item->num_item_refs += 1;
+			_render_item_state.joined_item->bounding_rect = _render_item_state.joined_item->bounding_rect.merge(ci->global_rect_cache);
+
+			BItemRef *r = bdata.item_refs.request_with_grow();
+			r->item = ci;
+			r->final_modulate = _render_item_state.final_modulate;
+		}
+
+	} // for s through sort items
+}
+
 void RasterizerCanvasGLES2::join_items(Item *p_item_list, int p_z) {
 
 	_render_item_state.item_group_z = p_z;
@@ -1622,6 +1980,12 @@ void RasterizerCanvasGLES2::join_items(Item *p_item_list, int p_z) {
 	// batch_break is whether to PREVENT the next batch from joining with us
 	// batch_break must be preserved over z_indices,
 	// so is stored in _render_item_state.join_batch_break
+
+	// if z ranged lights are present, sometimes we have to disable joining over z_indices.
+	// we do this here
+	if (!bdata.join_across_z_indices) {
+		_render_item_state.join_batch_break = true;
+	}
 
 	while (p_item_list) {
 
@@ -1649,6 +2013,7 @@ void RasterizerCanvasGLES2::join_items(Item *p_item_list, int p_z) {
 			_render_item_state.joined_item->first_item_ref = bdata.item_refs.size();
 			_render_item_state.joined_item->num_item_refs = 1;
 			_render_item_state.joined_item->bounding_rect = ci->global_rect_cache;
+			_render_item_state.joined_item->z_index = p_z;
 
 			// add the reference
 			BItemRef *r = bdata.item_refs.request_with_grow();
@@ -1672,8 +2037,28 @@ void RasterizerCanvasGLES2::join_items(Item *p_item_list, int p_z) {
 	}
 }
 
+void RasterizerCanvasGLES2::canvas_end() {
+#ifdef DEBUG_ENABLED
+	if (bdata.diagnose_frame) {
+		bdata.frame_string += "canvas_end\n";
+		if (bdata.stats_items_sorted) {
+			bdata.frame_string += "\titems reordered: " + itos(bdata.stats_items_sorted) + "\n";
+		}
+		if (bdata.stats_light_items_joined) {
+			bdata.frame_string += "\tlight items joined: " + itos(bdata.stats_light_items_joined) + "\n";
+		}
+
+		print_line(bdata.frame_string);
+	}
+#endif
+
+	RasterizerCanvasBaseGLES2::canvas_end();
+}
+
 void RasterizerCanvasGLES2::canvas_begin() {
 	// diagnose_frame?
+	bdata.frame_string = ""; // just in case, always set this as we don't want a string leak in release...
+#ifdef DEBUG_ENABLED
 	if (bdata.settings_diagnose_frame) {
 		bdata.diagnose_frame = false;
 
@@ -1689,12 +2074,14 @@ void RasterizerCanvasGLES2::canvas_begin() {
 
 		if (frame == bdata.diagnose_frame_number) {
 			bdata.diagnose_frame = true;
+			bdata.reset_stats();
 		}
 
 		if (bdata.diagnose_frame) {
 			bdata.frame_string = "canvas_begin FRAME " + itos(frame) + "\n";
 		}
 	}
+#endif
 
 	RasterizerCanvasBaseGLES2::canvas_begin();
 }
@@ -1721,10 +2108,34 @@ void RasterizerCanvasGLES2::canvas_render_items_begin(const Color &p_modulate, L
 	_render_item_state.item_group_modulate = p_modulate;
 	_render_item_state.item_group_light = p_light;
 	_render_item_state.item_group_base_transform = p_base_transform;
+	_render_item_state.light_region.reset();
 
 	// batch break must be preserved over the different z indices,
 	// to prevent joining to an item on a previous index if not allowed
 	_render_item_state.join_batch_break = false;
+
+	// whether to join across z indices depends on whether there are z ranged lights.
+	// joined z_index items can be wrongly classified with z ranged lights.
+	bdata.join_across_z_indices = true;
+
+	int light_count = 0;
+	while (p_light) {
+		light_count++;
+
+		if ((p_light->z_min != VS::CANVAS_ITEM_Z_MIN) || (p_light->z_max != VS::CANVAS_ITEM_Z_MAX)) {
+			// prevent joining across z indices. This would have caused visual regressions
+			bdata.join_across_z_indices = false;
+		}
+
+		p_light = p_light->next_ptr;
+	}
+
+	// can't use the light region bitfield if there are too many lights
+	// hopefully most games won't blow this limit..
+	// if they do they will work but it won't batch join items just in case
+	if (light_count > 64) {
+		_render_item_state.light_region.too_many_lights = true;
+	}
 }
 
 void RasterizerCanvasGLES2::canvas_render_items_end() {
@@ -1732,9 +2143,13 @@ void RasterizerCanvasGLES2::canvas_render_items_end() {
 		return;
 	}
 
+	join_sorted_items();
+
+#ifdef DEBUG_ENABLED
 	if (bdata.diagnose_frame) {
 		bdata.frame_string += "items\n";
 	}
+#endif
 
 	// batching render is deferred until after going through all the z_indices, joining all the items
 	canvas_render_items_implementation(0, 0, _render_item_state.item_group_modulate,
@@ -1743,17 +2158,14 @@ void RasterizerCanvasGLES2::canvas_render_items_end() {
 
 	bdata.items_joined.reset();
 	bdata.item_refs.reset();
-
-	if (bdata.diagnose_frame) {
-		print_line(bdata.frame_string);
-	}
+	bdata.sort_items.reset();
 }
 
 void RasterizerCanvasGLES2::canvas_render_items(Item *p_item_list, int p_z, const Color &p_modulate, Light *p_light, const Transform2D &p_base_transform) {
 	// stage 1 : join similar items, so that their state changes are not repeated,
 	// and commands from joined items can be batched together
 	if (bdata.settings_use_batching) {
-		join_items(p_item_list, p_z);
+		record_items(p_item_list, p_z);
 		return;
 	}
 
@@ -1814,7 +2226,8 @@ bool RasterizerCanvasGLES2::try_join_item(Item *p_ci, RenderItemState &r_ris, bo
 	}
 
 	// if there are any state changes we change join to false
-	// we also set r_batch_break to true if we don't want this item joined
+	// we also set r_batch_break to true if we don't want this item joined to the next
+	// (e.g. an item that must not be joined at all)
 	r_batch_break = false;
 	bool join = true;
 
@@ -1911,16 +2324,131 @@ bool RasterizerCanvasGLES2::try_join_item(Item *p_ci, RenderItemState &r_ris, bo
 		r_ris.last_blend_mode = blend_mode;
 	}
 
+	// does the shader contain BUILTINs which should break the batching?
+	bdata.joined_item_batch_flags = 0;
+	if (r_ris.shader_cache) {
+
+		unsigned int and_flags = r_ris.shader_cache->canvas_item.batch_flags & (RasterizerStorageGLES2::Shader::CanvasItem::PREVENT_COLOR_BAKING | RasterizerStorageGLES2::Shader::CanvasItem::PREVENT_VERTEX_BAKING);
+		if (and_flags) {
+
+			bool break_batching = true;
+
+			if (and_flags == RasterizerStorageGLES2::Shader::CanvasItem::PREVENT_COLOR_BAKING) {
+				// in some circumstances, if the modulate is identity, we still allow baking because reading modulate / color
+				// will still be okay to do in the shader with no ill effects
+				if (r_ris.final_modulate == Color(1, 1, 1, 1)) {
+					break_batching = false;
+				}
+			}
+
+			if (break_batching) {
+				join = false;
+				r_batch_break = true;
+
+				// save the flags so that they don't need to be recalculated in the 2nd pass
+				bdata.joined_item_batch_flags |= r_ris.shader_cache->canvas_item.batch_flags;
+			}
+		}
+	}
+
 	if ((blend_mode == RasterizerStorageGLES2::Shader::CanvasItem::BLEND_MODE_MIX || blend_mode == RasterizerStorageGLES2::Shader::CanvasItem::BLEND_MODE_PMALPHA) && r_ris.item_group_light && !unshaded) {
 
 		// we cannot join lit items easily.
 		// it is possible, but not if they overlap, because
 		// a + light_blend + b + light_blend IS NOT THE SAME AS
 		// a + b + light_blend
-		join = false;
 
-		// we also dont want to allow joining this item with the next item, because the next item could have no lights!
-		r_batch_break = true;
+		bool light_allow_join = true;
+
+		// this is a quick getout if we have turned off light joining
+		if ((bdata.settings_light_max_join_items == 0) || r_ris.light_region.too_many_lights) {
+			light_allow_join = false;
+		} else {
+			// do light joining...
+
+			// first calculate the light bitfield
+			uint64_t light_bitfield = 0;
+			uint64_t shadow_bitfield = 0;
+			Light *light = r_ris.item_group_light;
+
+			int light_count = -1;
+			while (light) {
+				light_count++;
+				uint64_t light_bit = 1ULL << light_count;
+
+				// note that as a cost of batching, the light culling will be less effective
+				if (p_ci->light_mask & light->item_mask && r_ris.item_group_z >= light->z_min && r_ris.item_group_z <= light->z_max) {
+
+					// Note that with the above test, it is possible to also include a bound check.
+					// Tests so far have indicated better performance without it, but there may be reason to change this at a later stage,
+					// so I leave the line here for reference:
+					// && p_ci->global_rect_cache.intersects_transformed(light->xform_cache, light->rect_cache)) {
+
+					light_bitfield |= light_bit;
+
+					bool has_shadow = light->shadow_buffer.is_valid() && p_ci->light_mask & light->item_shadow_mask;
+
+					if (has_shadow) {
+						shadow_bitfield |= light_bit;
+					}
+				}
+
+				light = light->next_ptr;
+			}
+
+			// now compare to previous
+			if ((r_ris.light_region.light_bitfield != light_bitfield) || (r_ris.light_region.shadow_bitfield != shadow_bitfield)) {
+				light_allow_join = false;
+
+				r_ris.light_region.light_bitfield = light_bitfield;
+				r_ris.light_region.shadow_bitfield = shadow_bitfield;
+			} else {
+				// only do these checks if necessary
+				if (join && (!r_batch_break)) {
+
+					// we still can't join, even if the lights are exactly the same, if there is overlap between the previous and this item
+					if (r_ris.joined_item && light_bitfield) {
+						if ((int)r_ris.joined_item->num_item_refs <= bdata.settings_light_max_join_items) {
+							for (uint32_t r = 0; r < r_ris.joined_item->num_item_refs; r++) {
+								Item *pRefItem = bdata.item_refs[r_ris.joined_item->first_item_ref + r].item;
+								if (p_ci->global_rect_cache.intersects(pRefItem->global_rect_cache)) {
+									light_allow_join = false;
+									break;
+								}
+							}
+
+#ifdef DEBUG_ENABLED
+							if (light_allow_join) {
+								bdata.stats_light_items_joined++;
+							}
+#endif
+
+						} // if below max join items
+						else {
+							// just don't allow joining if above overlap check max items
+							light_allow_join = false;
+						}
+					}
+
+				} // if not batch broken already (no point in doing expensive overlap tests if not needed)
+			} // if bitfields don't match
+		} // if do light joining
+
+		if (!light_allow_join) {
+			// can't join
+			join = false;
+		}
+
+	} else {
+		// if the last item had lights, we should not join it to this one (which has no lights)
+		if (r_ris.light_region.light_bitfield || r_ris.light_region.shadow_bitfield) {
+			join = false;
+
+			// setting these to zero ensures that any following item with lights will, by definition,
+			// be affected by a different set of lights, and thus prevent a join
+			r_ris.light_region.light_bitfield = 0;
+			r_ris.light_region.shadow_bitfield = 0;
+		}
 	}
 
 	if (reclip) {
@@ -2327,7 +2855,6 @@ void RasterizerCanvasGLES2::_canvas_render_item(Item *p_ci, RenderItemState &r_r
 						ci->final_modulate.b * p_modulate.b,
 						ci->final_modulate.a * p_modulate.a );
 
-
 			state.canvas_shader.set_uniform(CanvasShaderGLES2::MODELVIEW_MATRIX,state.final_transform);
 			state.canvas_shader.set_uniform(CanvasShaderGLES2::EXTRA_MATRIX,Transform2D());
 			state.canvas_shader.set_uniform(CanvasShaderGLES2::FINAL_MODULATE,state.canvas_item_modulate);
@@ -2358,9 +2885,18 @@ void RasterizerCanvasGLES2::render_joined_item(const BItemJoined &p_bij, RenderI
 
 	storage->info.render._2d_item_count++;
 
+#ifdef DEBUG_ENABLED
 	if (bdata.diagnose_frame) {
 		bdata.frame_string += "\tjoined_item " + itos(p_bij.num_item_refs) + " refs\n";
+		if (p_bij.z_index != 0) {
+			bdata.frame_string += "\t\t(z " + itos(p_bij.z_index) + ")\n";
+		}
 	}
+#endif
+
+	// this must be reset for each joined item,
+	// it only exists to prevent capturing the screen more than once per item
+	state.canvas_texscreen_used = false;
 
 	// all the joined items will share the same state with the first item
 	Item *ci = bdata.item_refs[p_bij.first_item_ref].item;
@@ -2584,7 +3120,7 @@ void RasterizerCanvasGLES2::render_joined_item(const BItemJoined &p_bij, RenderI
 	// using software transform
 	if (!p_bij.use_hardware_transform()) {
 		state.uniforms.modelview_matrix = Transform2D();
-		// final_modulate will be baked per item ref and multiplied by a NULL final modulate in the shader
+		// final_modulate will be baked per item ref so the final_modulate can be an identity color
 		state.uniforms.final_modulate = Color(1, 1, 1, 1);
 	} else {
 		state.uniforms.modelview_matrix = ci->final_transform;
@@ -2596,7 +3132,7 @@ void RasterizerCanvasGLES2::render_joined_item(const BItemJoined &p_bij, RenderI
 	_set_uniforms();
 
 	if (unshaded || (state.uniforms.final_modulate.a > 0.001 && (!r_ris.shader_cache || r_ris.shader_cache->canvas_item.light_mode != RasterizerStorageGLES2::Shader::CanvasItem::LIGHT_MODE_LIGHT_ONLY) && !ci->light_masked))
-		render_joined_item_commands(p_bij, NULL, reclip, material_ptr);
+		render_joined_item_commands(p_bij, NULL, reclip, material_ptr, false);
 
 	r_ris.rebind_shader = true; // hacked in for now.
 
@@ -2605,13 +3141,20 @@ void RasterizerCanvasGLES2::render_joined_item(const BItemJoined &p_bij, RenderI
 		Light *light = r_ris.item_group_light;
 		bool light_used = false;
 		VS::CanvasLightMode mode = VS::CANVAS_LIGHT_MODE_ADD;
-		state.uniforms.final_modulate = ci->final_modulate; // remove the canvas modulate
+
+		// we leave this set to 1, 1, 1, 1 if using software because the colors are baked into the vertices
+		if (p_bij.use_hardware_transform()) {
+			state.uniforms.final_modulate = ci->final_modulate; // remove the canvas modulate
+		}
 
 		while (light) {
 
 			// use the bounding rect of the joined items, NOT only the bounding rect of the first item.
 			// note this is a cost of batching, the light culling will be less effective
-			if (ci->light_mask & light->item_mask && r_ris.item_group_z >= light->z_min && r_ris.item_group_z <= light->z_max && p_bij.bounding_rect.intersects_transformed(light->xform_cache, light->rect_cache)) {
+
+			// note that the r_ris.item_group_z will be out of date because we are using deferred rendering till canvas_render_items_end()
+			// so we have to test z against the stored value in the joined item
+			if (ci->light_mask & light->item_mask && p_bij.z_index >= light->z_min && p_bij.z_index <= light->z_max && p_bij.bounding_rect.intersects_transformed(light->xform_cache, light->rect_cache)) {
 
 				//intersects this light
 
@@ -2683,10 +3226,10 @@ void RasterizerCanvasGLES2::render_joined_item(const BItemJoined &p_bij, RenderI
 				// this can greatly reduce fill rate ..
 				// at the cost of glScissor commands, so is optional
 				if (!bdata.settings_scissor_lights || r_ris.current_clip) {
-					render_joined_item_commands(p_bij, NULL, reclip, material_ptr);
+					render_joined_item_commands(p_bij, NULL, reclip, material_ptr, true);
 				} else {
 					bool scissor = _light_scissor_begin(p_bij.bounding_rect, light->xform_cache, light->rect_cache);
-					render_joined_item_commands(p_bij, NULL, reclip, material_ptr);
+					render_joined_item_commands(p_bij, NULL, reclip, material_ptr, true);
 					if (scissor) {
 						glDisable(GL_SCISSOR_TEST);
 					}
@@ -2720,7 +3263,6 @@ void RasterizerCanvasGLES2::render_joined_item(const BItemJoined &p_bij, RenderI
 						ci->final_modulate.g * p_modulate.g,
 						ci->final_modulate.b * p_modulate.b,
 						ci->final_modulate.a * p_modulate.a );
-
 
 			state.canvas_shader.set_uniform(CanvasShaderGLES2::MODELVIEW_MATRIX,state.final_transform);
 			state.canvas_shader.set_uniform(CanvasShaderGLES2::EXTRA_MATRIX,Transform2D());
@@ -2840,28 +3382,52 @@ void RasterizerCanvasGLES2::_calculate_scissor_threshold_area() {
 void RasterizerCanvasGLES2::initialize() {
 	RasterizerCanvasBaseGLES2::initialize();
 
-	bdata.settings_use_batching = GLOBAL_GET("rendering/gles2/batching/use_batching");
-	bdata.settings_max_join_item_commands = GLOBAL_GET("rendering/gles2/batching/max_join_item_commands");
-	bdata.settings_colored_vertex_format_threshold = GLOBAL_GET("rendering/gles2/batching/colored_vertex_format_threshold");
+	bdata.settings_use_batching = GLOBAL_GET("rendering/batching/options/use_batching");
+	bdata.settings_max_join_item_commands = GLOBAL_GET("rendering/batching/parameters/max_join_item_commands");
+	bdata.settings_colored_vertex_format_threshold = GLOBAL_GET("rendering/batching/parameters/colored_vertex_format_threshold");
+	bdata.settings_item_reordering_lookahead = GLOBAL_GET("rendering/batching/parameters/item_reordering_lookahead");
+	bdata.settings_light_max_join_items = GLOBAL_GET("rendering/batching/lights/max_join_items");
+	bdata.settings_use_single_rect_fallback = GLOBAL_GET("rendering/batching/options/single_rect_fallback");
+
+	// alternatively only enable uv contract if pixel snap in use,
+	// but with this enable bool, it should not be necessary
+	bdata.settings_uv_contract = GLOBAL_GET("rendering/batching/precision/uv_contract");
+	bdata.settings_uv_contract_amount = (float)GLOBAL_GET("rendering/batching/precision/uv_contract_amount") / 1000000.0f;
 
 	// we can use the threshold to determine whether to turn scissoring off or on
-	bdata.settings_scissor_threshold = GLOBAL_GET("rendering/gles2/batching/light_scissor_area_threshold");
+	bdata.settings_scissor_threshold = GLOBAL_GET("rendering/batching/lights/scissor_area_threshold");
 	if (bdata.settings_scissor_threshold > 0.999f) {
 		bdata.settings_scissor_lights = false;
 	} else {
 		bdata.settings_scissor_lights = true;
+
+		// apply power of 4 relationship for the area, as most of the important changes
+		// will be happening at low values of scissor threshold
+		bdata.settings_scissor_threshold *= bdata.settings_scissor_threshold;
+		bdata.settings_scissor_threshold *= bdata.settings_scissor_threshold;
 	}
 
 	// The sweet spot on my desktop for cache is actually smaller than the max, and this
 	// is the default. This saves memory too so we will use it for now, needs testing to see whether this varies according
 	// to device / platform.
-	bdata.settings_batch_buffer_num_verts = GLOBAL_GET("rendering/gles2/batching/batch_buffer_size");
+	bdata.settings_batch_buffer_num_verts = GLOBAL_GET("rendering/batching/parameters/batch_buffer_size");
 
 	// override the use_batching setting in the editor
 	// (note that if the editor can't start, you can't change the use_batching project setting!)
 	if (Engine::get_singleton()->is_editor_hint()) {
-		bool use_in_editor = GLOBAL_GET("rendering/gles2/debug/use_batching_in_editor");
+		bool use_in_editor = GLOBAL_GET("rendering/batching/options/use_batching_in_editor");
 		bdata.settings_use_batching = use_in_editor;
+
+		// fix some settings in the editor, as the performance not worth the risk
+		bdata.settings_use_single_rect_fallback = false;
+	}
+
+	// if we are using batching, we will purposefully disable the nvidia workaround.
+	// This is because the only reason to use the single rect fallback is the approx 2x speed
+	// of the uniform drawing technique. If we used nvidia workaround, speed would be
+	// approx equal to the batcher drawing technique (indexed primitive + VB).
+	if (bdata.settings_use_batching) {
+		use_nvidia_rect_workaround = false;
 	}
 
 	// For debugging, if flash is set in project settings, it will flash on alternate frames
@@ -2870,7 +3436,7 @@ void RasterizerCanvasGLES2::initialize() {
 	// This should not be used except during development.
 	// make a note of the original choice in case we are flashing on and off the batching
 	bdata.settings_use_batching_original_choice = bdata.settings_use_batching;
-	bdata.settings_flash_batching = GLOBAL_GET("rendering/gles2/debug/flash_batching");
+	bdata.settings_flash_batching = GLOBAL_GET("rendering/batching/debug/flash_batching");
 	if (!bdata.settings_use_batching) {
 		// no flash when batching turned off
 		bdata.settings_flash_batching = false;
@@ -2879,7 +3445,7 @@ void RasterizerCanvasGLES2::initialize() {
 	// frame diagnosis. print out the batches every nth frame
 	bdata.settings_diagnose_frame = false;
 	if (!Engine::get_singleton()->is_editor_hint() && bdata.settings_use_batching) {
-		bdata.settings_diagnose_frame = GLOBAL_GET("rendering/gles2/debug/diagnose_frame");
+		bdata.settings_diagnose_frame = GLOBAL_GET("rendering/batching/debug/diagnose_frame");
 	}
 
 	// the maximum num quads in a batch is limited by GLES2. We can have only 16 bit indices,
@@ -2898,21 +3464,31 @@ void RasterizerCanvasGLES2::initialize() {
 	bdata.settings_max_join_item_commands = CLAMP(bdata.settings_max_join_item_commands, 0, 65535);
 	bdata.settings_colored_vertex_format_threshold = CLAMP(bdata.settings_colored_vertex_format_threshold, 0.0f, 1.0f);
 	bdata.settings_scissor_threshold = CLAMP(bdata.settings_scissor_threshold, 0.0f, 1.0f);
+	bdata.settings_light_max_join_items = CLAMP(bdata.settings_light_max_join_items, 0, 65535);
+	bdata.settings_item_reordering_lookahead = CLAMP(bdata.settings_item_reordering_lookahead, 0, 65535);
 
 	// for debug purposes, output a string with the batching options
 	String batching_options_string = "OpenGL ES 2.0 Batching: ";
 	if (bdata.settings_use_batching) {
-		batching_options_string += "ON\n\tOPTIONS\n";
-		batching_options_string += "\tmax_join_item_commands " + itos(bdata.settings_max_join_item_commands) + "\n";
-		batching_options_string += "\tcolored_vertex_format_threshold " + String(Variant(bdata.settings_colored_vertex_format_threshold)) + "\n";
-		batching_options_string += "\tbatch_buffer_size " + itos(bdata.settings_batch_buffer_num_verts) + "\n";
-		batching_options_string += "\tlight_scissor_area_threshold " + String(Variant(bdata.settings_scissor_threshold)) + "\n";
-		batching_options_string += "\tdebug_flash " + String(Variant(bdata.settings_flash_batching)) + "\n";
-		batching_options_string += "\tdiagnose_frame " + String(Variant(bdata.settings_diagnose_frame));
-	} else {
-		batching_options_string += "OFF";
+		batching_options_string += "ON";
+
+		if (OS::get_singleton()->is_stdout_verbose()) {
+			batching_options_string += "\n\tOPTIONS\n";
+			batching_options_string += "\tmax_join_item_commands " + itos(bdata.settings_max_join_item_commands) + "\n";
+			batching_options_string += "\tcolored_vertex_format_threshold " + String(Variant(bdata.settings_colored_vertex_format_threshold)) + "\n";
+			batching_options_string += "\tbatch_buffer_size " + itos(bdata.settings_batch_buffer_num_verts) + "\n";
+			batching_options_string += "\tlight_scissor_area_threshold " + String(Variant(bdata.settings_scissor_threshold)) + "\n";
+
+			batching_options_string += "\titem_reordering_lookahead " + itos(bdata.settings_item_reordering_lookahead) + "\n";
+			batching_options_string += "\tlight_max_join_items " + itos(bdata.settings_light_max_join_items) + "\n";
+			batching_options_string += "\tsingle_rect_fallback " + String(Variant(bdata.settings_use_single_rect_fallback)) + "\n";
+
+			batching_options_string += "\tdebug_flash " + String(Variant(bdata.settings_flash_batching)) + "\n";
+			batching_options_string += "\tdiagnose_frame " + String(Variant(bdata.settings_diagnose_frame));
+		}
+
+		print_line(batching_options_string);
 	}
-	print_line(batching_options_string);
 
 	// special case, for colored vertex format threshold.
 	// as the comparison is >=, we want to be able to totally turn on or off

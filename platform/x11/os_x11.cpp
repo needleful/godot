@@ -29,14 +29,14 @@
 /*************************************************************************/
 
 #include "os_x11.h"
-#include "detect_prime.h"
 
 #include "core/os/dir_access.h"
 #include "core/print_string.h"
+#include "detect_prime.h"
 #include "drivers/gles2/rasterizer_gles2.h"
 #include "drivers/gles3/rasterizer_gles3.h"
-#include "errno.h"
 #include "key_mapping_x11.h"
+#include "main/main.h"
 #include "servers/visual/visual_server_raster.h"
 #include "servers/visual/visual_server_wrap_mt.h"
 
@@ -44,14 +44,15 @@
 #include <mntent.h>
 #endif
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "X11/Xutil.h"
+#include <X11/Xatom.h>
+#include <X11/Xutil.h>
+#include <X11/extensions/Xinerama.h>
 
-#include "X11/Xatom.h"
-#include "X11/extensions/Xinerama.h"
 // ICCCM
 #define WM_NormalState 1L // window normal state
 #define WM_IconicState 3L // window minimized
@@ -59,8 +60,6 @@
 #define _NET_WM_STATE_REMOVE 0L // remove/unset property
 #define _NET_WM_STATE_ADD 1L // add/set property
 #define _NET_WM_STATE_TOGGLE 2L // toggle property
-
-#include "main/main.h"
 
 #include <dlfcn.h>
 #include <fcntl.h>
@@ -72,8 +71,6 @@
 #ifdef KEY_TAB
 #undef KEY_TAB
 #endif
-
-#include <X11/Xatom.h>
 
 #undef CursorShape
 
@@ -664,13 +661,16 @@ bool OS_X11::refresh_device_info() {
 		bool absolute_mode = false;
 		int resolution_x = 0;
 		int resolution_y = 0;
-		double range_min_x = 0;
-		double range_min_y = 0;
-		double range_max_x = 0;
-		double range_max_y = 0;
-		int pressure_resolution = 0;
-		int tilt_resolution_x = 0;
-		int tilt_resolution_y = 0;
+		double abs_x_min = 0;
+		double abs_x_max = 0;
+		double abs_y_min = 0;
+		double abs_y_max = 0;
+		double pressure_min = 0;
+		double pressure_max = 0;
+		double tilt_x_min = 0;
+		double tilt_x_max = 0;
+		double tilt_y_min = 0;
+		double tilt_y_max = 0;
 		for (int j = 0; j < dev->num_classes; j++) {
 #ifdef TOUCH_ENABLED
 			if (dev->classes[j]->type == XITouchClass && ((XITouchClassInfo *)dev->classes[j])->mode == XIDirectTouch) {
@@ -682,23 +682,23 @@ bool OS_X11::refresh_device_info() {
 
 				if (class_info->number == VALUATOR_ABSX && class_info->mode == XIModeAbsolute) {
 					resolution_x = class_info->resolution;
-					range_min_x = class_info->min;
-					range_max_x = class_info->max;
+					abs_x_min = class_info->min;
+					abs_y_max = class_info->max;
 					absolute_mode = true;
 				} else if (class_info->number == VALUATOR_ABSY && class_info->mode == XIModeAbsolute) {
 					resolution_y = class_info->resolution;
-					range_min_y = class_info->min;
-					range_max_y = class_info->max;
+					abs_y_min = class_info->min;
+					abs_y_max = class_info->max;
 					absolute_mode = true;
 				} else if (class_info->number == VALUATOR_PRESSURE && class_info->mode == XIModeAbsolute) {
-					pressure_resolution = (class_info->max - class_info->min);
-					if (pressure_resolution == 0) pressure_resolution = 1;
+					pressure_min = class_info->min;
+					pressure_max = class_info->max;
 				} else if (class_info->number == VALUATOR_TILTX && class_info->mode == XIModeAbsolute) {
-					tilt_resolution_x = (class_info->max - class_info->min);
-					if (tilt_resolution_x == 0) tilt_resolution_x = 1;
+					tilt_x_min = class_info->min;
+					tilt_x_max = class_info->max;
 				} else if (class_info->number == VALUATOR_TILTY && class_info->mode == XIModeAbsolute) {
-					tilt_resolution_y = (class_info->max - class_info->min);
-					if (tilt_resolution_y == 0) tilt_resolution_y = 1;
+					tilt_x_min = class_info->min;
+					tilt_x_max = class_info->max;
 				}
 			}
 		}
@@ -709,18 +709,19 @@ bool OS_X11::refresh_device_info() {
 		if (absolute_mode) {
 			// If no resolution was reported, use the min/max ranges.
 			if (resolution_x <= 0) {
-				resolution_x = (range_max_x - range_min_x) * abs_resolution_range_mult;
+				resolution_x = (abs_x_max - abs_x_min) * abs_resolution_range_mult;
 			}
 			if (resolution_y <= 0) {
-				resolution_y = (range_max_y - range_min_y) * abs_resolution_range_mult;
+				resolution_y = (abs_y_max - abs_y_min) * abs_resolution_range_mult;
 			}
-
 			xi.absolute_devices[dev->deviceid] = Vector2(abs_resolution_mult / resolution_x, abs_resolution_mult / resolution_y);
 			print_verbose("XInput: Absolute pointing device: " + String(dev->name));
 		}
 
 		xi.pressure = 0;
-		xi.pen_devices[dev->deviceid] = Vector3(pressure_resolution, tilt_resolution_x, tilt_resolution_y);
+		xi.pen_pressure_range[dev->deviceid] = Vector2(pressure_min, pressure_max);
+		xi.pen_tilt_x_range[dev->deviceid] = Vector2(tilt_x_min, tilt_x_max);
+		xi.pen_tilt_y_range[dev->deviceid] = Vector2(tilt_y_min, tilt_y_max);
 	}
 
 	XIFreeDeviceInfo(info);
@@ -960,7 +961,6 @@ void OS_X11::set_window_per_pixel_transparency_enabled(bool p_enabled) {
 	if (!is_layered_allowed()) return;
 	if (layered_window != p_enabled) {
 		if (p_enabled) {
-			set_borderless_window(true);
 			layered_window = true;
 		} else {
 			layered_window = false;
@@ -1501,6 +1501,7 @@ bool OS_X11::is_window_minimized() const {
 	unsigned long len;
 	unsigned long remaining;
 	unsigned char *data = NULL;
+	bool retval = false;
 
 	int result = XGetWindowProperty(
 			x11_display,
@@ -1518,10 +1519,13 @@ bool OS_X11::is_window_minimized() const {
 
 	if (result == Success) {
 		long *state = (long *)data;
-		if (state[0] == WM_IconicState)
-			return true;
+		if (state[0] == WM_IconicState) {
+			retval = true;
+		}
+		XFree(data);
 	}
-	return false;
+
+	return retval;
 }
 
 void OS_X11::set_window_maximized(bool p_enabled) {
@@ -1557,13 +1561,16 @@ void OS_X11::set_window_maximized(bool p_enabled) {
 	maximized = p_enabled;
 }
 
-bool OS_X11::is_window_maximize_allowed() {
-	Atom property = XInternAtom(x11_display, "_NET_WM_ALLOWED_ACTIONS", False);
+// Just a helper to reduce code duplication in `is_window_maximize_allowed`
+// and `is_window_maximized`.
+bool OS_X11::window_maximize_check(const char *p_atom_name) const {
+	Atom property = XInternAtom(x11_display, p_atom_name, False);
 	Atom type;
 	int format;
 	unsigned long len;
 	unsigned long remaining;
 	unsigned char *data = NULL;
+	bool retval = false;
 
 	int result = XGetWindowProperty(
 			x11_display,
@@ -1592,61 +1599,25 @@ bool OS_X11::is_window_maximize_allowed() {
 			if (atoms[i] == wm_act_max_vert)
 				found_wm_act_max_vert = true;
 
-			if (found_wm_act_max_horz || found_wm_act_max_vert)
-				return true;
-		}
-		XFree(atoms);
-	}
-
-	return false;
-}
-
-bool OS_X11::is_window_maximized() const {
-	// Using EWMH -- Extended Window Manager Hints
-	Atom property = XInternAtom(x11_display, "_NET_WM_STATE", False);
-	Atom type;
-	int format;
-	unsigned long len;
-	unsigned long remaining;
-	unsigned char *data = NULL;
-	bool retval = false;
-
-	int result = XGetWindowProperty(
-			x11_display,
-			x11_window,
-			property,
-			0,
-			1024,
-			False,
-			XA_ATOM,
-			&type,
-			&format,
-			&len,
-			&remaining,
-			&data);
-
-	if (result == Success) {
-		Atom *atoms = (Atom *)data;
-		Atom wm_max_horz = XInternAtom(x11_display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
-		Atom wm_max_vert = XInternAtom(x11_display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
-		bool found_wm_max_horz = false;
-		bool found_wm_max_vert = false;
-
-		for (uint64_t i = 0; i < len; i++) {
-			if (atoms[i] == wm_max_horz)
-				found_wm_max_horz = true;
-			if (atoms[i] == wm_max_vert)
-				found_wm_max_vert = true;
-
-			if (found_wm_max_horz && found_wm_max_vert) {
+			if (found_wm_act_max_horz || found_wm_act_max_vert) {
 				retval = true;
 				break;
 			}
 		}
+
+		XFree(data);
 	}
 
-	XFree(data);
 	return retval;
+}
+
+bool OS_X11::is_window_maximize_allowed() const {
+	return window_maximize_check("_NET_WM_ALLOWED_ACTIONS");
+}
+
+bool OS_X11::is_window_maximized() const {
+	// Using EWMH -- Extended Window Manager Hints
+	return window_maximize_check("_NET_WM_STATE");
 }
 
 void OS_X11::set_window_always_on_top(bool p_enabled) {
@@ -1678,9 +1649,6 @@ void OS_X11::set_borderless_window(bool p_borderless) {
 
 	if (get_borderless_window() == p_borderless)
 		return;
-
-	if (!p_borderless && layered_window)
-		set_window_per_pixel_transparency_enabled(false);
 
 	current_videomode.borderless_window = p_borderless;
 
@@ -2079,6 +2047,10 @@ void OS_X11::process_xevents() {
 	// Is the current mouse mode one where it needs to be grabbed.
 	bool mouse_mode_grab = mouse_mode == MOUSE_MODE_CAPTURED || mouse_mode == MOUSE_MODE_CONFINED;
 
+	xi.pressure = 0;
+	xi.tilt = Vector2();
+	xi.pressure_supported = false;
+
 	while (XPending(x11_display) > 0) {
 		XEvent event;
 		XNextEvent(x11_display, &event);
@@ -2115,9 +2087,6 @@ void OS_X11::process_xevents() {
 
 						double rel_x = 0.0;
 						double rel_y = 0.0;
-						double pressure = 0.0;
-						double tilt_x = 0.0;
-						double tilt_y = 0.0;
 
 						if (XIMaskIsSet(raw_event->valuators.mask, VALUATOR_ABSX)) {
 							rel_x = *values;
@@ -2130,24 +2099,41 @@ void OS_X11::process_xevents() {
 						}
 
 						if (XIMaskIsSet(raw_event->valuators.mask, VALUATOR_PRESSURE)) {
-							pressure = *values;
+							Map<int, Vector2>::Element *pen_pressure = xi.pen_pressure_range.find(device_id);
+							if (pen_pressure) {
+								Vector2 pen_pressure_range = pen_pressure->value();
+								if (pen_pressure_range != Vector2()) {
+									xi.pressure_supported = true;
+									xi.pressure = (*values - pen_pressure_range[0]) /
+												  (pen_pressure_range[1] - pen_pressure_range[0]);
+								}
+							}
+
 							values++;
 						}
 
 						if (XIMaskIsSet(raw_event->valuators.mask, VALUATOR_TILTX)) {
-							tilt_x = *values;
+							Map<int, Vector2>::Element *pen_tilt_x = xi.pen_tilt_x_range.find(device_id);
+							if (pen_tilt_x) {
+								Vector2 pen_tilt_x_range = pen_tilt_x->value();
+								if (pen_tilt_x_range != Vector2()) {
+									xi.tilt.x = ((*values - pen_tilt_x_range[0]) / (pen_tilt_x_range[1] - pen_tilt_x_range[0])) * 2 - 1;
+								}
+							}
+
 							values++;
 						}
 
 						if (XIMaskIsSet(raw_event->valuators.mask, VALUATOR_TILTY)) {
-							tilt_y = *values;
-						}
+							Map<int, Vector2>::Element *pen_tilt_y = xi.pen_tilt_y_range.find(device_id);
+							if (pen_tilt_y) {
+								Vector2 pen_tilt_y_range = pen_tilt_y->value();
+								if (pen_tilt_y_range != Vector2()) {
+									xi.tilt.y = ((*values - pen_tilt_y_range[0]) / (pen_tilt_y_range[1] - pen_tilt_y_range[0])) * 2 - 1;
+								}
+							}
 
-						Map<int, Vector3>::Element *pen_info = xi.pen_devices.find(device_id);
-						if (pen_info) {
-							Vector3 mult = pen_info->value();
-							if (mult.x != 0.0) xi.pressure = pressure / mult.x;
-							if ((mult.y != 0.0) && (mult.z != 0.0)) xi.tilt = Vector2(tilt_x / mult.y, tilt_y / mult.z);
+							values++;
 						}
 
 						// https://bugs.freedesktop.org/show_bug.cgi?id=71609
@@ -2465,7 +2451,11 @@ void OS_X11::process_xevents() {
 				Ref<InputEventMouseMotion> mm;
 				mm.instance();
 
-				mm->set_pressure(xi.pressure);
+				if (xi.pressure_supported) {
+					mm->set_pressure(xi.pressure);
+				} else {
+					mm->set_pressure((get_mouse_button_state() & (1 << (BUTTON_LEFT - 1))) ? 1.0f : 0.0f);
+				}
 				mm->set_tilt(xi.tilt);
 
 				// Make the absolute position integral so it doesn't look _too_ weird :)
@@ -3450,6 +3440,108 @@ OS::LatinKeyboardVariant OS_X11::get_latin_keyboard_variant() const {
 	}
 
 	return LATIN_KEYBOARD_QWERTY;
+}
+
+int OS_X11::keyboard_get_layout_count() const {
+	int _group_count = 0;
+	XkbDescRec *kbd = XkbAllocKeyboard();
+	if (kbd) {
+		kbd->dpy = x11_display;
+		XkbGetControls(x11_display, XkbAllControlsMask, kbd);
+		XkbGetNames(x11_display, XkbSymbolsNameMask, kbd);
+
+		const Atom *groups = kbd->names->groups;
+		if (kbd->ctrls != NULL) {
+			_group_count = kbd->ctrls->num_groups;
+		} else {
+			while (_group_count < XkbNumKbdGroups && groups[_group_count] != None) {
+				_group_count++;
+			}
+		}
+		XkbFreeKeyboard(kbd, 0, true);
+	}
+	return _group_count;
+}
+
+int OS_X11::keyboard_get_current_layout() const {
+	XkbStateRec state;
+	XkbGetState(x11_display, XkbUseCoreKbd, &state);
+	return state.group;
+}
+
+void OS_X11::keyboard_set_current_layout(int p_index) {
+	ERR_FAIL_INDEX(p_index, keyboard_get_layout_count());
+	XkbLockGroup(x11_display, XkbUseCoreKbd, p_index);
+}
+
+String OS_X11::keyboard_get_layout_language(int p_index) const {
+	String ret;
+	XkbDescRec *kbd = XkbAllocKeyboard();
+	if (kbd) {
+		kbd->dpy = x11_display;
+		XkbGetControls(x11_display, XkbAllControlsMask, kbd);
+		XkbGetNames(x11_display, XkbSymbolsNameMask, kbd);
+		XkbGetNames(x11_display, XkbGroupNamesMask, kbd);
+
+		int _group_count = 0;
+		const Atom *groups = kbd->names->groups;
+		if (kbd->ctrls != NULL) {
+			_group_count = kbd->ctrls->num_groups;
+		} else {
+			while (_group_count < XkbNumKbdGroups && groups[_group_count] != None) {
+				_group_count++;
+			}
+		}
+
+		Atom names = kbd->names->symbols;
+		if (names != None) {
+			char *name = XGetAtomName(x11_display, names);
+			Vector<String> info = String(name).split("+");
+			if (p_index >= 0 && p_index < _group_count) {
+				if (p_index + 1 < info.size()) {
+					ret = info[p_index + 1]; // Skip "pc" at the start and "inet"/"group" at the end of symbols.
+				} else {
+					ret = "en"; // No symbol for layout fallback to "en".
+				}
+			} else {
+				ERR_PRINT("Index " + itos(p_index) + "is out of bounds (" + itos(_group_count) + ").");
+			}
+			XFree(name);
+		}
+		XkbFreeKeyboard(kbd, 0, true);
+	}
+	return ret.substr(0, 2);
+}
+
+String OS_X11::keyboard_get_layout_name(int p_index) const {
+	String ret;
+	XkbDescRec *kbd = XkbAllocKeyboard();
+	if (kbd) {
+		kbd->dpy = x11_display;
+		XkbGetControls(x11_display, XkbAllControlsMask, kbd);
+		XkbGetNames(x11_display, XkbSymbolsNameMask, kbd);
+		XkbGetNames(x11_display, XkbGroupNamesMask, kbd);
+
+		int _group_count = 0;
+		const Atom *groups = kbd->names->groups;
+		if (kbd->ctrls != NULL) {
+			_group_count = kbd->ctrls->num_groups;
+		} else {
+			while (_group_count < XkbNumKbdGroups && groups[_group_count] != None) {
+				_group_count++;
+			}
+		}
+
+		if (p_index >= 0 && p_index < _group_count) {
+			char *full_name = XGetAtomName(x11_display, groups[p_index]);
+			ret.parse_utf8(full_name);
+			XFree(full_name);
+		} else {
+			ERR_PRINT("Index " + itos(p_index) + "is out of bounds (" + itos(_group_count) + ").");
+		}
+		XkbFreeKeyboard(kbd, 0, true);
+	}
+	return ret;
 }
 
 void OS_X11::update_real_mouse_position() {

@@ -158,6 +158,7 @@ class ViewportRotationControl : public Control {
 	SpatialEditorViewport *viewport = nullptr;
 	Vector<Color> axis_colors;
 	Vector<int> axis_menu_options;
+	Vector2i orbiting_mouse_start;
 	bool orbiting = false;
 	int focused_axis = -2;
 
@@ -225,6 +226,12 @@ public:
 		NAVIGATION_MODO,
 	};
 
+	enum FreelookNavigationScheme {
+		FREELOOK_DEFAULT,
+		FREELOOK_PARTIALLY_AXIS_LOCKED,
+		FREELOOK_FULLY_AXIS_LOCKED,
+	};
+
 private:
 	int index;
 	String name;
@@ -259,8 +266,8 @@ private:
 
 	bool freelook_active;
 	real_t freelook_speed;
+	Vector2 previous_mouse_position;
 
-	TextureRect *crosshair;
 	Label *info_label;
 	Label *cinema_label;
 	Label *locked_label;
@@ -368,7 +375,9 @@ private:
 		Point2 region_begin, region_end;
 
 		Cursor() {
-			x_rot = y_rot = 0.5;
+			// These rotations place the camera in +X +Y +Z, aka south east, facing north west.
+			x_rot = 0.5;
+			y_rot = -0.5;
 			distance = 4;
 			region_select = false;
 		}
@@ -828,12 +837,11 @@ public:
 	static const int HIDDEN = 1;
 	static const int ON_TOP = 2;
 
-private:
+protected:
 	int current_state;
 	List<EditorSpatialGizmo *> current_gizmos;
 	HashMap<String, Vector<Ref<SpatialMaterial> > > materials;
 
-protected:
 	static void _bind_methods();
 	virtual bool has_gizmo(Spatial *p_spatial);
 	virtual Ref<EditorSpatialGizmo> create_gizmo(Spatial *p_spatial);

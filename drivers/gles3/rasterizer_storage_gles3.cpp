@@ -244,24 +244,24 @@ Ref<Image> RasterizerStorageGLES3::_get_gl_image_and_format(const Ref<Image> &p_
 
 		} break;
 		case Image::FORMAT_RH: {
-			r_gl_internal_format = GL_R32F;
+			r_gl_internal_format = GL_R16F;
 			r_gl_format = GL_RED;
 			r_gl_type = GL_HALF_FLOAT;
 		} break;
 		case Image::FORMAT_RGH: {
-			r_gl_internal_format = GL_RG32F;
+			r_gl_internal_format = GL_RG16F;
 			r_gl_format = GL_RG;
 			r_gl_type = GL_HALF_FLOAT;
 
 		} break;
 		case Image::FORMAT_RGBH: {
-			r_gl_internal_format = GL_RGB32F;
+			r_gl_internal_format = GL_RGB16F;
 			r_gl_format = GL_RGB;
 			r_gl_type = GL_HALF_FLOAT;
 
 		} break;
 		case Image::FORMAT_RGBAH: {
-			r_gl_internal_format = GL_RGBA32F;
+			r_gl_internal_format = GL_RGBA16F;
 			r_gl_format = GL_RGBA;
 			r_gl_type = GL_HALF_FLOAT;
 
@@ -666,7 +666,11 @@ void RasterizerStorageGLES3::texture_allocate(RID p_texture, int p_width, int p_
 			texture->images.resize(1);
 		} break;
 		case VS::TEXTURE_TYPE_EXTERNAL: {
+#ifdef ANDROID_ENABLED
 			texture->target = _GL_TEXTURE_EXTERNAL_OES;
+#else
+			texture->target = GL_TEXTURE_2D;
+#endif
 			texture->images.resize(0);
 		} break;
 		case VS::TEXTURE_TYPE_CUBEMAP: {
@@ -837,7 +841,11 @@ void RasterizerStorageGLES3::texture_set_data(RID p_texture, const Ref<Image> &p
 	texture->ignore_mipmaps = compressed && !img->has_mipmaps();
 
 	if ((texture->flags & VS::TEXTURE_FLAG_MIPMAPS) && !texture->ignore_mipmaps)
-		glTexParameteri(texture->target, GL_TEXTURE_MIN_FILTER, config.use_fast_texture_filter ? GL_LINEAR_MIPMAP_NEAREST : GL_LINEAR_MIPMAP_LINEAR);
+		if (texture->flags & VS::TEXTURE_FLAG_FILTER) {
+			glTexParameteri(texture->target, GL_TEXTURE_MIN_FILTER, config.use_fast_texture_filter ? GL_LINEAR_MIPMAP_NEAREST : GL_LINEAR_MIPMAP_LINEAR);
+		} else {
+			glTexParameteri(texture->target, GL_TEXTURE_MIN_FILTER, config.use_fast_texture_filter ? GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST_MIPMAP_LINEAR);
+		}
 	else {
 		if (texture->flags & VS::TEXTURE_FLAG_FILTER) {
 			glTexParameteri(texture->target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -1416,7 +1424,11 @@ void RasterizerStorageGLES3::texture_set_flags(RID p_texture, uint32_t p_flags) 
 		if (!had_mipmaps && texture->mipmaps == 1) {
 			glGenerateMipmap(texture->target);
 		}
-		glTexParameteri(texture->target, GL_TEXTURE_MIN_FILTER, config.use_fast_texture_filter ? GL_LINEAR_MIPMAP_NEAREST : GL_LINEAR_MIPMAP_LINEAR);
+		if (texture->flags & VS::TEXTURE_FLAG_FILTER) {
+			glTexParameteri(texture->target, GL_TEXTURE_MIN_FILTER, config.use_fast_texture_filter ? GL_LINEAR_MIPMAP_NEAREST : GL_LINEAR_MIPMAP_LINEAR);
+		} else {
+			glTexParameteri(texture->target, GL_TEXTURE_MIN_FILTER, config.use_fast_texture_filter ? GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST_MIPMAP_LINEAR);
+		}
 
 	} else {
 		if (texture->flags & VS::TEXTURE_FLAG_FILTER) {
@@ -2165,7 +2177,7 @@ void RasterizerStorageGLES3::sky_set_texture(RID p_sky, RID p_panorama, int p_ra
 			}
 
 			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, tmp_fb);
-			glFramebufferTextureLayer(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, sky->radiance, 0, lod);
+			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, sky->radiance, lod);
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, tmp_fb2);
 			glReadBuffer(GL_COLOR_ATTACHMENT0);
 			glBlitFramebuffer(0, 0, size, size * 2, 0, 0, size, size * 2, GL_COLOR_BUFFER_BIT, GL_NEAREST);
@@ -8137,6 +8149,8 @@ void RasterizerStorageGLES3::render_info_end_capture() {
 	info.snap.surface_switch_count = info.render.surface_switch_count - info.snap.surface_switch_count;
 	info.snap.shader_rebind_count = info.render.shader_rebind_count - info.snap.shader_rebind_count;
 	info.snap.vertices_count = info.render.vertices_count - info.snap.vertices_count;
+	info.snap._2d_item_count = info.render._2d_item_count - info.snap._2d_item_count;
+	info.snap._2d_draw_call_count = info.render._2d_draw_call_count - info.snap._2d_draw_call_count;
 }
 
 int RasterizerStorageGLES3::get_captured_render_info(VS::RenderInfo p_info) {
@@ -8162,6 +8176,12 @@ int RasterizerStorageGLES3::get_captured_render_info(VS::RenderInfo p_info) {
 		case VS::INFO_DRAW_CALLS_IN_FRAME: {
 			return info.snap.draw_call_count;
 		} break;
+		case VS::INFO_2D_ITEMS_IN_FRAME: {
+			return info.snap._2d_item_count;
+		} break;
+		case VS::INFO_2D_DRAW_CALLS_IN_FRAME: {
+			return info.snap._2d_draw_call_count;
+		} break;
 		default: {
 			return get_render_info(p_info);
 		}
@@ -8183,6 +8203,10 @@ int RasterizerStorageGLES3::get_render_info(VS::RenderInfo p_info) {
 			return info.render_final.surface_switch_count;
 		case VS::INFO_DRAW_CALLS_IN_FRAME:
 			return info.render_final.draw_call_count;
+		case VS::INFO_2D_ITEMS_IN_FRAME:
+			return info.render_final._2d_item_count;
+		case VS::INFO_2D_DRAW_CALLS_IN_FRAME:
+			return info.render_final._2d_draw_call_count;
 		case VS::INFO_USAGE_VIDEO_MEM_TOTAL:
 			return 0; //no idea
 		case VS::INFO_VIDEO_MEM_USED:

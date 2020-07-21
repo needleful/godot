@@ -195,12 +195,20 @@ void ViewportRotationControl::_gui_input(Ref<InputEvent> p_event) {
 				_update_focus();
 			}
 			orbiting = false;
+			if (Input::get_singleton()->get_mouse_mode() == Input::MOUSE_MODE_CAPTURED) {
+				Input::get_singleton()->set_mouse_mode(Input::MOUSE_MODE_VISIBLE);
+				Input::get_singleton()->warp_mouse_position(orbiting_mouse_start);
+			}
 		}
 	}
 
 	const Ref<InputEventMouseMotion> mm = p_event;
 	if (mm.is_valid()) {
 		if (orbiting) {
+			if (Input::get_singleton()->get_mouse_mode() == Input::MOUSE_MODE_VISIBLE) {
+				Input::get_singleton()->set_mouse_mode(Input::MOUSE_MODE_CAPTURED);
+				orbiting_mouse_start = mm->get_global_position();
+			}
 			viewport->_nav_orbit(mm, viewport->_get_warped_mouse_motion(mm));
 			focused_axis = -1;
 		} else {
@@ -669,17 +677,13 @@ void SpatialEditorViewport::_select_region() {
 		}
 	}
 
-	if (!orthogonal) {
-		Plane near(cam_pos, -_get_camera_normal());
-		near.d -= get_znear();
+	Plane near(cam_pos, -_get_camera_normal());
+	near.d -= get_znear();
+	frustum.push_back(near);
 
-		frustum.push_back(near);
-
-		Plane far = -near;
-		far.d += get_zfar();
-
-		frustum.push_back(far);
-	}
+	Plane far = -near;
+	far.d += get_zfar();
+	frustum.push_back(far);
 
 	Vector<ObjectID> instances = VisualServer::get_singleton()->instances_cull_convex(frustum, get_tree()->get_root()->get_world()->get_scenario());
 	Vector<Node *> selected;
@@ -2119,10 +2123,7 @@ void SpatialEditorViewport::_nav_orbit(Ref<InputEventWithModifiers> p_event, con
 		cursor.x_rot += p_relative.y * radians_per_pixel;
 	}
 	cursor.y_rot += p_relative.x * radians_per_pixel;
-	if (cursor.x_rot > Math_PI / 2.0)
-		cursor.x_rot = Math_PI / 2.0;
-	if (cursor.x_rot < -Math_PI / 2.0)
-		cursor.x_rot = -Math_PI / 2.0;
+	cursor.x_rot = CLAMP(cursor.x_rot, -1.57, 1.57);
 	name = "";
 	_update_name();
 }
@@ -2151,10 +2152,7 @@ void SpatialEditorViewport::_nav_look(Ref<InputEventWithModifiers> p_event, cons
 		cursor.x_rot += p_relative.y * radians_per_pixel;
 	}
 	cursor.y_rot += p_relative.x * radians_per_pixel;
-	if (cursor.x_rot > Math_PI / 2.0)
-		cursor.x_rot = Math_PI / 2.0;
-	if (cursor.x_rot < -Math_PI / 2.0)
-		cursor.x_rot = -Math_PI / 2.0;
+	cursor.x_rot = CLAMP(cursor.x_rot, -1.57, 1.57);
 
 	// Look is like the opposite of Orbit: the focus point rotates around the camera
 	Transform camera_transform = to_camera_transform(cursor);
@@ -2185,15 +2183,22 @@ void SpatialEditorViewport::set_freelook_active(bool active_now) {
 			freelook_speed = base_speed * cursor.distance;
 		}
 
+		previous_mouse_position = get_local_mouse_position();
+
 		// Hide mouse like in an FPS (warping doesn't work)
-		OS::get_singleton()->set_mouse_mode(OS::MOUSE_MODE_CAPTURED);
+		Input::get_singleton()->set_mouse_mode(Input::MOUSE_MODE_CAPTURED);
 
 	} else if (freelook_active && !active_now) {
 		// Sync camera cursor to cursor to "cut" interpolation jumps due to changing referential
 		cursor = camera_cursor;
 
 		// Restore mouse
-		OS::get_singleton()->set_mouse_mode(OS::MOUSE_MODE_VISIBLE);
+		Input::get_singleton()->set_mouse_mode(Input::MOUSE_MODE_VISIBLE);
+
+		// Restore the previous mouse position when leaving freelook mode.
+		// This is done because leaving `Input.MOUSE_MODE_CAPTURED` will center the cursor
+		// due to OS limitations.
+		warp_mouse(previous_mouse_position);
 	}
 
 	freelook_active = active_now;
@@ -2259,9 +2264,27 @@ void SpatialEditorViewport::_update_freelook(real_t delta) {
 		return;
 	}
 
-	const Vector3 forward = camera->get_transform().basis.xform(Vector3(0, 0, -1));
+	const FreelookNavigationScheme navigation_scheme = (FreelookNavigationScheme)EditorSettings::get_singleton()->get("editors/3d/freelook/freelook_navigation_scheme").operator int();
+
+	Vector3 forward;
+	if (navigation_scheme == FREELOOK_FULLY_AXIS_LOCKED) {
+		// Forward/backward keys will always go straight forward/backward, never moving on the Y axis.
+		forward = Vector3(0, 0, -1).rotated(Vector3(0, 1, 0), camera->get_rotation().y);
+	} else {
+		// Forward/backward keys will be relative to the camera pitch.
+		forward = camera->get_transform().basis.xform(Vector3(0, 0, -1));
+	}
+
 	const Vector3 right = camera->get_transform().basis.xform(Vector3(1, 0, 0));
-	const Vector3 up = camera->get_transform().basis.xform(Vector3(0, 1, 0));
+
+	Vector3 up;
+	if (navigation_scheme == FREELOOK_PARTIALLY_AXIS_LOCKED || navigation_scheme == FREELOOK_FULLY_AXIS_LOCKED) {
+		// Up/down keys will always go up/down regardless of camera pitch.
+		up = Vector3(0, 1, 0);
+	} else {
+		// Up/down keys will be relative to the camera pitch.
+		up = camera->get_transform().basis.xform(Vector3(0, 1, 0));
+	}
 
 	Vector3 direction;
 
@@ -2335,13 +2358,6 @@ void SpatialEditorViewport::_notification(int p_what) {
 	if (p_what == NOTIFICATION_RESIZED) {
 
 		call_deferred("update_transform_gizmo_view");
-	}
-
-	if (p_what == NOTIFICATION_READY) {
-		// The crosshair icon doesn't depend on the editor theme.
-		crosshair->set_texture(get_icon("Crosshair", "EditorIcons"));
-		// Set the anchors and margins after changing the icon to ensure it's centered correctly.
-		crosshair->set_anchors_and_margins_preset(PRESET_CENTER);
 	}
 
 	if (p_what == NOTIFICATION_PROCESS) {
@@ -2467,10 +2483,6 @@ void SpatialEditorViewport::_notification(int p_what) {
 			current_camera = camera;
 		}
 
-		// Display the crosshair only while freelooking. Hide it otherwise,
-		// as the crosshair can be distracting.
-		crosshair->set_visible(freelook_active);
-
 		if (show_info) {
 			String text;
 			text += "X: " + rtos(current_camera->get_translation().x).pad_decimals(1) + "\n";
@@ -2530,7 +2542,7 @@ void SpatialEditorViewport::_notification(int p_what) {
 
 	if (p_what == NOTIFICATION_THEME_CHANGED) {
 
-		view_menu->set_icon(get_icon("GuiTabMenu", "EditorIcons"));
+		view_menu->set_icon(get_icon("GuiTabMenuHl", "EditorIcons"));
 		preview_camera->set_icon(get_icon("Camera", "EditorIcons"));
 
 		view_menu->add_style_override("normal", editor->get_gui_base()->get_stylebox("Information3dViewport", "EditorStyles"));
@@ -2552,15 +2564,14 @@ void SpatialEditorViewport::_notification(int p_what) {
 	}
 }
 
-static void draw_indicator_bar(Control &surface, real_t fill, Ref<Texture> icon) {
-
+static void draw_indicator_bar(Control &surface, real_t fill, const Ref<Texture> icon, const Ref<Font> font, const String &text) {
 	// Adjust bar size from control height
-	Vector2 surface_size = surface.get_size();
-	real_t h = surface_size.y / 2.0;
-	real_t y = (surface_size.y - h) / 2.0;
+	const Vector2 surface_size = surface.get_size();
+	const real_t h = surface_size.y / 2.0;
+	const real_t y = (surface_size.y - h) / 2.0;
 
-	Rect2 r(10, y, 6, h);
-	real_t sy = r.size.y * fill;
+	const Rect2 r(10 * EDSCALE, y, 6 * EDSCALE, h);
+	const real_t sy = r.size.y * fill;
 
 	// Note: because this bar appears over the viewport, it has to stay readable for any background color
 	// Draw both neutral dark and bright colors to account this
@@ -2568,9 +2579,12 @@ static void draw_indicator_bar(Control &surface, real_t fill, Ref<Texture> icon)
 	surface.draw_rect(Rect2(r.position.x, r.position.y + r.size.y - sy, r.size.x, sy), Color(1, 1, 1, 0.6));
 	surface.draw_rect(r.grow(1), Color(0, 0, 0, 0.7), false, Math::round(EDSCALE));
 
-	Vector2 icon_size = icon->get_size();
-	Vector2 icon_pos = Vector2(r.position.x - (icon_size.x - r.size.x) / 2, r.position.y + r.size.y + 2);
+	const Vector2 icon_size = icon->get_size();
+	const Vector2 icon_pos = Vector2(r.position.x - (icon_size.x - r.size.x) / 2, r.position.y + r.size.y + 2 * EDSCALE);
 	surface.draw_texture(icon, icon_pos);
+
+	// Draw text below the bar (for speed/zoom information).
+	surface.draw_string(font, Vector2(icon_pos.x, icon_pos.y + icon_size.y + 16 * EDSCALE), text);
 }
 
 void SpatialEditorViewport::_draw() {
@@ -2674,7 +2688,14 @@ void SpatialEditorViewport::_draw() {
 					if (logscale_t < 0.25)
 						logscale_t = 0.25 * Math::exp(4.0 * logscale_t - 1.0);
 
-					draw_indicator_bar(*surface, 1.0 - logscale_t, get_icon("ViewportSpeed", "EditorIcons"));
+					// Display the freelook speed to help the user get a better sense of scale.
+					const int precision = freelook_speed < 1.0 ? 2 : 1;
+					draw_indicator_bar(
+							*surface,
+							1.0 - logscale_t,
+							get_icon("ViewportSpeed", "EditorIcons"),
+							get_font("font", "Label"),
+							vformat("%s u/s", String::num(freelook_speed).pad_decimals(precision)));
 				}
 
 			} else {
@@ -2692,7 +2713,14 @@ void SpatialEditorViewport::_draw() {
 					if (logscale_t < 0.25)
 						logscale_t = 0.25 * Math::exp(4.0 * logscale_t - 1.0);
 
-					draw_indicator_bar(*surface, logscale_t, get_icon("ViewportZoom", "EditorIcons"));
+					// Display the zoom center distance to help the user get a better sense of scale.
+					const int precision = cursor.distance < 1.0 ? 2 : 1;
+					draw_indicator_bar(
+							*surface,
+							logscale_t,
+							get_icon("ViewportZoom", "EditorIcons"),
+							get_font("font", "Label"),
+							vformat("%s u", String::num(cursor.distance).pad_decimals(precision)));
 				}
 			}
 		}
@@ -2807,7 +2835,6 @@ void SpatialEditorViewport::_menu_option(int p_option) {
 				undo_redo->add_undo_method(sp, "set_global_transform", sp->get_global_gizmo_transform());
 			}
 			undo_redo->commit_action();
-			focus_selection();
 
 		} break;
 		case VIEW_ALIGN_ROTATION_WITH_VIEW: {
@@ -3077,6 +3104,8 @@ void SpatialEditorViewport::_toggle_camera_preview(bool p_activate) {
 	ERR_FAIL_COND(p_activate && !preview);
 	ERR_FAIL_COND(!p_activate && !previewing);
 
+	rotation_control->set_visible(!p_activate);
+
 	if (!p_activate) {
 
 		previewing->disconnect("tree_exiting", this, "_preview_exited_scene");
@@ -3167,7 +3196,7 @@ void SpatialEditorViewport::update_transform_gizmo_view() {
 	Vector3 camz = -camera_xform.get_basis().get_axis(2).normalized();
 	Vector3 camy = -camera_xform.get_basis().get_axis(1).normalized();
 	Plane p(camera_xform.origin, camz);
-	float gizmo_d = Math::abs(p.distance_to(xform.origin));
+	float gizmo_d = MAX(Math::abs(p.distance_to(xform.origin)), CMP_EPSILON);
 	float d0 = camera->unproject_position(camera_xform.origin + camz * gizmo_d).y;
 	float d1 = camera->unproject_position(camera_xform.origin + camz * gizmo_d + camy).y;
 	float dd = Math::abs(d0 - d1);
@@ -3384,11 +3413,7 @@ void SpatialEditorViewport::reset() {
 	last_message = "";
 	name = "";
 
-	cursor.x_rot = 0.5;
-	cursor.y_rot = 0.5;
-	cursor.distance = 4;
-	cursor.region_select = false;
-	cursor.pos = Vector3();
+	cursor = Cursor();
 	_update_name();
 }
 
@@ -3618,14 +3643,19 @@ bool SpatialEditorViewport::_create_instance(Node *parent, String &path, const P
 	editor_data->get_undo_redo().add_do_method(sed, "live_debug_instance_node", editor->get_edited_scene()->get_path_to(parent), path, new_name);
 	editor_data->get_undo_redo().add_undo_method(sed, "live_debug_remove_node", NodePath(String(editor->get_edited_scene()->get_path_to(parent)) + "/" + new_name));
 
-	Transform global_transform;
-	Spatial *parent_spatial = Object::cast_to<Spatial>(parent);
-	if (parent_spatial)
-		global_transform = parent_spatial->get_global_gizmo_transform();
+	Spatial *spatial = Object::cast_to<Spatial>(instanced_scene);
+	if (spatial) {
+		Transform global_transform;
+		Spatial *parent_spatial = Object::cast_to<Spatial>(parent);
+		if (parent_spatial) {
+			global_transform = parent_spatial->get_global_gizmo_transform();
+		}
 
-	global_transform.origin = spatial_editor->snap_point(_get_instance_position(p_point));
+		global_transform.origin = spatial_editor->snap_point(_get_instance_position(p_point));
+		global_transform.basis *= spatial->get_transform().basis;
 
-	editor_data->get_undo_redo().add_do_method(instanced_scene, "set_global_transform", global_transform);
+		editor_data->get_undo_redo().add_do_method(instanced_scene, "set_global_transform", global_transform);
+	}
 
 	return true;
 }
@@ -3805,10 +3835,6 @@ SpatialEditorViewport::SpatialEditorViewport(SpatialEditor *p_spatial_editor, Ed
 	viewport->add_child(camera);
 	camera->make_current();
 	surface->set_focus_mode(FOCUS_ALL);
-
-	crosshair = memnew(TextureRect);
-	crosshair->set_mouse_filter(MOUSE_FILTER_IGNORE);
-	surface->add_child(crosshair);
 
 	VBoxContainer *vbox = memnew(VBoxContainer);
 	surface->add_child(vbox);
@@ -5352,6 +5378,9 @@ void SpatialEditor::_update_gizmos_menu() {
 		const int plugin_state = gizmo_plugins_by_name[i]->get_state();
 		gizmos_menu->add_multistate_item(TTR(plugin_name), 3, plugin_state, i);
 		const int idx = gizmos_menu->get_item_index(i);
+		gizmos_menu->set_item_tooltip(
+				idx,
+				TTR("Click to toggle between visibility states.\n\nOpen eye: Gizmo is visible.\nClosed eye: Gizmo is hidden.\nHalf-open eye: Gizmo is also visible through opaque surfaces (\"x-ray\")."));
 		switch (plugin_state) {
 			case EditorSpatialGizmoPlugin::VISIBLE:
 				gizmos_menu->set_item_icon(idx, gizmos_menu->get_icon("visibility_visible"));

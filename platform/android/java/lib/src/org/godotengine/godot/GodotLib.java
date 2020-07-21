@@ -32,6 +32,7 @@ package org.godotengine.godot;
 
 import android.app.Activity;
 import android.hardware.SensorEvent;
+
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
@@ -188,7 +189,7 @@ public class GodotLib {
 	 * @param p_method Name of the method to invoke
 	 * @param p_params Parameters to use for method invocation
 	 */
-	public static native void callobject(int p_id, String p_method, Object[] p_params);
+	public static native void callobject(long p_id, String p_method, Object[] p_params);
 
 	/**
 	 * Invoke method |p_method| on the Godot object specified by |p_id| during idle time.
@@ -196,7 +197,7 @@ public class GodotLib {
 	 * @param p_method Name of the method to invoke
 	 * @param p_params Parameters to use for method invocation
 	 */
-	public static native void calldeferred(int p_id, String p_method, Object[] p_params);
+	public static native void calldeferred(long p_id, String p_method, Object[] p_params);
 
 	/**
 	 * Forward the results from a permission request.

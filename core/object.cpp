@@ -33,6 +33,7 @@
 #include "core/class_db.h"
 #include "core/core_string_names.h"
 #include "core/message_queue.h"
+#include "core/object_rc.h"
 #include "core/os/os.h"
 #include "core/print_string.h"
 #include "core/resource.h"
@@ -967,6 +968,37 @@ void Object::cancel_delete() {
 
 	_predelete_ok = true;
 }
+
+#ifdef DEBUG_ENABLED
+ObjectRC *Object::_use_rc() {
+
+	// The RC object is lazily created the first time it's requested;
+	// that way, there's no need to allocate and release it at all if this Object
+	// is not being referred by any Variant at all.
+
+	// Although when dealing with Objects from multiple threads some locking
+	// mechanism should be used, this at least makes safe the case of first
+	// assignment.
+
+	ObjectRC *rc = nullptr;
+	ObjectRC *const creating = reinterpret_cast<ObjectRC *>(1);
+	if (unlikely(_rc.compare_exchange_strong(rc, creating, std::memory_order_acq_rel))) {
+		// Not created yet
+		rc = memnew(ObjectRC(this));
+		_rc.store(rc, std::memory_order_release);
+		return rc;
+	}
+
+	// Spin-wait until we know it's created (or just return if it's already created)
+	for (;;) {
+		if (likely(rc != creating)) {
+			rc->increment();
+			return rc;
+		}
+		rc = _rc.load(std::memory_order_acquire);
+	}
+}
+#endif
 
 void Object::set_script_and_instance(const RefPtr &p_script, ScriptInstance *p_instance) {
 
@@ -1944,6 +1976,9 @@ Object::Object() {
 	instance_binding_count = 0;
 	memset(_script_instance_bindings, 0, sizeof(void *) * MAX_SCRIPT_INSTANCE_BINDINGS);
 	script_instance = NULL;
+#ifdef DEBUG_ENABLED
+	_rc.store(nullptr, std::memory_order_release);
+#endif
 #ifdef TOOLS_ENABLED
 
 	_edited = false;
@@ -1956,6 +1991,15 @@ Object::Object() {
 }
 
 Object::~Object() {
+
+#ifdef DEBUG_ENABLED
+	ObjectRC *rc = _rc.load(std::memory_order_acquire);
+	if (rc) {
+		if (rc->invalidate()) {
+			memdelete(rc);
+		}
+	}
+#endif
 
 	if (script_instance)
 		memdelete(script_instance);
@@ -2088,18 +2132,26 @@ void ObjectDB::cleanup() {
 	rw_lock->write_lock();
 	if (instances.size()) {
 
-		WARN_PRINT("ObjectDB Instances still exist!");
+		WARN_PRINT("ObjectDB instances leaked at exit (run with --verbose for details).");
 		if (OS::get_singleton()->is_stdout_verbose()) {
+			// Ensure calling the native classes because if a leaked instance has a script
+			// that overrides any of those methods, it'd not be OK to call them at this point,
+			// now the scripting languages have already been terminated.
+			MethodBind *node_get_name = ClassDB::get_method("Node", "get_name");
+			MethodBind *resource_get_path = ClassDB::get_method("Resource", "get_path");
+			Variant::CallError call_error;
+
 			const ObjectID *K = NULL;
 			while ((K = instances.next(K))) {
 
-				String node_name;
+				String extra_info;
 				if (instances[*K]->is_class("Node"))
-					node_name = " - Node name: " + String(instances[*K]->call("get_name"));
+					extra_info = " - Node name: " + String(node_get_name->call(instances[*K], NULL, 0, call_error));
 				if (instances[*K]->is_class("Resource"))
-					node_name = " - Resource name: " + String(instances[*K]->call("get_name")) + " Path: " + String(instances[*K]->call("get_path"));
-				print_line("Leaked instance: " + String(instances[*K]->get_class()) + ":" + itos(*K) + node_name);
+					extra_info = " - Resource path: " + String(resource_get_path->call(instances[*K], NULL, 0, call_error));
+				print_line("Leaked instance: " + String(instances[*K]->get_class()) + ":" + itos(*K) + extra_info);
 			}
+			print_line("Hint: Leaked instances typically happen when nodes are removed from the scene tree (with `remove_child()`) but not freed (with `free()` or `queue_free()`).");
 		}
 	}
 	instances.clear();
