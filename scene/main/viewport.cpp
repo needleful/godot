@@ -3309,6 +3309,7 @@ void Viewport::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_keep_3d_linear", "keep_3d_linear"), &Viewport::set_keep_3d_linear);
 	ClassDB::bind_method(D_METHOD("get_keep_3d_linear"), &Viewport::get_keep_3d_linear);
 
+	ClassDB::bind_method(D_METHOD("_gui_find_control"), &Viewport::_gui_find_control);
 	ClassDB::bind_method(D_METHOD("_gui_show_tooltip"), &Viewport::_gui_show_tooltip);
 	ClassDB::bind_method(D_METHOD("_gui_remove_focus"), &Viewport::_gui_remove_focus);
 	ClassDB::bind_method(D_METHOD("_post_gui_grab_click_focus"), &Viewport::_post_gui_grab_click_focus);
