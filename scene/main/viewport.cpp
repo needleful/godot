@@ -1473,7 +1473,8 @@ void Viewport::_vp_unhandled_input(const Ref<InputEvent> &p_ev) {
 
 Vector2 Viewport::get_mouse_position() const {
 
-	return (get_final_transform().affine_inverse() * _get_input_pre_xform()).xform(Input::get_singleton()->get_mouse_position() - _get_window_offset());
+	return gui.last_mouse_pos;
+	//return (get_final_transform().affine_inverse() * _get_input_pre_xform()).xform(Input::get_singleton()->get_mouse_position() - _get_window_offset());
 }
 
 void Viewport::warp_mouse(const Vector2 &p_pos) {
