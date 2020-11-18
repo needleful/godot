@@ -549,6 +549,7 @@ msgid "Seconds"
 msgstr ""
 
 #: editor/animation_track_editor.cpp
+#: editor/plugins/sprite_frames_editor_plugin.cpp
 msgid "FPS"
 msgstr ""
 
@@ -742,7 +743,7 @@ msgstr "符合大小寫"
 msgid "Whole Words"
 msgstr "完整詞語"
 
-#: editor/code_editor.cpp editor/rename_dialog.cpp
+#: editor/code_editor.cpp
 #, fuzzy
 msgid "Replace"
 msgstr "取代"
@@ -938,6 +939,11 @@ msgid "Signals"
 msgstr "訊號"
 
 #: editor/connections_dialog.cpp
+#, fuzzy
+msgid "Filter signals"
+msgstr "篩選檔案..."
+
+#: editor/connections_dialog.cpp
 msgid "Are you sure you want to remove all connections from this signal?"
 msgstr ""
 
@@ -980,7 +986,7 @@ msgid "Recent:"
 msgstr "最近:"
 
 #: editor/create_dialog.cpp editor/plugins/script_editor_plugin.cpp
-#: editor/property_selector.cpp editor/quick_open.cpp
+#: editor/property_selector.cpp editor/quick_open.cpp editor/rename_dialog.cpp
 #: modules/visual_script/visual_script_property_selector.cpp
 msgid "Search:"
 msgstr "搜尋："
@@ -1065,14 +1071,17 @@ msgstr ""
 
 #: editor/dependency_editor.cpp
 #, fuzzy
-msgid "Remove selected files from the project? (Can't be restored)"
+msgid ""
+"Remove selected files from the project? (no undo)\n"
+"You can find the removed files in the system trash to restore them."
 msgstr "從專案中刪除所選的檔案？（此動作無法復原）"
 
 #: editor/dependency_editor.cpp
 msgid ""
 "The files being removed are required by other resources in order for them to "
 "work.\n"
-"Remove them anyway? (no undo)"
+"Remove them anyway? (no undo)\n"
+"You can find the removed files in the system trash to restore them."
 msgstr ""
 
 #: editor/dependency_editor.cpp
@@ -1158,6 +1167,9 @@ msgstr "專案開荒人"
 msgid "Lead Developer"
 msgstr "主要開發者"
 
+#. TRANSLATORS: This refers to a job title.
+#. The trailing space is used to distinguish with the project list application,
+#. you do not have to keep it in your translation.
 #: editor/editor_about.cpp
 msgid "Project Manager "
 msgstr "開啟 Project Manager "
@@ -1177,6 +1189,16 @@ msgstr "白金級贊助人"
 #: editor/editor_about.cpp
 msgid "Gold Sponsors"
 msgstr "黃金級贊助人"
+
+#: editor/editor_about.cpp
+#, fuzzy
+msgid "Silver Sponsors"
+msgstr "白銀級捐款人"
+
+#: editor/editor_about.cpp
+#, fuzzy
+msgid "Bronze Sponsors"
+msgstr "青銅級捐款人"
 
 #: editor/editor_about.cpp
 msgid "Mini Sponsors"
@@ -1633,6 +1655,26 @@ msgid ""
 "Enabled'."
 msgstr ""
 
+#: editor/editor_export.cpp
+msgid ""
+"Target platform requires 'PVRTC' texture compression for GLES2. Enable "
+"'Import Pvrtc' in Project Settings."
+msgstr ""
+
+#: editor/editor_export.cpp
+msgid ""
+"Target platform requires 'ETC2' or 'PVRTC' texture compression for GLES3. "
+"Enable 'Import Etc 2' or 'Import Pvrtc' in Project Settings."
+msgstr ""
+
+#: editor/editor_export.cpp
+msgid ""
+"Target platform requires 'PVRTC' texture compression for the driver fallback "
+"to GLES2.\n"
+"Enable 'Import Pvrtc' in Project Settings, or disable 'Driver Fallback "
+"Enabled'."
+msgstr ""
+
 #: editor/editor_export.cpp platform/android/export/export.cpp
 #: platform/iphone/export/export.cpp platform/javascript/export/export.cpp
 #: platform/osx/export/export.cpp platform/uwp/export/export.cpp
@@ -1673,18 +1715,18 @@ msgstr "即時編輯"
 
 #: editor/editor_feature_profile.cpp
 #, fuzzy
-msgid "Import Dock"
-msgstr "導入"
-
-#: editor/editor_feature_profile.cpp
-#, fuzzy
 msgid "Node Dock"
 msgstr "移動模式"
 
 #: editor/editor_feature_profile.cpp
 #, fuzzy
-msgid "FileSystem and Import Docks"
+msgid "FileSystem Dock"
 msgstr "檔案系統"
+
+#: editor/editor_feature_profile.cpp
+#, fuzzy
+msgid "Import Dock"
+msgstr "導入"
 
 #: editor/editor_feature_profile.cpp
 #, fuzzy
@@ -1972,7 +2014,7 @@ msgstr "資料夾和檔案:"
 
 #: editor/editor_file_dialog.cpp editor/plugins/sprite_editor_plugin.cpp
 #: editor/plugins/style_box_editor_plugin.cpp
-#: editor/plugins/theme_editor_plugin.cpp
+#: editor/plugins/theme_editor_plugin.cpp editor/rename_dialog.cpp
 msgid "Preview:"
 msgstr "預覽:"
 
@@ -2350,12 +2392,16 @@ msgid "Error saving TileSet!"
 msgstr "儲存TileSet時出現錯誤！"
 
 #: editor/editor_node.cpp
-#, fuzzy
-msgid "Error trying to save layout!"
-msgstr "儲存佈局時出現錯誤！"
+msgid ""
+"An error occurred while trying to save the editor layout.\n"
+"Make sure the editor's user data path is writable."
+msgstr ""
 
 #: editor/editor_node.cpp
-msgid "Default editor layout overridden."
+msgid ""
+"Default editor layout overridden.\n"
+"To restore the Default layout to its base settings, use the Delete Layout "
+"option and delete the Default layout."
 msgstr ""
 
 #: editor/editor_node.cpp
@@ -2364,7 +2410,7 @@ msgstr "未找到佈局名稱！"
 
 #: editor/editor_node.cpp
 #, fuzzy
-msgid "Restored default layout to base settings."
+msgid "Restored the Default layout to its base settings."
 msgstr "重設預設佈局。"
 
 #: editor/editor_node.cpp
@@ -2404,10 +2450,6 @@ msgstr ""
 #: editor/editor_node.cpp
 msgid "There is no defined scene to run."
 msgstr "沒有可以已定義的場景可以運行。"
-
-#: editor/editor_node.cpp
-msgid "Current scene was never saved, please save it prior to running."
-msgstr ""
 
 #: editor/editor_node.cpp
 msgid "Could not start subprocess!"
@@ -2865,22 +2907,26 @@ msgstr ""
 
 #: editor/editor_node.cpp
 msgid ""
-"When exporting or deploying, the resulting executable will attempt to "
-"connect to the IP of this computer in order to be debugged."
+"When this option is enabled, using one-click deploy will make the executable "
+"attempt to connect to this computer's IP so the running project can be "
+"debugged.\n"
+"This option is intended to be used for remote debugging (typically with a "
+"mobile device).\n"
+"You don't need to enable it to use the GDScript debugger locally."
 msgstr ""
 
 #: editor/editor_node.cpp
-msgid "Small Deploy with Network FS"
+msgid "Small Deploy with Network Filesystem"
 msgstr ""
 
 #: editor/editor_node.cpp
 msgid ""
-"When this option is enabled, export or deploy will produce a minimal "
-"executable.\n"
+"When this option is enabled, using one-click deploy for Android will only "
+"export an executable without the project data.\n"
 "The filesystem will be provided from the project by the editor over the "
 "network.\n"
-"On Android, deploy will use the USB cable for faster performance. This "
-"option speeds up testing for games with a large footprint."
+"On Android, deploying will use the USB cable for faster performance. This "
+"option speeds up testing for projects with large assets."
 msgstr ""
 
 #: editor/editor_node.cpp
@@ -2890,8 +2936,8 @@ msgstr "可見碰撞圖形"
 
 #: editor/editor_node.cpp
 msgid ""
-"Collision shapes and raycast nodes (for 2D and 3D) will be visible on the "
-"running game if this option is turned on."
+"When this option is enabled, collision shapes and raycast nodes (for 2D and "
+"3D) will be visible in the running project."
 msgstr ""
 
 #: editor/editor_node.cpp
@@ -2900,33 +2946,34 @@ msgstr ""
 
 #: editor/editor_node.cpp
 msgid ""
-"Navigation meshes and polygons will be visible on the running game if this "
-"option is turned on."
+"When this option is enabled, navigation meshes and polygons will be visible "
+"in the running project."
 msgstr ""
 
 #: editor/editor_node.cpp
 #, fuzzy
-msgid "Sync Scene Changes"
+msgid "Synchronize Scene Changes"
 msgstr "同步場景的變動"
 
 #: editor/editor_node.cpp
 msgid ""
-"When this option is turned on, any changes made to the scene in the editor "
-"will be replicated in the running game.\n"
-"When used remotely on a device, this is more efficient with network "
-"filesystem."
+"When this option is enabled, any changes made to the scene in the editor "
+"will be replicated in the running project.\n"
+"When used remotely on a device, this is more efficient when the network "
+"filesystem option is enabled."
 msgstr ""
 
 #: editor/editor_node.cpp
-msgid "Sync Script Changes"
+#, fuzzy
+msgid "Synchronize Script Changes"
 msgstr "同步更新腳本"
 
 #: editor/editor_node.cpp
 msgid ""
-"When this option is turned on, any script that is saved will be reloaded on "
-"the running game.\n"
-"When used remotely on a device, this is more efficient with network "
-"filesystem."
+"When this option is enabled, any script that is saved will be reloaded in "
+"the running project.\n"
+"When used remotely on a device, this is more efficient when the network "
+"filesystem option is enabled."
 msgstr ""
 
 #: editor/editor_node.cpp editor/script_create_dialog.cpp
@@ -2989,12 +3036,11 @@ msgstr "管理輸出範本"
 msgid "Help"
 msgstr "幫助"
 
-#: editor/editor_node.cpp editor/plugins/asset_library_editor_plugin.cpp
-#: editor/plugins/script_editor_plugin.cpp
+#: editor/editor_node.cpp editor/plugins/script_editor_plugin.cpp
 #: editor/plugins/script_text_editor.cpp
 #: editor/plugins/shader_editor_plugin.cpp editor/plugins/text_editor.cpp
 #: editor/plugins/visual_shader_editor_plugin.cpp editor/project_manager.cpp
-#: editor/project_settings_editor.cpp editor/rename_dialog.cpp
+#: editor/project_settings_editor.cpp editor/settings_config_dialog.cpp
 msgid "Search"
 msgstr "搜尋"
 
@@ -3419,7 +3465,8 @@ msgstr ""
 #: editor/editor_run_native.cpp
 msgid ""
 "No runnable export preset found for this platform.\n"
-"Please add a runnable preset in the export menu."
+"Please add a runnable preset in the Export menu or define an existing preset "
+"as runnable."
 msgstr ""
 
 #: editor/editor_run_script.cpp
@@ -3819,6 +3866,11 @@ msgstr "再製..."
 #, fuzzy
 msgid "Move To..."
 msgstr "搬到..."
+
+#: editor/filesystem_dock.cpp
+#, fuzzy
+msgid "Move to Trash"
+msgstr "移動Autoload"
 
 #: editor/filesystem_dock.cpp
 msgid "New Scene..."
@@ -4492,7 +4544,6 @@ msgid "Add Node to BlendTree"
 msgstr "由主幹新增節點"
 
 #: editor/plugins/animation_blend_tree_editor_plugin.cpp
-#: editor/plugins/visual_shader_editor_plugin.cpp
 #, fuzzy
 msgid "Node Moved"
 msgstr "移動模式"
@@ -5296,7 +5347,7 @@ msgid "Bake Lightmaps"
 msgstr ""
 
 #: editor/plugins/camera_editor_plugin.cpp
-#: editor/plugins/spatial_editor_plugin.cpp editor/rename_dialog.cpp
+#: editor/plugins/spatial_editor_plugin.cpp
 msgid "Preview"
 msgstr ""
 
@@ -5369,29 +5420,43 @@ msgid "Create Horizontal and Vertical Guides"
 msgstr "新增"
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
-#, fuzzy
-msgid "Move pivot"
-msgstr "上移"
-
-#: editor/plugins/canvas_item_editor_plugin.cpp
-msgid "Rotate CanvasItem"
+msgid "Set CanvasItem \"%s\" Pivot Offset to (%d, %d)"
 msgstr ""
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
-#, fuzzy
-msgid "Move anchor"
-msgstr "移動模式"
-
-#: editor/plugins/canvas_item_editor_plugin.cpp
-msgid "Resize CanvasItem"
+msgid "Rotate %d CanvasItems"
 msgstr ""
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
-msgid "Scale CanvasItem"
+msgid "Rotate CanvasItem \"%s\" to %d degrees"
 msgstr ""
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
-msgid "Move CanvasItem"
+msgid "Move CanvasItem \"%s\" Anchor"
+msgstr ""
+
+#: editor/plugins/canvas_item_editor_plugin.cpp
+msgid "Scale Node2D \"%s\" to (%s, %s)"
+msgstr ""
+
+#: editor/plugins/canvas_item_editor_plugin.cpp
+msgid "Resize Control \"%s\" to (%d, %d)"
+msgstr ""
+
+#: editor/plugins/canvas_item_editor_plugin.cpp
+msgid "Scale %d CanvasItems"
+msgstr ""
+
+#: editor/plugins/canvas_item_editor_plugin.cpp
+msgid "Scale CanvasItem \"%s\" to (%s, %s)"
+msgstr ""
+
+#: editor/plugins/canvas_item_editor_plugin.cpp
+msgid "Move %d CanvasItems"
+msgstr ""
+
+#: editor/plugins/canvas_item_editor_plugin.cpp
+msgid "Move CanvasItem \"%s\" to (%d, %d)"
 msgstr ""
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
@@ -6687,11 +6752,19 @@ msgid "Move Points"
 msgstr "下移"
 
 #: editor/plugins/polygon_2d_editor_plugin.cpp
-msgid "Ctrl: Rotate"
+msgid "Command: Rotate"
 msgstr ""
 
 #: editor/plugins/polygon_2d_editor_plugin.cpp
 msgid "Shift: Move All"
+msgstr ""
+
+#: editor/plugins/polygon_2d_editor_plugin.cpp
+msgid "Shift+Command: Scale"
+msgstr ""
+
+#: editor/plugins/polygon_2d_editor_plugin.cpp
+msgid "Ctrl: Rotate"
 msgstr ""
 
 #: editor/plugins/polygon_2d_editor_plugin.cpp
@@ -6733,12 +6806,13 @@ msgid "Radius:"
 msgstr ""
 
 #: editor/plugins/polygon_2d_editor_plugin.cpp
-msgid "Polygon->UV"
+msgid "Copy Polygon to UV"
 msgstr ""
 
 #: editor/plugins/polygon_2d_editor_plugin.cpp
-msgid "UV->Polygon"
-msgstr ""
+#, fuzzy
+msgid "Copy UV to Polygon"
+msgstr "轉為..."
 
 #: editor/plugins/polygon_2d_editor_plugin.cpp
 msgid "Clear UV"
@@ -7213,11 +7287,6 @@ msgstr ""
 
 #: editor/plugins/script_text_editor.cpp
 #: editor/plugins/shader_editor_plugin.cpp editor/plugins/text_editor.cpp
-msgid "Go To"
-msgstr ""
-
-#: editor/plugins/script_text_editor.cpp
-#: editor/plugins/shader_editor_plugin.cpp editor/plugins/text_editor.cpp
 msgid "Bookmarks"
 msgstr ""
 
@@ -7225,6 +7294,11 @@ msgstr ""
 #, fuzzy
 msgid "Breakpoints"
 msgstr "刪除"
+
+#: editor/plugins/script_text_editor.cpp
+#: editor/plugins/shader_editor_plugin.cpp editor/plugins/text_editor.cpp
+msgid "Go To"
+msgstr ""
 
 #: editor/plugins/script_text_editor.cpp scene/gui/line_edit.cpp
 #: scene/gui/text_edit.cpp
@@ -8029,7 +8103,7 @@ msgid "New Animation"
 msgstr "新的動畫名稱："
 
 #: editor/plugins/sprite_frames_editor_plugin.cpp
-msgid "Speed (FPS):"
+msgid "Speed:"
 msgstr ""
 
 #: editor/plugins/sprite_frames_editor_plugin.cpp
@@ -8367,6 +8441,12 @@ msgstr ""
 
 #: editor/plugins/tile_map_editor_plugin.cpp
 msgid "Paint Tile"
+msgstr ""
+
+#: editor/plugins/tile_map_editor_plugin.cpp
+msgid ""
+"Shift+LMB: Line Draw\n"
+"Shift+Command+LMB: Rectangle Paint"
 msgstr ""
 
 #: editor/plugins/tile_map_editor_plugin.cpp
@@ -8938,6 +9018,11 @@ msgstr ""
 
 #: editor/plugins/visual_shader_editor_plugin.cpp
 #, fuzzy
+msgid "Node(s) Moved"
+msgstr "移動模式"
+
+#: editor/plugins/visual_shader_editor_plugin.cpp
+#, fuzzy
 msgid "Duplicate Nodes"
 msgstr "複製動畫幀"
 
@@ -8955,6 +9040,11 @@ msgstr "不選"
 #: editor/plugins/visual_shader_editor_plugin.cpp
 msgid "Visual Shader Input Type Changed"
 msgstr ""
+
+#: editor/plugins/visual_shader_editor_plugin.cpp
+#, fuzzy
+msgid "UniformRef Name Changed"
+msgstr "當改變時更新"
 
 #: editor/plugins/visual_shader_editor_plugin.cpp
 msgid "Vertex"
@@ -9621,6 +9711,10 @@ msgid ""
 msgstr ""
 
 #: editor/plugins/visual_shader_editor_plugin.cpp
+msgid "A reference to an existing uniform."
+msgstr ""
+
+#: editor/plugins/visual_shader_editor_plugin.cpp
 msgid "(Fragment/Light mode only) Scalar derivative function."
 msgstr ""
 
@@ -9682,20 +9776,6 @@ msgstr "當改變時更新"
 #, fuzzy
 msgid "Runnable"
 msgstr "啟用"
-
-#: editor/project_export.cpp
-#, fuzzy
-msgid "Add initial export..."
-msgstr "新增訊號"
-
-#: editor/project_export.cpp
-msgid "Add previous patches..."
-msgstr ""
-
-#: editor/project_export.cpp
-#, fuzzy
-msgid "Delete patch '%s' from list?"
-msgstr "刪除"
 
 #: editor/project_export.cpp
 #, fuzzy
@@ -9788,20 +9868,6 @@ msgid ""
 "Filters to exclude files/folders from project\n"
 "(comma-separated, e.g: *.json, *.txt, docs/*)"
 msgstr ""
-
-#: editor/project_export.cpp
-#, fuzzy
-msgid "Patches"
-msgstr "吻合"
-
-#: editor/project_export.cpp
-msgid "Make Patch"
-msgstr ""
-
-#: editor/project_export.cpp
-#, fuzzy
-msgid "Pack File"
-msgstr "檔案"
 
 #: editor/project_export.cpp
 msgid "Features"
@@ -10134,6 +10200,7 @@ msgid ""
 "This could take a while."
 msgstr ""
 
+#. TRANSLATORS: This refers to the application where users manage their Godot projects.
 #: editor/project_manager.cpp
 msgid "Project Manager"
 msgstr ""
@@ -10587,11 +10654,16 @@ msgid "Batch Rename"
 msgstr "重新命名..."
 
 #: editor/rename_dialog.cpp
-msgid "Prefix"
+#, fuzzy
+msgid "Replace:"
+msgstr "取代： "
+
+#: editor/rename_dialog.cpp
+msgid "Prefix:"
 msgstr ""
 
 #: editor/rename_dialog.cpp
-msgid "Suffix"
+msgid "Suffix:"
 msgstr ""
 
 #: editor/rename_dialog.cpp
@@ -10641,7 +10713,7 @@ msgid "Per-level Counter"
 msgstr ""
 
 #: editor/rename_dialog.cpp
-msgid "If set the counter restarts for each group of child nodes"
+msgid "If set, the counter restarts for each group of child nodes."
 msgstr ""
 
 #: editor/rename_dialog.cpp
@@ -10702,7 +10774,7 @@ msgid "Reset"
 msgstr "重設縮放比例"
 
 #: editor/rename_dialog.cpp
-msgid "Regular Expression Error"
+msgid "Regular Expression Error:"
 msgstr ""
 
 #: editor/rename_dialog.cpp
@@ -10810,6 +10882,11 @@ msgstr "Instantiated scenes不能成為root"
 #, fuzzy
 msgid "Make node as Root"
 msgstr "儲存場景"
+
+#: editor/scene_tree_dock.cpp
+#, fuzzy
+msgid "Delete %d nodes and any children?"
+msgstr "删除root node \"%s\"?"
 
 #: editor/scene_tree_dock.cpp
 #, fuzzy
@@ -12300,6 +12377,14 @@ msgid "Invalid Android SDK path for custom build in Editor Settings."
 msgstr ""
 
 #: platform/android/export/export.cpp
+msgid "Missing 'platform-tools' directory!"
+msgstr ""
+
+#: platform/android/export/export.cpp
+msgid "Missing 'build-tools' directory!"
+msgstr ""
+
+#: platform/android/export/export.cpp
 msgid ""
 "Android build template not installed in the project. Install it from the "
 "Project menu."
@@ -12341,6 +12426,38 @@ msgid ""
 msgstr ""
 
 #: platform/android/export/export.cpp
+msgid "\"Export AAB\" is only valid when \"Use Custom Build\" is enabled."
+msgstr ""
+
+#: platform/android/export/export.cpp
+msgid "Unable to find the zipalign tool."
+msgstr ""
+
+#: platform/android/export/export.cpp
+msgid "Aligning APK..."
+msgstr ""
+
+#: platform/android/export/export.cpp
+msgid "Unable to complete APK alignment."
+msgstr ""
+
+#: platform/android/export/export.cpp
+msgid "Unable to delete unaligned APK."
+msgstr ""
+
+#: platform/android/export/export.cpp
+msgid "Invalid filename! Android App Bundle requires the *.aab extension."
+msgstr ""
+
+#: platform/android/export/export.cpp
+msgid "APK Expansion not compatible with Android App Bundle."
+msgstr ""
+
+#: platform/android/export/export.cpp
+msgid "Invalid filename! Android APK requires the *.apk extension."
+msgstr ""
+
+#: platform/android/export/export.cpp
 msgid ""
 "Trying to build from a custom built template, but no version info for it "
 "exists. Please reinstall from the 'Project' menu."
@@ -12365,7 +12482,13 @@ msgid ""
 msgstr ""
 
 #: platform/android/export/export.cpp
-msgid "No build apk generated at: "
+msgid "Moving output"
+msgstr ""
+
+#: platform/android/export/export.cpp
+msgid ""
+"Unable to copy and rename export file, check gradle project directory for "
+"outputs."
 msgstr ""
 
 #: platform/iphone/export/export.cpp
@@ -12531,6 +12654,12 @@ msgstr ""
 msgid ""
 "A shape must be provided for CollisionShape2D to function. Please create a "
 "shape resource for it!"
+msgstr ""
+
+#: scene/2d/collision_shape_2d.cpp
+msgid ""
+"Polygon-based shapes are not meant be used nor edited directly through the "
+"CollisionShape2D node. Please use the CollisionPolygon2D node instead."
 msgstr ""
 
 #: scene/2d/cpu_particles_2d.cpp
@@ -12743,6 +12872,11 @@ msgstr ""
 msgid ""
 "GIProbes are not supported by the GLES2 video driver.\n"
 "Use a BakedLightmap instead."
+msgstr ""
+
+#: scene/3d/interpolated_camera.cpp
+msgid ""
+"InterpolatedCamera has been deprecated and will be removed in Godot 4.0."
 msgstr ""
 
 #: scene/3d/light.cpp
@@ -13001,6 +13135,38 @@ msgstr ""
 #: servers/visual/shader_language.cpp
 msgid "Constants cannot be modified."
 msgstr ""
+
+#, fuzzy
+#~ msgid "Error trying to save layout!"
+#~ msgstr "儲存佈局時出現錯誤！"
+
+#, fuzzy
+#~ msgid "Move pivot"
+#~ msgstr "上移"
+
+#, fuzzy
+#~ msgid "Move anchor"
+#~ msgstr "移動模式"
+
+#, fuzzy
+#~ msgid "Add initial export..."
+#~ msgstr "新增訊號"
+
+#, fuzzy
+#~ msgid "Delete patch '%s' from list?"
+#~ msgstr "刪除"
+
+#, fuzzy
+#~ msgid "Patches"
+#~ msgstr "吻合"
+
+#, fuzzy
+#~ msgid "Pack File"
+#~ msgstr "檔案"
+
+#, fuzzy
+#~ msgid "FileSystem and Import Docks"
+#~ msgstr "檔案系統"
 
 #, fuzzy
 #~ msgid "Not in resource path."

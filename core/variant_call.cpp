@@ -534,6 +534,7 @@ struct _VariantCall {
 	VCALL_LOCALMEM0R(Array, pop_back);
 	VCALL_LOCALMEM0R(Array, pop_front);
 	VCALL_LOCALMEM1(Array, append);
+	VCALL_LOCALMEM1(Array, append_array);
 	VCALL_LOCALMEM1(Array, resize);
 	VCALL_LOCALMEM2(Array, insert);
 	VCALL_LOCALMEM1(Array, remove);
@@ -743,6 +744,7 @@ struct _VariantCall {
 #define VCALL_PTR5R(m_type, m_method) \
 	static void _call_##m_type##_##m_method(Variant &r_ret, Variant &p_self, const Variant **p_args) { r_ret = reinterpret_cast<m_type *>(p_self._data._ptr)->m_method(*p_args[0], *p_args[1], *p_args[2], *p_args[3], *p_args[4]); }
 
+	VCALL_PTR0R(AABB, abs);
 	VCALL_PTR0R(AABB, get_area);
 	VCALL_PTR0R(AABB, has_no_area);
 	VCALL_PTR0R(AABB, has_no_surface);
@@ -1798,6 +1800,7 @@ void register_variant_methods() {
 	ADDFUNC1NC(ARRAY, NIL, Array, push_back, NIL, "value", varray());
 	ADDFUNC1NC(ARRAY, NIL, Array, push_front, NIL, "value", varray());
 	ADDFUNC1NC(ARRAY, NIL, Array, append, NIL, "value", varray());
+	ADDFUNC1NC(ARRAY, NIL, Array, append_array, ARRAY, "array", varray());
 	ADDFUNC1NC(ARRAY, NIL, Array, resize, INT, "size", varray());
 	ADDFUNC2NC(ARRAY, NIL, Array, insert, INT, "position", NIL, "value", varray());
 	ADDFUNC1NC(ARRAY, NIL, Array, remove, INT, "position", varray());
@@ -1909,6 +1912,7 @@ void register_variant_methods() {
 
 	//pointerbased
 
+	ADDFUNC0R(AABB, AABB, AABB, abs, varray());
 	ADDFUNC0R(AABB, REAL, AABB, get_area, varray());
 	ADDFUNC0R(AABB, BOOL, AABB, has_no_area, varray());
 	ADDFUNC0R(AABB, BOOL, AABB, has_no_surface, varray());

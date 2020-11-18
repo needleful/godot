@@ -31,6 +31,7 @@
 #include "editor_spin_slider.h"
 #include "core/math/expression.h"
 #include "core/os/input.h"
+#include "editor_node.h"
 #include "editor_scale.h"
 
 String EditorSpinSlider::get_tooltip(const Point2 &p_pos) const {
@@ -203,6 +204,19 @@ void EditorSpinSlider::_notification(int p_what) {
 		}
 	}
 
+	if (p_what == NOTIFICATION_READY) {
+		// Add a left margin to the stylebox to make the number align with the Label
+		// when it's edited. The LineEdit "focus" stylebox uses the "normal" stylebox's
+		// default margins.
+		Ref<StyleBoxFlat> stylebox =
+				EditorNode::get_singleton()->get_theme_base()->get_stylebox("normal", "LineEdit")->duplicate();
+		// EditorSpinSliders with a label have more space on the left, so add an
+		// higher margin to match the location where the text begins.
+		// The margin values below were determined by empirical testing.
+		stylebox->set_default_margin(MARGIN_LEFT, (get_label() != String() ? 23 : 16) * EDSCALE);
+		value_input->add_style_override("normal", stylebox);
+	}
+
 	if (p_what == NOTIFICATION_DRAW) {
 
 		updown_offset = -1;
@@ -362,7 +376,12 @@ String EditorSpinSlider::get_label() const {
 }
 
 void EditorSpinSlider::_evaluate_input_text() {
-	String text = value_input->get_text();
+	// Replace comma with dot to support it as decimal separator (GH-6028).
+	// This prevents using functions like `pow()`, but using functions
+	// in EditorSpinSlider is a barely known (and barely used) feature.
+	// Instead, we'd rather support German/French keyboard layouts out of the box.
+	const String text = value_input->get_text().replace(",", ".");
+
 	Ref<Expression> expr;
 	expr.instance();
 	Error err = expr->parse(text);

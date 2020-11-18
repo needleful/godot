@@ -1864,7 +1864,7 @@ MonoObject *CSharpInstance::_internal_new_managed() {
 
 		bool die = _unreference_owner_unsafe();
 		// Not ok for the owner to die here. If there is a situation where this can happen, it will be considered a bug.
-		CRASH_COND(die == true);
+		CRASH_COND(die);
 
 		owner = NULL;
 
@@ -2203,7 +2203,7 @@ CSharpInstance::~CSharpInstance() {
 		// Unreference the owner here, before the new "instance binding" references it.
 		// Otherwise, the unsafe reference debug checks will incorrectly detect a bug.
 		bool die = _unreference_owner_unsafe();
-		CRASH_COND(die == true); // `owner_keep_alive` holds a reference, so it can't die
+		CRASH_COND(die); // `owner_keep_alive` holds a reference, so it can't die
 
 		void *data = owner->get_script_instance_binding(CSharpLanguage::get_singleton()->get_language_index());
 		CRASH_COND(data == NULL);
@@ -2608,14 +2608,14 @@ bool CSharpScript::_get_member_export(IMonoClassMember *p_member, bool p_inspect
 		if (!property->has_getter()) {
 #ifdef TOOLS_ENABLED
 			if (exported)
-				ERR_PRINTS("Read-only property cannot be exported: '" + MEMBER_FULL_QUALIFIED_NAME(p_member) + "'.");
+				ERR_PRINT("Cannot export a property without a getter: '" + MEMBER_FULL_QUALIFIED_NAME(p_member) + "'.");
 #endif
 			return false;
 		}
 		if (!property->has_setter()) {
 #ifdef TOOLS_ENABLED
 			if (exported)
-				ERR_PRINTS("Write-only property (without getter) cannot be exported: '" + MEMBER_FULL_QUALIFIED_NAME(p_member) + "'.");
+				ERR_PRINT("Cannot export a property without a setter: '" + MEMBER_FULL_QUALIFIED_NAME(p_member) + "'.");
 #endif
 			return false;
 		}
@@ -3015,7 +3015,7 @@ CSharpInstance *CSharpScript::_create_instance(const Variant **p_args, int p_arg
 
 		bool die = instance->_unreference_owner_unsafe();
 		// Not ok for the owner to die here. If there is a situation where this can happen, it will be considered a bug.
-		CRASH_COND(die == true);
+		CRASH_COND(die);
 
 		p_owner->set_script_instance(NULL);
 		r_error.error = Variant::CallError::CALL_ERROR_INSTANCE_IS_NULL;

@@ -76,6 +76,13 @@
 				Returns the [PopupMenu] of this [LineEdit]. By default, this menu is displayed when right-clicking on the [LineEdit].
 			</description>
 		</method>
+		<method name="get_scroll_offset" qualifiers="const">
+			<return type="int">
+			</return>
+			<description>
+				Returns the scroll offset due to [member caret_position], as a number of characters.
+			</description>
+		</method>
 		<method name="menu_option">
 			<return type="void">
 			</return>
@@ -164,6 +171,9 @@
 		<member name="text" type="String" setter="set_text" getter="get_text" default="&quot;&quot;">
 			String value of the [LineEdit].
 			[b]Note:[/b] Changing text using this property won't emit the [signal text_changed] signal.
+		</member>
+		<member name="virtual_keyboard_enabled" type="bool" setter="set_virtual_keyboard_enabled" getter="is_virtual_keyboard_enabled" default="true">
+			If [code]true[/code], the native virtual keyboard is shown when focused on platforms that support it.
 		</member>
 	</members>
 	<signals>

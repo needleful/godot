@@ -70,8 +70,6 @@ private:
 	Set<String> selected_files;
 	bool runnable;
 
-	Vector<String> patches;
-
 	friend class EditorExport;
 	friend class EditorExportPlatform;
 
@@ -117,12 +115,6 @@ public:
 
 	void set_exclude_filter(const String &p_exclude);
 	String get_exclude_filter() const;
-
-	void add_patch(const String &p_path, int p_at_pos = -1);
-	void set_patch(int p_index, const String &p_path);
-	String get_patch(int p_index);
-	void remove_patch(int p_idx);
-	Vector<String> get_patches() const;
 
 	void set_custom_features(const String &p_custom_features);
 	String get_custom_features() const;
@@ -265,6 +257,7 @@ public:
 	virtual Ref<Texture> get_run_icon() const { return get_logo(); }
 
 	String test_etc2() const; //generic test for etc2 since most platforms use it
+	String test_etc2_or_pvrtc() const; // test for etc2 or pvrtc support for iOS
 	virtual bool can_export(const Ref<EditorExportPreset> &p_preset, String &r_error, bool &r_missing_templates) const = 0;
 
 	virtual List<String> get_binary_extensions(const Ref<EditorExportPreset> &p_preset) const = 0;
@@ -294,6 +287,7 @@ class EditorExportPlugin : public Reference {
 	bool skipped;
 
 	Vector<String> ios_frameworks;
+	Vector<String> ios_embedded_frameworks;
 	Vector<String> ios_project_static_libs;
 	String ios_plist_content;
 	String ios_linker_flags;
@@ -308,6 +302,7 @@ class EditorExportPlugin : public Reference {
 
 	_FORCE_INLINE_ void _export_end() {
 		ios_frameworks.clear();
+		ios_embedded_frameworks.clear();
 		ios_bundle_files.clear();
 		ios_plist_content = "";
 		ios_linker_flags = "";
@@ -326,6 +321,7 @@ protected:
 	void add_shared_object(const String &p_path, const Vector<String> &tags);
 
 	void add_ios_framework(const String &p_path);
+	void add_ios_embedded_framework(const String &p_path);
 	void add_ios_project_static_lib(const String &p_path);
 	void add_ios_plist_content(const String &p_plist_content);
 	void add_ios_linker_flags(const String &p_flags);
@@ -341,6 +337,7 @@ protected:
 
 public:
 	Vector<String> get_ios_frameworks() const;
+	Vector<String> get_ios_embedded_frameworks() const;
 	Vector<String> get_ios_project_static_libs() const;
 	String get_ios_plist_content() const;
 	String get_ios_linker_flags() const;

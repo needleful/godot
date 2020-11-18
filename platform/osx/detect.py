@@ -25,7 +25,7 @@ def get_opts():
     return [
         ("osxcross_sdk", "OSXCross SDK version", "darwin14"),
         ("MACOS_SDK_PATH", "Path to the macOS SDK", ""),
-        EnumVariable("debug_symbols", "Add debugging symbols to release builds", "yes", ("yes", "no", "full")),
+        EnumVariable("debug_symbols", "Add debugging symbols to release/release_debug builds", "yes", ("yes", "no")),
         BoolVariable("separate_debug_symbols", "Create a separate file containing debugging symbols", False),
         BoolVariable("use_ubsan", "Use LLVM/GCC compiler undefined behavior sanitizer (UBSAN)", False),
         BoolVariable("use_asan", "Use LLVM/GCC compiler address sanitizer (ASAN))", False),
@@ -43,30 +43,31 @@ def configure(env):
     ## Build type
 
     if env["target"] == "release":
-        if env["optimize"] == "speed":  # optimize for speed (default)
-            env.Prepend(CCFLAGS=["-O3", "-fomit-frame-pointer", "-ftree-vectorize", "-msse2"])
-        else:  # optimize for size
-            env.Prepend(CCFLAGS=["-Os", "-ftree-vectorize", "-msse2"])
+        if env["debug_symbols"] != "full":
+            if env["optimize"] == "speed":  # optimize for speed (default)
+                env.Prepend(CCFLAGS=["-O3", "-fomit-frame-pointer", "-ftree-vectorize", "-msse2"])
+            else:  # optimize for size
+                env.Prepend(CCFLAGS=["-Os", "-ftree-vectorize", "-msse2"])
 
         if env["debug_symbols"] == "yes":
-            env.Prepend(CCFLAGS=["-g1"])
-        if env["debug_symbols"] == "full":
             env.Prepend(CCFLAGS=["-g2"])
 
     elif env["target"] == "release_debug":
-        if env["optimize"] == "speed":  # optimize for speed (default)
-            env.Prepend(CCFLAGS=["-O2"])
-        else:  # optimize for size
-            env.Prepend(CCFLAGS=["-Os"])
+        if env["debug_symbols"] != "full":
+            if env["optimize"] == "speed":  # optimize for speed (default)
+                env.Prepend(CCFLAGS=["-O2"])
+            else:  # optimize for size
+                env.Prepend(CCFLAGS=["-Os"])
+
         env.Prepend(CPPDEFINES=["DEBUG_ENABLED"])
+
         if env["debug_symbols"] == "yes":
-            env.Prepend(CCFLAGS=["-g1"])
-        if env["debug_symbols"] == "full":
             env.Prepend(CCFLAGS=["-g2"])
 
     elif env["target"] == "debug":
         env.Prepend(CCFLAGS=["-g3"])
-        env.Prepend(CPPDEFINES=["DEBUG_ENABLED", "DEBUG_MEMORY_ENABLED"])
+        env.Prepend(CPPDEFINES=["DEBUG_ENABLED"])
+        env.Prepend(LINKFLAGS=["-Xlinker", "-no_deduplicate"])
 
     ## Architecture
 

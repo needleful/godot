@@ -35,7 +35,10 @@
 #include "editor_icons.gen.h"
 #include "editor_scale.h"
 #include "editor_settings.h"
+
+#ifdef SVG_ENABLED
 #include "modules/svg/image_loader_svg.h"
+#endif
 
 static Ref<StyleBoxTexture> make_stylebox(Ref<Texture> p_texture, float p_left, float p_top, float p_right, float p_botton, float p_margin_left = -1, float p_margin_top = -1, float p_margin_right = -1, float p_margin_botton = -1, bool p_draw_center = true) {
 	Ref<StyleBoxTexture> style(memnew(StyleBoxTexture));
@@ -81,7 +84,8 @@ static Ref<StyleBoxLine> make_line_stylebox(Color p_color, int p_thickness = 1, 
 	return style;
 }
 
-Ref<ImageTexture> editor_generate_icon(int p_index, bool p_convert_color, float p_scale = EDSCALE, bool p_force_filter = false) {
+#ifdef SVG_ENABLED
+static Ref<ImageTexture> editor_generate_icon(int p_index, bool p_convert_color, float p_scale = EDSCALE, bool p_force_filter = false) {
 
 	Ref<ImageTexture> icon = memnew(ImageTexture);
 	Ref<Image> img = memnew(Image);
@@ -102,6 +106,7 @@ Ref<ImageTexture> editor_generate_icon(int p_index, bool p_convert_color, float 
 
 	return icon;
 }
+#endif
 
 #ifndef ADD_CONVERT_COLOR
 #define ADD_CONVERT_COLOR(dictionary, old_color, new_color) dictionary[Color::html(old_color)] = Color::html(new_color)
@@ -221,8 +226,15 @@ void editor_register_and_generate_icons(Ref<Theme> p_theme, bool p_dark_theme = 
 	// Generate icons.
 	if (!p_only_thumbs) {
 		for (int i = 0; i < editor_icons_count; i++) {
+			float icon_scale = EDSCALE;
+
+			// Always keep the DefaultProjectIcon at the default size
+			if (strcmp(editor_icons_names[i], "DefaultProjectIcon") == 0) {
+				icon_scale = 1.0f;
+			}
+
 			const int is_exception = exceptions.has(editor_icons_names[i]);
-			const Ref<ImageTexture> icon = editor_generate_icon(i, !is_exception);
+			const Ref<ImageTexture> icon = editor_generate_icon(i, !is_exception, icon_scale);
 
 			p_theme->set_icon(editor_icons_names[i], "EditorIcons", icon);
 		}
@@ -433,7 +445,8 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 
 	// Highlighted tabs and border width
 	Color tab_color = highlight_tabs ? base_color.linear_interpolate(font_color, contrast) : base_color;
-	const int border_width = CLAMP(border_size, 0, 3) * EDSCALE;
+	// Ensure borders are visible when using an editor scale below 100%.
+	const int border_width = CLAMP(border_size, 0, 3) * MAX(1, EDSCALE);
 
 	const int default_margin_size = 4;
 	const int margin_size_extra = default_margin_size + CLAMP(border_size, 0, 3);

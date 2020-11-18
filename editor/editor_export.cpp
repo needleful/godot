@@ -202,35 +202,6 @@ bool EditorExportPreset::has_export_file(const String &p_path) {
 	return selected_files.has(p_path);
 }
 
-void EditorExportPreset::add_patch(const String &p_path, int p_at_pos) {
-
-	if (p_at_pos < 0)
-		patches.push_back(p_path);
-	else
-		patches.insert(p_at_pos, p_path);
-	EditorExport::singleton->save_presets();
-}
-
-void EditorExportPreset::remove_patch(int p_idx) {
-	patches.remove(p_idx);
-	EditorExport::singleton->save_presets();
-}
-
-void EditorExportPreset::set_patch(int p_index, const String &p_path) {
-	ERR_FAIL_INDEX(p_index, patches.size());
-	patches.write[p_index] = p_path;
-	EditorExport::singleton->save_presets();
-}
-String EditorExportPreset::get_patch(int p_index) {
-
-	ERR_FAIL_INDEX_V(p_index, patches.size(), String());
-	return patches[p_index];
-}
-
-Vector<String> EditorExportPreset::get_patches() const {
-	return patches;
-}
-
 void EditorExportPreset::set_custom_features(const String &p_custom_features) {
 
 	custom_features = p_custom_features;
@@ -555,8 +526,16 @@ void EditorExportPlugin::add_ios_framework(const String &p_path) {
 	ios_frameworks.push_back(p_path);
 }
 
+void EditorExportPlugin::add_ios_embedded_framework(const String &p_path) {
+	ios_embedded_frameworks.push_back(p_path);
+}
+
 Vector<String> EditorExportPlugin::get_ios_frameworks() const {
 	return ios_frameworks;
+}
+
+Vector<String> EditorExportPlugin::get_ios_embedded_frameworks() const {
+	return ios_embedded_frameworks;
 }
 
 void EditorExportPlugin::add_ios_plist_content(const String &p_plist_content) {
@@ -640,6 +619,7 @@ void EditorExportPlugin::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("add_ios_project_static_lib", "path"), &EditorExportPlugin::add_ios_project_static_lib);
 	ClassDB::bind_method(D_METHOD("add_file", "path", "file", "remap"), &EditorExportPlugin::add_file);
 	ClassDB::bind_method(D_METHOD("add_ios_framework", "path"), &EditorExportPlugin::add_ios_framework);
+	ClassDB::bind_method(D_METHOD("add_ios_embedded_framework", "path"), &EditorExportPlugin::add_ios_embedded_framework);
 	ClassDB::bind_method(D_METHOD("add_ios_plist_content", "plist_content"), &EditorExportPlugin::add_ios_plist_content);
 	ClassDB::bind_method(D_METHOD("add_ios_linker_flags", "flags"), &EditorExportPlugin::add_ios_linker_flags);
 	ClassDB::bind_method(D_METHOD("add_ios_bundle_file", "path"), &EditorExportPlugin::add_ios_bundle_file);
@@ -732,6 +712,9 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 
 	_edit_filter_list(paths, p_preset->get_include_filter(), false);
 	_edit_filter_list(paths, p_preset->get_exclude_filter(), true);
+
+	// Ignore import files, since these are automatically added to the jar later with the resources
+	_edit_filter_list(paths, String("*.import"), true);
 
 	Vector<Ref<EditorExportPlugin> > export_plugins = EditorExport::get_singleton()->get_export_plugins();
 	for (int i = 0; i < export_plugins.size(); i++) {
@@ -1212,7 +1195,6 @@ void EditorExport::_save() {
 		config->set_value(section, "include_filter", preset->get_include_filter());
 		config->set_value(section, "exclude_filter", preset->get_exclude_filter());
 		config->set_value(section, "export_path", preset->get_export_path());
-		config->set_value(section, "patch_list", preset->get_patches());
 		config->set_value(section, "script_export_mode", preset->get_script_export_mode());
 		config->set_value(section, "script_encryption_key", preset->get_script_encryption_key());
 
@@ -1283,6 +1265,30 @@ String EditorExportPlatform::test_etc2() const {
 			if (err != String())
 				err += "\n";
 			err += TTR("Target platform requires 'ETC' texture compression for the driver fallback to GLES2.\nEnable 'Import Etc' in Project Settings, or disable 'Driver Fallback Enabled'.");
+		}
+		return err;
+	}
+	return String();
+}
+
+String EditorExportPlatform::test_etc2_or_pvrtc() const {
+
+	String driver = ProjectSettings::get_singleton()->get("rendering/quality/driver/driver_name");
+	bool driver_fallback = ProjectSettings::get_singleton()->get("rendering/quality/driver/fallback_to_gles2");
+	bool etc2_supported = ProjectSettings::get_singleton()->get("rendering/vram_compression/import_etc2");
+	bool pvrtc_supported = ProjectSettings::get_singleton()->get("rendering/vram_compression/import_pvrtc");
+
+	if (driver == "GLES2" && !pvrtc_supported) {
+		return TTR("Target platform requires 'PVRTC' texture compression for GLES2. Enable 'Import Pvrtc' in Project Settings.");
+	} else if (driver == "GLES3") {
+		String err;
+		if (!etc2_supported && !pvrtc_supported) {
+			err += TTR("Target platform requires 'ETC2' or 'PVRTC' texture compression for GLES3. Enable 'Import Etc 2' or 'Import Pvrtc' in Project Settings.");
+		}
+		if (driver_fallback && !pvrtc_supported) {
+			if (err != String())
+				err += "\n";
+			err += TTR("Target platform requires 'PVRTC' texture compression for the driver fallback to GLES2.\nEnable 'Import Pvrtc' in Project Settings, or disable 'Driver Fallback Enabled'.");
 		}
 		return err;
 	}
@@ -1405,12 +1411,6 @@ void EditorExport::load_config() {
 		preset->set_include_filter(config->get_value(section, "include_filter"));
 		preset->set_exclude_filter(config->get_value(section, "exclude_filter"));
 		preset->set_export_path(config->get_value(section, "export_path", ""));
-
-		Vector<String> patch_list = config->get_value(section, "patch_list");
-
-		for (int i = 0; i < patch_list.size(); i++) {
-			preset->add_patch(patch_list[i]);
-		}
 
 		if (config->has_section_key(section, "script_export_mode")) {
 			preset->set_script_export_mode(config->get_value(section, "script_export_mode"));

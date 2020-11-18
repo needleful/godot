@@ -275,6 +275,7 @@ void GraphEdit::remove_child_notify(Node *p_child) {
 	if (gn) {
 		gn->disconnect("offset_changed", this, "_graph_node_moved");
 		gn->disconnect("raise_request", this, "_graph_node_raised");
+		gn->disconnect("item_rect_changed", connections_layer, "update");
 	}
 }
 
@@ -810,6 +811,10 @@ void GraphEdit::_gui_input(const Ref<InputEvent> &p_ev) {
 	}
 
 	if (mm.is_valid() && dragging) {
+		if (!moving_selection) {
+			emit_signal("_begin_node_move");
+			moving_selection = true;
+		}
 
 		just_selected = true;
 		drag_accum += mm->get_relative();
@@ -919,16 +924,16 @@ void GraphEdit::_gui_input(const Ref<InputEvent> &p_ev) {
 			}
 
 			if (drag_accum != Vector2()) {
-
-				emit_signal("_begin_node_move");
-
 				for (int i = get_child_count() - 1; i >= 0; i--) {
 					GraphNode *gn = Object::cast_to<GraphNode>(get_child(i));
 					if (gn && gn->is_selected())
 						gn->set_drag(false);
 				}
+			}
 
+			if (moving_selection) {
 				emit_signal("_end_node_move");
+				moving_selection = false;
 			}
 
 			dragging = false;

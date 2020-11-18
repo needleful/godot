@@ -631,9 +631,6 @@ void Object::get_property_list(List<PropertyInfo> *p_list, bool p_reversed) cons
 	_get_property_listv(p_list, p_reversed);
 
 	if (!is_class("Script")) { // can still be set, but this is for userfriendlyness
-#ifdef TOOLS_ENABLED
-		p_list->push_back(PropertyInfo(Variant::NIL, "Script", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_GROUP));
-#endif
 		p_list->push_back(PropertyInfo(Variant::OBJECT, "script", PROPERTY_HINT_RESOURCE_TYPE, "Script", PROPERTY_USAGE_DEFAULT));
 	}
 	if (!metadata.empty()) {
@@ -695,7 +692,7 @@ Variant Object::_call_deferred_bind(const Variant **p_args, int p_argcount, Vari
 
 	StringName method = *p_args[0];
 
-	MessageQueue::get_singleton()->push_call(get_instance_id(), method, &p_args[1], p_argcount - 1);
+	MessageQueue::get_singleton()->push_call(get_instance_id(), method, &p_args[1], p_argcount - 1, true);
 
 	return Variant();
 }

@@ -821,8 +821,9 @@ int Animation::_insert(float p_time, T &p_keys, const V &p_value) {
 
 		// Condition for replacement.
 		if (idx > 0 && Math::is_equal_approx(p_keys[idx - 1].time, p_time)) {
-
+			float transition = p_keys[idx - 1].transition;
 			p_keys.write[idx - 1] = p_value;
+			p_keys.write[idx - 1].transition = transition;
 			return idx - 1;
 
 			// Condition for insert.
@@ -2787,6 +2788,7 @@ void Animation::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("value_track_get_update_mode", "track_idx"), &Animation::value_track_get_update_mode);
 
 	ClassDB::bind_method(D_METHOD("value_track_get_key_indices", "track_idx", "time_sec", "delta"), &Animation::_value_track_get_key_indices);
+	ClassDB::bind_method(D_METHOD("value_track_interpolate", "track_idx", "time_sec"), &Animation::value_track_interpolate);
 
 	ClassDB::bind_method(D_METHOD("method_track_get_key_indices", "track_idx", "time_sec", "delta"), &Animation::_method_track_get_key_indices);
 	ClassDB::bind_method(D_METHOD("method_track_get_name", "track_idx", "key_idx"), &Animation::method_track_get_name);

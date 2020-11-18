@@ -175,11 +175,126 @@
 
 EditorNode *EditorNode::singleton = NULL;
 
+void EditorNode::disambiguate_filenames(const Vector<String> p_full_paths, Vector<String> &r_filenames) {
+	// Keep track of a list of "index sets," i.e. sets of indices
+	// within disambiguated_scene_names which contain the same name.
+	Vector<Set<int> > index_sets;
+	Map<String, int> scene_name_to_set_index;
+	for (int i = 0; i < r_filenames.size(); i++) {
+		String scene_name = r_filenames[i];
+		if (!scene_name_to_set_index.has(scene_name)) {
+			index_sets.push_back(Set<int>());
+			scene_name_to_set_index.insert(r_filenames[i], index_sets.size() - 1);
+		}
+		index_sets.write[scene_name_to_set_index[scene_name]].insert(i);
+	}
+
+	// For each index set with a size > 1, we need to disambiguate
+	for (int i = 0; i < index_sets.size(); i++) {
+		Set<int> iset = index_sets[i];
+		while (iset.size() > 1) {
+			// Append the parent folder to each scene name
+			for (Set<int>::Element *E = iset.front(); E; E = E->next()) {
+				int set_idx = E->get();
+				String scene_name = r_filenames[set_idx];
+				String full_path = p_full_paths[set_idx];
+
+				// Get rid of file extensions and res:// prefixes
+				if (scene_name.rfind(".") >= 0) {
+					scene_name = scene_name.substr(0, scene_name.rfind("."));
+				}
+				if (full_path.begins_with("res://")) {
+					full_path = full_path.substr(6);
+				}
+				if (full_path.rfind(".") >= 0) {
+					full_path = full_path.substr(0, full_path.rfind("."));
+				}
+
+				int scene_name_size = scene_name.size();
+				int full_path_size = full_path.size();
+				int difference = full_path_size - scene_name_size;
+
+				// Find just the parent folder of the current path and append it.
+				// If the current name is foo.tscn, and the full path is /some/folder/foo.tscn
+				// then slash_idx is the second '/', so that we select just "folder", and
+				// append that to yield "folder/foo.tscn".
+				if (difference > 0) {
+					String parent = full_path.substr(0, difference);
+					int slash_idx = parent.rfind("/");
+					slash_idx = parent.rfind("/", slash_idx - 1);
+					parent = slash_idx >= 0 ? parent.substr(slash_idx + 1) : parent;
+					r_filenames.write[set_idx] = parent + r_filenames[set_idx];
+				}
+			}
+
+			// Loop back through scene names and remove non-ambiguous names
+			bool can_proceed = false;
+			Set<int>::Element *E = iset.front();
+			while (E) {
+				String scene_name = r_filenames[E->get()];
+				bool duplicate_found = false;
+				for (Set<int>::Element *F = iset.front(); F; F = F->next()) {
+					if (E->get() == F->get()) {
+						continue;
+					}
+					String other_scene_name = r_filenames[F->get()];
+					if (other_scene_name == scene_name) {
+						duplicate_found = true;
+						break;
+					}
+				}
+
+				Set<int>::Element *to_erase = duplicate_found ? nullptr : E;
+
+				// We need to check that we could actually append anymore names
+				// if we wanted to for disambiguation. If we can't, then we have
+				// to abort even with ambiguous names. We clean the full path
+				// and the scene name first to remove extensions so that this
+				// comparison actually works.
+				String path = p_full_paths[E->get()];
+				if (path.begins_with("res://")) {
+					path = path.substr(6);
+				}
+				if (path.rfind(".") >= 0) {
+					path = path.substr(0, path.rfind("."));
+				}
+				if (scene_name.rfind(".") >= 0) {
+					scene_name = scene_name.substr(0, scene_name.rfind("."));
+				}
+
+				// We can proceed iff the full path is longer than the scene name,
+				// meaning that there is at least one more parent folder we can
+				// tack onto the name.
+				can_proceed = can_proceed || (path.size() - scene_name.size()) >= 1;
+
+				E = E->next();
+				if (to_erase) {
+					iset.erase(to_erase);
+				}
+			}
+
+			if (!can_proceed) {
+				break;
+			}
+		}
+	}
+}
+
 void EditorNode::_update_scene_tabs() {
 
 	bool show_rb = EditorSettings::get_singleton()->get("interface/scene_tabs/show_script_button");
 
 	OS::get_singleton()->global_menu_clear("_dock");
+
+	// Get all scene names, which may be ambiguous
+	Vector<String> disambiguated_scene_names;
+	Vector<String> full_path_names;
+	for (int i = 0; i < editor_data.get_edited_scene_count(); i++) {
+		disambiguated_scene_names.push_back(editor_data.get_scene_title(i));
+		full_path_names.push_back(editor_data.get_scene_path(i));
+	}
+
+	disambiguate_filenames(full_path_names, disambiguated_scene_names);
 
 	scene_tabs->clear_tabs();
 	Ref<Texture> script_icon = gui_base->get_icon("Script", "EditorIcons");
@@ -193,7 +308,7 @@ void EditorNode::_update_scene_tabs() {
 
 		int current = editor_data.get_edited_scene();
 		bool unsaved = (i == current) ? saved_version != editor_data.get_undo_redo().get_version() : editor_data.get_scene_version(i) != 0;
-		scene_tabs->add_tab(editor_data.get_scene_title(i) + (unsaved ? "(*)" : ""), icon);
+		scene_tabs->add_tab(disambiguated_scene_names[i] + (unsaved ? "(*)" : ""), icon);
 
 		OS::get_singleton()->global_menu_add_item("_dock", editor_data.get_scene_title(i) + (unsaved ? "(*)" : ""), GLOBAL_SCENE, i);
 
@@ -598,15 +713,18 @@ void EditorNode::_fs_changed() {
 					preset_name);
 		} else {
 			Ref<EditorExportPlatform> platform = preset->get_platform();
-			if (platform.is_null()) {
+			const String export_path = export_defer.path.empty() ? preset->get_export_path() : export_defer.path;
+			if (export_path.empty()) {
+				export_error = vformat("Export preset '%s' doesn't have a default export path, and none was specified.", preset_name);
+			} else if (platform.is_null()) {
 				export_error = vformat("Export preset '%s' doesn't have a matching platform.", preset_name);
 			} else {
 				Error err = OK;
 				if (export_defer.pack_only) { // Only export .pck or .zip data pack.
-					if (export_defer.path.ends_with(".zip")) {
-						err = platform->export_zip(preset, export_defer.debug, export_defer.path);
-					} else if (export_defer.path.ends_with(".pck")) {
-						err = platform->export_pack(preset, export_defer.debug, export_defer.path);
+					if (export_path.ends_with(".zip")) {
+						err = platform->export_zip(preset, export_defer.debug, export_path);
+					} else if (export_path.ends_with(".pck")) {
+						err = platform->export_pack(preset, export_defer.debug, export_path);
 					}
 				} else { // Normal project export.
 					String config_error;
@@ -615,7 +733,7 @@ void EditorNode::_fs_changed() {
 						ERR_PRINT(vformat("Cannot export project with preset '%s' due to configuration errors:\n%s", preset_name, config_error));
 						err = missing_templates ? ERR_FILE_NOT_FOUND : ERR_UNCONFIGURED;
 					} else {
-						err = platform->export_project(preset, export_defer.debug, export_defer.path);
+						err = platform->export_project(preset, export_defer.debug, export_path);
 					}
 				}
 				switch (err) {
@@ -625,7 +743,7 @@ void EditorNode::_fs_changed() {
 						export_error = vformat("Project export failed for preset '%s', the export template appears to be missing.", preset_name);
 						break;
 					case ERR_FILE_BAD_PATH:
-						export_error = vformat("Project export failed for preset '%s', the target path '%s' appears to be invalid.", preset_name, export_defer.path);
+						export_error = vformat("Project export failed for preset '%s', the target path '%s' appears to be invalid.", preset_name, export_path);
 						break;
 					default:
 						export_error = vformat("Project export failed with error code %d for preset '%s'.", (int)err, preset_name);
@@ -1121,7 +1239,10 @@ void EditorNode::_save_scene_with_preview(String p_file, int p_idx) {
 			img.instance();
 			img->create(1, 1, 0, Image::FORMAT_RGB8);
 		} else if (c3d < c2d) {
-			img = scene_root->get_texture()->get_data();
+			Ref<ViewportTexture> viewport_texture = scene_root->get_texture();
+			if (viewport_texture->get_width() > 0 && viewport_texture->get_height() > 0) {
+				img = viewport_texture->get_data();
+			}
 		} else {
 			// The 3D editor may be disabled as a feature, but scenes can still be opened.
 			// This check prevents the preview from regenerating in case those scenes are then saved.
@@ -1131,8 +1252,7 @@ void EditorNode::_save_scene_with_preview(String p_file, int p_idx) {
 			}
 		}
 
-		if (img.is_valid()) {
-
+		if (img.is_valid() && img->get_width() > 0 && img->get_height() > 0) {
 			img = img->duplicate();
 
 			save.step(TTR("Creating Thumbnail"), 2);
@@ -1562,7 +1682,7 @@ void EditorNode::_dialog_action(String p_file) {
 			if (err == ERR_FILE_CANT_OPEN || err == ERR_FILE_NOT_FOUND) {
 				config.instance(); // new config
 			} else if (err != OK) {
-				show_warning(TTR("Error trying to save layout!"));
+				show_warning(TTR("An error occurred while trying to save the editor layout.\nMake sure the editor's user data path is writable."));
 				return;
 			}
 
@@ -1574,7 +1694,7 @@ void EditorNode::_dialog_action(String p_file) {
 			_update_layouts_menu();
 
 			if (p_file == "Default") {
-				show_warning(TTR("Default editor layout overridden."));
+				show_warning(TTR("Default editor layout overridden.\nTo restore the Default layout to its base settings, use the Delete Layout option and delete the Default layout."));
 			}
 
 		} break;
@@ -1605,7 +1725,7 @@ void EditorNode::_dialog_action(String p_file) {
 			_update_layouts_menu();
 
 			if (p_file == "Default") {
-				show_warning(TTR("Restored default layout to base settings."));
+				show_warning(TTR("Restored the Default layout to its base settings."));
 			}
 
 		} break;
@@ -1971,8 +2091,7 @@ void EditorNode::_run(bool p_current, const String &p_custom) {
 	String args;
 	bool skip_breakpoints;
 
-	if (p_current || (editor_data.get_edited_scene_root() && p_custom == editor_data.get_edited_scene_root()->get_filename())) {
-
+	if (p_current || (editor_data.get_edited_scene_root() && p_custom != String() && p_custom == editor_data.get_edited_scene_root()->get_filename())) {
 		Node *scene = editor_data.get_edited_scene_root();
 
 		if (!scene) {
@@ -2005,14 +2124,7 @@ void EditorNode::_run(bool p_current, const String &p_custom) {
 
 			Node *scene = editor_data.get_edited_scene_root();
 
-			if (scene) { //only autosave if there is a scene obviously
-
-				if (scene->get_filename() == "") {
-
-					show_accept(TTR("Current scene was never saved, please save it prior to running."), TTR("OK"));
-					return;
-				}
-
+			if (scene && scene->get_filename() != "") { // Only autosave if there is a scene and if it has a path.
 				_save_scene_with_preview(scene->get_filename());
 			}
 		}
@@ -3590,10 +3702,14 @@ void EditorNode::_quick_opened() {
 
 	Vector<String> files = quick_open->get_selected_files();
 
+	bool open_scene_dialog = quick_open->get_base_type() == "PackedScene";
 	for (int i = 0; i < files.size(); i++) {
 		String res_path = files[i];
 
-		if (quick_open->get_base_type() == "PackedScene") {
+		List<String> scene_extensions;
+		ResourceLoader::get_recognized_extensions_for_type("PackedScene", &scene_extensions);
+
+		if (open_scene_dialog || scene_extensions.find(files[i].get_extension())) {
 			open_request(res_path);
 		} else {
 			load_resource(res_path);
@@ -5155,7 +5271,6 @@ void EditorNode::_dropped_files(const Vector<String> &p_files, int p_screen) {
 void EditorNode::_add_dropped_files_recursive(const Vector<String> &p_files, String to_path) {
 
 	DirAccessRef dir = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
-	Vector<String> just_copy = String("ttf,otf").split(",");
 
 	for (int i = 0; i < p_files.size(); i++) {
 
@@ -5188,9 +5303,6 @@ void EditorNode::_add_dropped_files_recursive(const Vector<String> &p_files, Str
 			continue;
 		}
 
-		if (!ResourceFormatImporter::get_singleton()->can_be_imported(from) && (just_copy.find(from.get_extension().to_lower()) == -1)) {
-			continue;
-		}
 		dir->copy(from, to);
 	}
 }
@@ -5402,10 +5514,11 @@ void EditorNode::_feature_profile_changed() {
 	TabContainer *node_tabs = cast_to<TabContainer>(node_dock->get_parent());
 	TabContainer *fs_tabs = cast_to<TabContainer>(filesystem_dock->get_parent());
 	if (profile.is_valid()) {
-
-		import_tabs->set_tab_hidden(import_dock->get_index(), profile->is_feature_disabled(EditorFeatureProfile::FEATURE_IMPORT_DOCK));
 		node_tabs->set_tab_hidden(node_dock->get_index(), profile->is_feature_disabled(EditorFeatureProfile::FEATURE_NODE_DOCK));
-		fs_tabs->set_tab_hidden(filesystem_dock->get_index(), profile->is_feature_disabled(EditorFeatureProfile::FEATURE_FILESYSTEM_DOCK));
+		// The Import dock is useless without the FileSystem dock. Ensure the configuration is valid.
+		bool fs_dock_disabled = profile->is_feature_disabled(EditorFeatureProfile::FEATURE_FILESYSTEM_DOCK);
+		fs_tabs->set_tab_hidden(filesystem_dock->get_index(), fs_dock_disabled);
+		import_tabs->set_tab_hidden(import_dock->get_index(), fs_dock_disabled || profile->is_feature_disabled(EditorFeatureProfile::FEATURE_IMPORT_DOCK));
 
 		main_editor_buttons[EDITOR_3D]->set_visible(!profile->is_feature_disabled(EditorFeatureProfile::FEATURE_3D));
 		main_editor_buttons[EDITOR_SCRIPT]->set_visible(!profile->is_feature_disabled(EditorFeatureProfile::FEATURE_SCRIPT));
@@ -5652,46 +5765,51 @@ EditorNode::EditorNode() {
 
 	{
 		int display_scale = EditorSettings::get_singleton()->get("interface/editor/display_scale");
-		float custom_display_scale = EditorSettings::get_singleton()->get("interface/editor/custom_display_scale");
 
 		switch (display_scale) {
 			case 0: {
-				// Try applying a suitable display scale automatically
+				// Try applying a suitable display scale automatically.
 #ifdef OSX_ENABLED
 				editor_set_scale(OS::get_singleton()->get_screen_max_scale());
 #else
 				const int screen = OS::get_singleton()->get_current_screen();
-				editor_set_scale(OS::get_singleton()->get_screen_dpi(screen) >= 192 && OS::get_singleton()->get_screen_size(screen).x > 2000 ? 2.0 : 1.0);
+				float scale;
+				if (OS::get_singleton()->get_screen_dpi(screen) >= 192 && OS::get_singleton()->get_screen_size(screen).y >= 1400) {
+					// hiDPI display.
+					scale = 2.0;
+				} else if (OS::get_singleton()->get_screen_size(screen).y <= 800) {
+					// Small loDPI display. Use a smaller display scale so that editor elements fit more easily.
+					// Icons won't look great, but this is better than having editor elements overflow from its window.
+					scale = 0.75;
+				} else {
+					scale = 1.0;
+				}
+
+				editor_set_scale(scale);
 #endif
 			} break;
 
-			case 1: {
+			case 1:
 				editor_set_scale(0.75);
-			} break;
-
-			case 2: {
+				break;
+			case 2:
 				editor_set_scale(1.0);
-			} break;
-
-			case 3: {
+				break;
+			case 3:
 				editor_set_scale(1.25);
-			} break;
-
-			case 4: {
+				break;
+			case 4:
 				editor_set_scale(1.5);
-			} break;
-
-			case 5: {
+				break;
+			case 5:
 				editor_set_scale(1.75);
-			} break;
-
-			case 6: {
+				break;
+			case 6:
 				editor_set_scale(2.0);
-			} break;
-
-			default: {
-				editor_set_scale(custom_display_scale);
-			} break;
+				break;
+			default:
+				editor_set_scale(EditorSettings::get_singleton()->get("interface/editor/custom_display_scale"));
+				break;
 		}
 	}
 
@@ -6245,19 +6363,31 @@ EditorNode::EditorNode() {
 	p->set_hide_on_window_lose_focus(true);
 	p->set_hide_on_checkable_item_selection(false);
 	p->add_check_shortcut(ED_SHORTCUT("editor/deploy_with_remote_debug", TTR("Deploy with Remote Debug")), RUN_DEPLOY_REMOTE_DEBUG);
-	p->set_item_tooltip(p->get_item_count() - 1, TTR("When exporting or deploying, the resulting executable will attempt to connect to the IP of this computer in order to be debugged."));
-	p->add_check_shortcut(ED_SHORTCUT("editor/small_deploy_with_network_fs", TTR("Small Deploy with Network FS")), RUN_FILE_SERVER);
-	p->set_item_tooltip(p->get_item_count() - 1, TTR("When this option is enabled, export or deploy will produce a minimal executable.\nThe filesystem will be provided from the project by the editor over the network.\nOn Android, deploy will use the USB cable for faster performance. This option speeds up testing for games with a large footprint."));
+	p->set_item_tooltip(
+			p->get_item_count() - 1,
+			TTR("When this option is enabled, using one-click deploy will make the executable attempt to connect to this computer's IP so the running project can be debugged.\nThis option is intended to be used for remote debugging (typically with a mobile device).\nYou don't need to enable it to use the GDScript debugger locally."));
+	p->add_check_shortcut(ED_SHORTCUT("editor/small_deploy_with_network_fs", TTR("Small Deploy with Network Filesystem")), RUN_FILE_SERVER);
+	p->set_item_tooltip(
+			p->get_item_count() - 1,
+			TTR("When this option is enabled, using one-click deploy for Android will only export an executable without the project data.\nThe filesystem will be provided from the project by the editor over the network.\nOn Android, deploying will use the USB cable for faster performance. This option speeds up testing for projects with large assets."));
 	p->add_separator();
 	p->add_check_shortcut(ED_SHORTCUT("editor/visible_collision_shapes", TTR("Visible Collision Shapes")), RUN_DEBUG_COLLISONS);
-	p->set_item_tooltip(p->get_item_count() - 1, TTR("Collision shapes and raycast nodes (for 2D and 3D) will be visible on the running game if this option is turned on."));
+	p->set_item_tooltip(
+			p->get_item_count() - 1,
+			TTR("When this option is enabled, collision shapes and raycast nodes (for 2D and 3D) will be visible in the running project."));
 	p->add_check_shortcut(ED_SHORTCUT("editor/visible_navigation", TTR("Visible Navigation")), RUN_DEBUG_NAVIGATION);
-	p->set_item_tooltip(p->get_item_count() - 1, TTR("Navigation meshes and polygons will be visible on the running game if this option is turned on."));
+	p->set_item_tooltip(
+			p->get_item_count() - 1,
+			TTR("When this option is enabled, navigation meshes and polygons will be visible in the running project."));
 	p->add_separator();
-	p->add_check_shortcut(ED_SHORTCUT("editor/sync_scene_changes", TTR("Sync Scene Changes")), RUN_LIVE_DEBUG);
-	p->set_item_tooltip(p->get_item_count() - 1, TTR("When this option is turned on, any changes made to the scene in the editor will be replicated in the running game.\nWhen used remotely on a device, this is more efficient with network filesystem."));
-	p->add_check_shortcut(ED_SHORTCUT("editor/sync_script_changes", TTR("Sync Script Changes")), RUN_RELOAD_SCRIPTS);
-	p->set_item_tooltip(p->get_item_count() - 1, TTR("When this option is turned on, any script that is saved will be reloaded on the running game.\nWhen used remotely on a device, this is more efficient with network filesystem."));
+	p->add_check_shortcut(ED_SHORTCUT("editor/sync_scene_changes", TTR("Synchronize Scene Changes")), RUN_LIVE_DEBUG);
+	p->set_item_tooltip(
+			p->get_item_count() - 1,
+			TTR("When this option is enabled, any changes made to the scene in the editor will be replicated in the running project.\nWhen used remotely on a device, this is more efficient when the network filesystem option is enabled."));
+	p->add_check_shortcut(ED_SHORTCUT("editor/sync_script_changes", TTR("Synchronize Script Changes")), RUN_RELOAD_SCRIPTS);
+	p->set_item_tooltip(
+			p->get_item_count() - 1,
+			TTR("When this option is enabled, any script that is saved will be reloaded in the running project.\nWhen used remotely on a device, this is more efficient when the network filesystem option is enabled."));
 	p->connect("id_pressed", this, "_menu_option");
 
 	menu_hb->add_spacer();
@@ -6851,14 +6981,16 @@ EditorNode::EditorNode() {
 	ED_SHORTCUT("editor/editor_2d", TTR("Open 2D Editor"), KEY_MASK_ALT | KEY_1);
 	ED_SHORTCUT("editor/editor_3d", TTR("Open 3D Editor"), KEY_MASK_ALT | KEY_2);
 	ED_SHORTCUT("editor/editor_script", TTR("Open Script Editor"), KEY_MASK_ALT | KEY_3);
+	ED_SHORTCUT("editor/editor_assetlib", TTR("Open Asset Library"), KEY_MASK_ALT | KEY_4);
 	ED_SHORTCUT("editor/editor_help", TTR("Search Help"), KEY_MASK_ALT | KEY_SPACE);
 #else
-	ED_SHORTCUT("editor/editor_2d", TTR("Open 2D Editor"), KEY_F1);
-	ED_SHORTCUT("editor/editor_3d", TTR("Open 3D Editor"), KEY_F2);
-	ED_SHORTCUT("editor/editor_script", TTR("Open Script Editor"), KEY_F3); //hack needed for script editor F3 search to work :) Assign like this or don't use F3
+	// Use the Ctrl modifier so F2 can be used to rename nodes in the scene tree dock.
+	ED_SHORTCUT("editor/editor_2d", TTR("Open 2D Editor"), KEY_MASK_CTRL | KEY_F1);
+	ED_SHORTCUT("editor/editor_3d", TTR("Open 3D Editor"), KEY_MASK_CTRL | KEY_F2);
+	ED_SHORTCUT("editor/editor_script", TTR("Open Script Editor"), KEY_MASK_CTRL | KEY_F3);
+	ED_SHORTCUT("editor/editor_assetlib", TTR("Open Asset Library"), KEY_MASK_CTRL | KEY_F4);
 	ED_SHORTCUT("editor/editor_help", TTR("Search Help"), KEY_MASK_SHIFT | KEY_F1);
 #endif
-	ED_SHORTCUT("editor/editor_assetlib", TTR("Open Asset Library"));
 	ED_SHORTCUT("editor/editor_next", TTR("Open the next Editor"));
 	ED_SHORTCUT("editor/editor_prev", TTR("Open the previous Editor"));
 

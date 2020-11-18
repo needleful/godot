@@ -153,8 +153,8 @@ bool JoypadWindows::setup_dinput_joypad(const DIDEVICEINSTANCE *instance) {
 	if (have_device(instance->guidInstance) || num == -1)
 		return false;
 
-	d_joypads[joypad_count] = dinput_gamepad();
-	dinput_gamepad *joy = &d_joypads[joypad_count];
+	d_joypads[num] = dinput_gamepad();
+	dinput_gamepad *joy = &d_joypads[num];
 
 	const DWORD devtype = (instance->dwDevType & 0xFF);
 
@@ -178,7 +178,7 @@ bool JoypadWindows::setup_dinput_joypad(const DIDEVICEINSTANCE *instance) {
 	WORD version = 0;
 	sprintf_s(uid, "%04x%04x%04x%04x%04x%04x%04x%04x", type, 0, vendor, 0, product, 0, version, 0);
 
-	id_to_change = joypad_count;
+	id_to_change = num;
 	slider_count = 0;
 
 	joy->di_joy->SetDataFormat(&c_dfDIJoystick2);
@@ -203,7 +203,7 @@ void JoypadWindows::setup_joypad_object(const DIDEVICEOBJECTINSTANCE *ob, int p_
 		HRESULT res;
 		DIPROPRANGE prop_range;
 		DIPROPDWORD dilong;
-		DWORD ofs;
+		LONG ofs;
 		if (ob->guidType == GUID_XAxis)
 			ofs = DIJOFS_X;
 		else if (ob->guidType == GUID_YAxis)
@@ -426,7 +426,7 @@ void JoypadWindows::process_joypads() {
 
 		// on mingw, these constants are not constants
 		int count = 8;
-		unsigned int axes[] = { DIJOFS_X, DIJOFS_Y, DIJOFS_Z, DIJOFS_RX, DIJOFS_RY, DIJOFS_RZ, DIJOFS_SLIDER(0), DIJOFS_SLIDER(1) };
+		LONG axes[] = { DIJOFS_X, DIJOFS_Y, DIJOFS_Z, DIJOFS_RX, DIJOFS_RY, DIJOFS_RZ, (LONG)DIJOFS_SLIDER(0), (LONG)DIJOFS_SLIDER(1) };
 		int values[] = { js.lX, js.lY, js.lZ, js.lRx, js.lRy, js.lRz, js.rglSlider[0], js.rglSlider[1] };
 
 		for (int j = 0; j < joy->joy_axis.size(); j++) {

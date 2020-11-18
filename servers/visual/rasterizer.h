@@ -244,7 +244,7 @@ public:
 
 	virtual void shader_add_custom_define(RID p_shader, const String &p_define) = 0;
 	virtual void shader_get_custom_defines(RID p_shader, Vector<String> *p_defines) const = 0;
-	virtual void shader_clear_custom_defines(RID p_shader) = 0;
+	virtual void shader_remove_custom_define(RID p_shader, const String &p_define) = 0;
 
 	/* COMMON MATERIAL API */
 
@@ -264,6 +264,8 @@ public:
 
 	virtual bool material_is_animated(RID p_material) = 0;
 	virtual bool material_casts_shadows(RID p_material) = 0;
+	virtual bool material_uses_tangents(RID p_material);
+	virtual bool material_uses_ensure_correct_normals(RID p_material);
 
 	virtual void material_add_instance_owner(RID p_material, RasterizerScene::InstanceBase *p_instance) = 0;
 	virtual void material_remove_instance_owner(RID p_material, RasterizerScene::InstanceBase *p_instance) = 0;
@@ -379,6 +381,7 @@ public:
 	virtual void light_set_cull_mask(RID p_light, uint32_t p_mask) = 0;
 	virtual void light_set_reverse_cull_face_mode(RID p_light, bool p_enabled) = 0;
 	virtual void light_set_use_gi(RID p_light, bool p_enable) = 0;
+	virtual void light_set_bake_mode(RID p_light, VS::LightBakeMode p_bake_mode) = 0;
 
 	virtual void light_omni_set_shadow_mode(RID p_light, VS::LightOmniShadowMode p_mode) = 0;
 	virtual void light_omni_set_shadow_detail(RID p_light, VS::LightOmniShadowDetail p_detail) = 0;
@@ -399,6 +402,7 @@ public:
 	virtual float light_get_param(RID p_light, VS::LightParam p_param) = 0;
 	virtual Color light_get_color(RID p_light) = 0;
 	virtual bool light_get_use_gi(RID p_light) = 0;
+	virtual VS::LightBakeMode light_get_bake_mode(RID p_light) = 0;
 	virtual uint64_t light_get_version(RID p_light) const = 0;
 
 	/* PROBE API */
@@ -568,6 +572,8 @@ public:
 	virtual bool render_target_was_used(RID p_render_target) = 0;
 	virtual void render_target_clear_used(RID p_render_target) = 0;
 	virtual void render_target_set_msaa(RID p_render_target, VS::ViewportMSAA p_msaa) = 0;
+	virtual void render_target_set_use_fxaa(RID p_render_target, bool p_fxaa) = 0;
+	virtual void render_target_set_use_debanding(RID p_render_target, bool p_debanding) = 0;
 
 	/* CANVAS SHADOW */
 
@@ -969,6 +975,56 @@ public:
 						for (int j = 1; j < l; j++) {
 							r.expand_to(pp[j]);
 						}
+
+						if (skeleton != RID()) {
+
+							// calculate bone AABBs
+							int bone_count = RasterizerStorage::base_singleton->skeleton_get_bone_count(skeleton);
+
+							Vector<Rect2> bone_aabbs;
+							bone_aabbs.resize(bone_count);
+							Rect2 *bptr = bone_aabbs.ptrw();
+
+							for (int j = 0; j < bone_count; j++) {
+								bptr[j].size = Vector2(-1, -1); //negative means unused
+							}
+							if (l && polygon->bones.size() == l * 4 && polygon->weights.size() == polygon->bones.size()) {
+
+								for (int j = 0; j < l; j++) {
+									Point2 p = pp[j];
+									for (int k = 0; k < 4; k++) {
+										int idx = polygon->bones[j * 4 + k];
+										float w = polygon->weights[j * 4 + k];
+										if (w == 0)
+											continue;
+
+										if (bptr[idx].size.x < 0) {
+											//first
+											bptr[idx] = Rect2(p, Vector2(0.00001, 0.00001));
+										} else {
+											bptr[idx].expand_to(p);
+										}
+									}
+								}
+
+								Rect2 aabb;
+								bool first_bone = true;
+								for (int j = 0; j < bone_count; j++) {
+									Transform2D mtx = RasterizerStorage::base_singleton->skeleton_bone_get_transform_2d(skeleton, j);
+									Rect2 baabb = mtx.xform(bone_aabbs[j]);
+
+									if (first_bone) {
+										aabb = baabb;
+										first_bone = false;
+									} else {
+										aabb = aabb.merge(baabb);
+									}
+								}
+
+								r = r.merge(aabb);
+							}
+						}
+
 					} break;
 					case Item::Command::TYPE_MESH: {
 
@@ -1127,6 +1183,8 @@ public:
 	virtual void finalize() = 0;
 
 	virtual bool is_low_end() const = 0;
+
+	virtual const char *gl_check_for_error(bool p_print_error = true) = 0;
 
 	virtual ~Rasterizer() {}
 };

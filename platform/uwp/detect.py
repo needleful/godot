@@ -69,7 +69,7 @@ def configure(env):
     elif env["target"] == "debug":
         env.Append(CCFLAGS=["/Zi"])
         env.Append(CCFLAGS=["/MDd"])
-        env.Append(CPPDEFINES=["DEBUG_ENABLED", "DEBUG_MEMORY_ENABLED"])
+        env.Append(CPPDEFINES=["DEBUG_ENABLED"])
         env.Append(LINKFLAGS=["/SUBSYSTEM:CONSOLE"])
         env.Append(LINKFLAGS=["/DEBUG"])
 
@@ -77,6 +77,9 @@ def configure(env):
 
     env["ENV"] = os.environ
     vc_base_path = os.environ["VCTOOLSINSTALLDIR"] if "VCTOOLSINSTALLDIR" in os.environ else os.environ["VCINSTALLDIR"]
+
+    # Force to use Unicode encoding
+    env.AppendUnique(CCFLAGS=["/utf-8"])
 
     # ANGLE
     angle_root = os.getenv("ANGLE_SRC_PATH")

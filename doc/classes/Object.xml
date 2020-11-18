@@ -17,8 +17,10 @@
 		[/codeblock]
 		The [code]in[/code] operator will evaluate to [code]true[/code] as long as the key exists, even if the value is [code]null[/code].
 		Objects also receive notifications. Notifications are a simple way to notify the object about different events, so they can all be handled together. See [method _notification].
+		[b]Note:[/b] Unlike references to a [Reference], references to an Object stored in a variable can become invalid without warning. Therefore, it's recommended to use [Reference] for data classes instead of [Object].
 	</description>
 	<tutorials>
+		<link title="When and how to avoid using nodes for everything">https://docs.godotengine.org/en/3.2/getting_started/workflow/best_practices/node_alternatives.html</link>
 	</tutorials>
 	<methods>
 		<method name="_get" qualifiers="virtual">
@@ -396,7 +398,7 @@
 			<argument index="0" name="name" type="String">
 			</argument>
 			<description>
-				Removes a given entry from the object's metadata.
+				Removes a given entry from the object's metadata. See also [method set_meta].
 			</description>
 		</method>
 		<method name="set">
@@ -465,7 +467,8 @@
 			<argument index="1" name="value" type="Variant">
 			</argument>
 			<description>
-				Adds or changes a given entry in the object's metadata. Metadata are serialized, and can take any [Variant] value.
+				Adds, changes or removes a given entry in the object's metadata. Metadata are serialized and can take any [Variant] value.
+				To remove a given entry from the object's metadata, use [method remove_meta]. Metadata is also removed if its value is set to [code]null[/code]. This means you can also use [code]set_meta("name", null)[/code] to remove metadata for [code]"name"[/code].
 			</description>
 		</method>
 		<method name="set_script">
@@ -521,7 +524,7 @@
 			One-shot connections disconnect themselves after emission.
 		</constant>
 		<constant name="CONNECT_REFERENCE_COUNTED" value="8" enum="ConnectFlags">
-			Connect a signal as reference counted. This means that a given signal can be connected several times to the same target, and will only be fully disconnected once no references are left.
+			Connect a signal as reference-counted. This means that a given signal can be connected several times to the same target, and will only be fully disconnected once no references are left.
 		</constant>
 	</constants>
 </class>
