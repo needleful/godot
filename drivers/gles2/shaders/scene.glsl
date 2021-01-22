@@ -1603,9 +1603,13 @@ FRAGMENT_SHADER_CODE
 #endif // ALPHA_SCISSOR_USED
 
 #ifdef USE_DEPTH_PREPASS
+#if !defined(ALPHA_SCISSOR_USED)
+
 	if (alpha < 0.1) {
 		discard;
 	}
+
+#endif // not ALPHA_SCISSOR_USED
 #endif // USE_DEPTH_PREPASS
 
 #endif // !USE_SHADOW_TO_OPACITY
@@ -2161,9 +2165,13 @@ FRAGMENT_SHADER_CODE
 #endif // ALPHA_SCISSOR_USED
 
 #ifdef USE_DEPTH_PREPASS
+#if !defined(ALPHA_SCISSOR_USED)
+
 	if (alpha < 0.1) {
 		discard;
 	}
+
+#endif // not ALPHA_SCISSOR_USED
 #endif // USE_DEPTH_PREPASS
 
 #endif // !USE_SHADOW_TO_OPACITY

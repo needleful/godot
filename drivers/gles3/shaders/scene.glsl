@@ -1809,11 +1809,13 @@ FRAGMENT_SHADER_CODE
 #endif // ALPHA_SCISSOR_USED
 
 #ifdef USE_OPAQUE_PREPASS
+#if !defined(ALPHA_SCISSOR_USED)
 
 	if (alpha < opaque_prepass_threshold) {
 		discard;
 	}
 
+#endif // not ALPHA_SCISSOR_USED
 #endif // USE_OPAQUE_PREPASS
 
 #endif // !USE_SHADOW_TO_OPACITY
@@ -2188,11 +2190,13 @@ FRAGMENT_SHADER_CODE
 #endif // ALPHA_SCISSOR_USED
 
 #ifdef USE_OPAQUE_PREPASS
+#if !defined(ALPHA_SCISSOR_USED)
 
 	if (alpha < opaque_prepass_threshold) {
 		discard;
 	}
 
+#endif // not ALPHA_SCISSOR_USED
 #endif // USE_OPAQUE_PREPASS
 
 #endif // USE_SHADOW_TO_OPACITY
