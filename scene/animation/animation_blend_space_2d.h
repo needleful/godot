@@ -45,7 +45,7 @@ public:
 
 protected:
 	enum {
-		MAX_BLEND_POINTS = 64
+		MAX_BLEND_POINTS = 16
 	};
 
 	struct BlendPoint {

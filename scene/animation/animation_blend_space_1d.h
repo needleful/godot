@@ -37,7 +37,7 @@ class AnimationNodeBlendSpace1D : public AnimationRootNode {
 	GDCLASS(AnimationNodeBlendSpace1D, AnimationRootNode);
 
 	enum {
-		MAX_BLEND_POINTS = 64
+		MAX_BLEND_POINTS = 8
 	};
 
 	struct BlendPoint {
