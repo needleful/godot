@@ -61,6 +61,7 @@ void SpringArm::_notification(int p_what) {
 
 void SpringArm::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_hit_length"), &SpringArm::get_hit_length);
+	ClassDB::bind_method(D_METHOD("get_hit_normal"), &SpringArm::get_hit_normal);
 
 	ClassDB::bind_method(D_METHOD("set_length", "length"), &SpringArm::set_length);
 	ClassDB::bind_method(D_METHOD("get_length"), &SpringArm::get_length);
@@ -136,6 +137,14 @@ float SpringArm::get_hit_length() {
 	return current_spring_length;
 }
 
+Vector3 SpringArm::get_hit_normal() {
+	if(!shape.is_null()) {
+		return Vector3(0,0,0);
+	} else {
+		return current_hit_normal;
+	}
+}
+
 void SpringArm::process_spring() {
 	// From
 	real_t motion_delta(1);
@@ -153,6 +162,7 @@ void SpringArm::process_spring() {
 			dist -= margin;
 			motion_delta = dist / (spring_length);
 		}
+		current_hit_normal = r.normal;
 	} else {
 		motion = Vector3(cast_direction * spring_length);
 		get_world()->get_direct_space_state()->cast_motion(shape->get_rid(), get_global_transform(), motion, 0, motion_delta, motion_delta_unsafe, excluded_objects, mask);

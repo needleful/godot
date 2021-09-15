@@ -39,6 +39,7 @@ class SpringArm : public Spatial {
 	Ref<Shape> shape;
 	Set<RID> excluded_objects;
 	float spring_length;
+	Vector3 current_hit_normal;
 	float current_spring_length;
 	bool keep_child_basis;
 	uint32_t mask;
@@ -59,6 +60,7 @@ public:
 	bool remove_excluded_object(RID p_rid);
 	void clear_excluded_objects();
 	float get_hit_length();
+	Vector3 get_hit_normal();
 	void set_margin(float p_margin);
 	float get_margin();
 
