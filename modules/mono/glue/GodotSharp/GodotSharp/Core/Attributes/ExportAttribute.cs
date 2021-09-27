@@ -13,20 +13,5 @@ namespace Godot
             this.hint = hint;
             this.hintString = hintString;
         }
-
-        public ExportAttribute(string className)
-        {
-            if (ClassDB.ClassExists(className) || ScriptServer.IsGlobalClass(className))
-            {
-                this.hint = PropertyHint.ResourceType;
-                this.hintString = className;
-            }
-            else
-            {
-                this.hint = PropertyHint.None;
-                this.hintString = "";
-            }
-        }
-
     }
 }

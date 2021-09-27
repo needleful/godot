@@ -2243,31 +2243,6 @@ void EditorPropertyResource::_resource_selected(const RES &p_resource) {
 		update_property();
 	} else {
 		emit_signal("resource_selected", get_edited_property(), p_resource);
-
-		List<PropertyInfo> prop_list;
-		get_edited_object()->get_property_list(&prop_list);
-		String property_types;
-
-		for (List<PropertyInfo>::Element *E = prop_list.front(); E; E = E->next()) {
-			if (E->get().name == get_edited_property() && (E->get().hint & PROPERTY_HINT_RESOURCE_TYPE)) {
-				property_types = E->get().hint_string;
-			}
-		}
-		if (!property_types.empty()) {
-			bool any_type_matches = false;
-			const Vector<String> split_property_types = property_types.split(",");
-			StringName res_class = _get_file_script_name_or_default(p_resource);
-			for (int i = 0; i < split_property_types.size(); ++i) {
-				if (EditorNode::get_editor_data().class_equals_or_inherits(res_class, split_property_types[i])) {
-					any_type_matches = true;
-					break;
-				}
-			}
-
-			if (!any_type_matches) {
-				EditorNode::get_singleton()->show_warning(vformat(TTR("The selected resource (%s) does not match any type expected for this property (%s)."), p_resource->get_class(), property_types));
-			}
-		}
 	}
 }
 
@@ -2523,6 +2498,7 @@ void EditorPropertyResource::update_property() {
 					EditorNode::get_singleton()->hide_top_editors();
 					opened_editor = false;
 				}
+
 				_update_property_bg();
 			}
 		}
@@ -2556,20 +2532,6 @@ void EditorPropertyResource::_notification(int p_what) {
 			}
 		} break;
 	}
-}
-
-StringName EditorPropertyResource::_get_file_script_name_or_default(const RES &p_resource) const {
-	Ref<Script> rscript = p_resource->get_script();
-	if (rscript.is_valid()) {
-		String rscript_path = rscript->get_path();
-		int script_index;
-		EditorFileSystemDirectory *fsdir = EditorFileSystem::get_singleton()->find_file(rscript_path, &script_index);
-		ERR_FAIL_COND_V_MSG(!fsdir, p_resource->get_class(), "Failed to find filesystem directory for the resource's script at: " + rscript_path);
-		String file_script_name = fsdir->get_file_script_class_name(script_index);
-		if (!file_script_name.empty())
-			return file_script_name;
-	}
-	return p_resource->get_class();
 }
 
 void EditorPropertyResource::_bind_methods() {
@@ -2992,8 +2954,7 @@ bool EditorInspectorDefaultPlugin::parse_property(Object *p_object, Variant::Typ
 		} break;
 		case Variant::OBJECT: {
 			EditorPropertyResource *editor = memnew(EditorPropertyResource);
-			editor->setup(p_object,  p_path, p_hint == PROPERTY_HINT_RESOURCE_TYPE ? p_hint_text : "Resource");
-			EditorData &ed = EditorNode::get_editor_data();
+			editor->setup(p_object, p_path, p_hint == PROPERTY_HINT_RESOURCE_TYPE ? p_hint_text : "Resource");
 
 			if (p_hint == PROPERTY_HINT_RESOURCE_TYPE) {
 				String open_in_new = EDITOR_GET("interface/inspector/resources_to_open_in_new_inspector");
@@ -3001,9 +2962,7 @@ bool EditorInspectorDefaultPlugin::parse_property(Object *p_object, Variant::Typ
 					String type = open_in_new.get_slicec(',', i).strip_edges();
 					for (int j = 0; j < p_hint_text.get_slice_count(","); j++) {
 						String inherits = p_hint_text.get_slicec(',', j);
-
-						//if (!ScriptServer::is_global_class(inherits) && ClassDB::is_parent_class(inherits, type)) {
-						if (ed.class_equals_or_inherits(inherits, type)) {
+						if (ClassDB::is_parent_class(inherits, type)) {
 							editor->set_use_sub_inspector(false);
 						}
 					}
