@@ -2311,9 +2311,10 @@ bool VisualServerScene::_light_instance_update_shadow(Instance *p_instance, cons
 			int cull_count = _cull_convex_from_point(p_scenario, light_transform.origin, planes, instance_shadow_cull_result, MAX_INSTANCE_CULL, light->previous_room_id_hint, VS::INSTANCE_GEOMETRY_MASK);
 
 			Plane near_plane(light_transform.origin, -light_transform.basis.get_axis(2));
+			uint32_t light_layer_mask = VSG::storage->light_get_cull_mask(p_instance->base);
 			for (int j = 0; j < cull_count; j++) {
 				Instance *instance = instance_shadow_cull_result[j];
-				if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !static_cast<InstanceGeometryData *>(instance->base_data)->can_cast_shadows) {
+				if (!(instance->layer_mask & light_layer_mask) || !instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !static_cast<InstanceGeometryData *>(instance->base_data)->can_cast_shadows) {
 					cull_count--;
 					SWAP(instance_shadow_cull_result[j], instance_shadow_cull_result[cull_count]);
 					j--;

@@ -5541,7 +5541,7 @@ VS::LightBakeMode RasterizerStorageGLES3::light_get_bake_mode(RID p_light) {
 
 uint32_t RasterizerStorageGLES3::light_get_cull_mask(RID p_light) const {
 	Light *light = light_owner.getornull(p_light);
-	ERR_FAIL_COND(!light, 0);
+	ERR_FAIL_COND_V(!light, 0);
 
 	return light->cull_mask;
 }
