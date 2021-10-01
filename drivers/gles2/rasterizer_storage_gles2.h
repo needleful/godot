@@ -988,6 +988,8 @@ public:
 	virtual AABB light_get_aabb(RID p_light) const;
 	virtual uint64_t light_get_version(RID p_light) const;
 
+	virtual uint32_t light_get_cull_mask(RID p_light) const;
+
 	/* PROBE API */
 
 	struct ReflectionProbe : Instantiable {

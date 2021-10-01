@@ -4298,6 +4298,13 @@ AABB RasterizerStorageGLES2::light_get_aabb(RID p_light) const {
 	ERR_FAIL_V(AABB());
 }
 
+uint32_t RasterizerStorageGLES2::light_get_cull_mask(RID p_light) const {
+	Light *light = light_owner.getornull(p_light);
+	ERR_FAIL_COND(!light, 0);
+
+	return light->cull_mask;
+}
+
 /* PROBE API */
 
 RID RasterizerStorageGLES2::reflection_probe_create() {

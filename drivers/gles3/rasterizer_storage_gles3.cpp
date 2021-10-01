@@ -5539,6 +5539,13 @@ VS::LightBakeMode RasterizerStorageGLES3::light_get_bake_mode(RID p_light) {
 	return light->bake_mode;
 }
 
+uint32_t RasterizerStorageGLES3::light_get_cull_mask(RID p_light) const {
+	Light *light = light_owner.getornull(p_light);
+	ERR_FAIL_COND(!light, 0);
+
+	return light->cull_mask;
+}
+
 bool RasterizerStorageGLES3::light_has_shadow(RID p_light) const {
 	const Light *light = light_owner.getornull(p_light);
 	ERR_FAIL_COND_V(!light, VS::LIGHT_DIRECTIONAL);
