@@ -9,4 +9,4 @@ void register_mesh_compositor_types() {
 	ClassDB::register_class<MC_Component>();
 	ClassDB::register_class<MeshCompositor>();
 }
-void unregister_mesh_compositor_types();
+void unregister_mesh_compositor_types() {}

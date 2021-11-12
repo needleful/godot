@@ -5,9 +5,6 @@ MC_Component::MC_Component() {}
 
 MeshCompositor::MeshCompositor(){}
 
-void MeshCompositor::_enter_tree() {
-	for(size_t i = 0; i < colored_meshes.size(); i++) {
-		Mesh* m = colored_meshes[i];
-		add_multimesh(m, true);
-	}
-}
+void MC_Component::_bind_methods() {}
+
+void MeshCompositor::_bind_methods() {}
