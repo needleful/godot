@@ -97,6 +97,7 @@ void MeshCompositor::configure_meshes() {
 	for(auto *elem = meshes.front(); elem; elem = elem->next()) {
 		Vector<MC_Component*> mc = components[elem->key()];
 		Ref<MultiMesh> multimesh = elem->value()->get_multimesh();
+		multimesh->set_instance_count(mc.size());
 		if(multimesh->get_color_format() != MultiMesh::COLOR_NONE) {
 			for(int i = 0; i < mc.size(); i++) {
 				multimesh->set_instance_color(i, Color(Math::randf(), Math::randf(), Math::randf()));
@@ -124,6 +125,7 @@ void MeshCompositor::clear() {
 
 void MeshCompositor::_bind_methods() {
 
+	// Properties
 	ClassDB::bind_method(D_METHOD("set_colored_meshes", "meshes"), &MeshCompositor::set_colored_meshes);
 	ClassDB::bind_method(D_METHOD("get_colored_meshes"), &MeshCompositor::get_colored_meshes);
 	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "colored_meshes", PROPERTY_HINT_RESOURCE_TYPE, "Mesh"), "set_colored_meshes", "get_colored_meshes");
@@ -135,4 +137,11 @@ void MeshCompositor::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_dynamic", "dynamic"), &MeshCompositor::set_dynamic);
 	ClassDB::bind_method(D_METHOD("is_dynamic"), &MeshCompositor::is_dynamic);
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "dynamic"), "set_dynamic", "is_dynamic");
+
+	// Methods
+	ClassDB::bind_method(D_METHOD("initialize"), &MeshCompositor::initialize);
+	ClassDB::bind_method(D_METHOD("add_multimesh", "mesh", "colored"), &MeshCompositor::add_multimesh);
+	ClassDB::bind_method(D_METHOD("configure_meshes"), &MeshCompositor::configure_meshes);
+	ClassDB::bind_method(D_METHOD("update_transforms"), &MeshCompositor::update_transforms);
+	ClassDB::bind_method(D_METHOD("clear"), &MeshCompositor::clear);
 }
