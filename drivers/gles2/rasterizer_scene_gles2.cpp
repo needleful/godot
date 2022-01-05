@@ -819,7 +819,7 @@ void RasterizerSceneGLES2::environment_set_adjustment(RID p_env, bool p_enable, 
 	env->color_correction = p_ramp;
 }
 
-void RasterizerSceneGLES2::environment_set_fog(RID p_env, bool p_enable, const Color &p_color, const Color &p_sun_color, float p_sun_amount) {
+void RasterizerSceneGLES2::environment_set_fog(RID p_env, bool p_enable, const Color &p_color, const Color &p_sun_color, float p_sun_amount, bool p_additive) {
 	Environment *env = environment_owner.getornull(p_env);
 	ERR_FAIL_COND(!env);
 

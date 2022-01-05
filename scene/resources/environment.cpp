@@ -676,7 +676,7 @@ Environment::DOFBlurQuality Environment::get_dof_blur_near_quality() const {
 
 void Environment::set_fog_enabled(bool p_enabled) {
 	fog_enabled = p_enabled;
-	VS::get_singleton()->environment_set_fog(environment, fog_enabled, fog_color, fog_sun_color, fog_sun_amount);
+	VS::get_singleton()->environment_set_fog(environment, fog_enabled, fog_color, fog_sun_color, fog_sun_amount, fog_additive);
 	_change_notify();
 }
 
@@ -684,9 +684,19 @@ bool Environment::is_fog_enabled() const {
 	return fog_enabled;
 }
 
+void Environment::set_fog_additive(bool p_additive) {
+	fog_additive = p_additive;
+	VS::get_singleton()->environment_set_fog(environment, fog_enabled, fog_color, fog_sun_color, fog_sun_amount, fog_additive);
+	_change_notify();
+}
+
+bool Environment::is_fog_additive() const {
+	return fog_additive;
+}
+
 void Environment::set_fog_color(const Color &p_color) {
 	fog_color = p_color;
-	VS::get_singleton()->environment_set_fog(environment, fog_enabled, fog_color, fog_sun_color, fog_sun_amount);
+	VS::get_singleton()->environment_set_fog(environment, fog_enabled, fog_color, fog_sun_color, fog_sun_amount, fog_additive);
 }
 Color Environment::get_fog_color() const {
 	return fog_color;
@@ -694,7 +704,7 @@ Color Environment::get_fog_color() const {
 
 void Environment::set_fog_sun_color(const Color &p_color) {
 	fog_sun_color = p_color;
-	VS::get_singleton()->environment_set_fog(environment, fog_enabled, fog_color, fog_sun_color, fog_sun_amount);
+	VS::get_singleton()->environment_set_fog(environment, fog_enabled, fog_color, fog_sun_color, fog_sun_amount, fog_additive);
 }
 Color Environment::get_fog_sun_color() const {
 	return fog_sun_color;
@@ -702,7 +712,7 @@ Color Environment::get_fog_sun_color() const {
 
 void Environment::set_fog_sun_amount(float p_amount) {
 	fog_sun_amount = p_amount;
-	VS::get_singleton()->environment_set_fog(environment, fog_enabled, fog_color, fog_sun_color, fog_sun_amount);
+	VS::get_singleton()->environment_set_fog(environment, fog_enabled, fog_color, fog_sun_color, fog_sun_amount, fog_additive);
 }
 float Environment::get_fog_sun_amount() const {
 	return fog_sun_amount;
@@ -839,6 +849,9 @@ void Environment::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_fog_enabled", "enabled"), &Environment::set_fog_enabled);
 	ClassDB::bind_method(D_METHOD("is_fog_enabled"), &Environment::is_fog_enabled);
 
+	ClassDB::bind_method(D_METHOD("set_fog_additive", "additive"), &Environment::set_fog_additive);
+	ClassDB::bind_method(D_METHOD("is_fog_additive"), &Environment::is_fog_additive);
+
 	ClassDB::bind_method(D_METHOD("set_fog_color", "color"), &Environment::set_fog_color);
 	ClassDB::bind_method(D_METHOD("get_fog_color"), &Environment::get_fog_color);
 
@@ -880,6 +893,7 @@ void Environment::_bind_methods() {
 
 	ADD_GROUP("Fog", "fog_");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "fog_enabled"), "set_fog_enabled", "is_fog_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "fog_additive"), "set_fog_additive", "is_fog_additive");
 	ADD_PROPERTY(PropertyInfo(Variant::COLOR, "fog_color"), "set_fog_color", "get_fog_color");
 	ADD_PROPERTY(PropertyInfo(Variant::COLOR, "fog_sun_color"), "set_fog_sun_color", "get_fog_sun_color");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "fog_sun_amount", PROPERTY_HINT_RANGE, "0,1,0.01"), "set_fog_sun_amount", "get_fog_sun_amount");

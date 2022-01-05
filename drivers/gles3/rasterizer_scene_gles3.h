@@ -142,6 +142,7 @@ public:
 			float ambient_occlusion_affect_ssao;
 			float opaque_prepass_threshold;
 
+			uint32_t fog_additive;
 			uint32_t fog_depth_enabled;
 			float fog_depth_begin;
 			float fog_depth_end;
@@ -157,7 +158,7 @@ public:
 			uint32_t view_index;
 
 			// make sure this struct is padded to be a multiple of 16 bytes for webgl
-			float pad[3];
+			float pad[2];
 
 		} ubo_data;
 		static_assert(sizeof(SceneDataUBO) % 16 == 0, "SceneDataUBO size must be a multiple of 16 bytes");
@@ -437,6 +438,7 @@ public:
 		RID color_correction;
 
 		bool fog_enabled;
+		bool fog_additive;
 		Color fog_color;
 		Color fog_sun_color;
 		float fog_sun_amount;
@@ -511,6 +513,7 @@ public:
 				adjustments_contrast(1.0),
 				adjustments_saturation(1.0),
 				fog_enabled(false),
+				fog_additive(false),
 				fog_color(Color(0.5, 0.5, 0.5)),
 				fog_sun_color(Color(0.8, 0.8, 0.0)),
 				fog_sun_amount(0),
@@ -554,7 +557,7 @@ public:
 
 	virtual void environment_set_adjustment(RID p_env, bool p_enable, float p_brightness, float p_contrast, float p_saturation, RID p_ramp);
 
-	virtual void environment_set_fog(RID p_env, bool p_enable, const Color &p_color, const Color &p_sun_color, float p_sun_amount);
+	virtual void environment_set_fog(RID p_env, bool p_enable, const Color &p_color, const Color &p_sun_color, float p_sun_amount, bool p_additive);
 	virtual void environment_set_fog_depth(RID p_env, bool p_enable, float p_depth_begin, float p_depth_end, float p_depth_curve, bool p_transmit, float p_transmit_curve);
 	virtual void environment_set_fog_height(RID p_env, bool p_enable, float p_min_height, float p_max_height, float p_height_curve);
 

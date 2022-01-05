@@ -102,6 +102,7 @@ layout(std140) uniform SceneData { // ubo:0
 	mediump float ambient_occlusion_affect_ao_channel;
 	mediump float opaque_prepass_threshold;
 
+	bool fog_additive;
 	bool fog_depth_enabled;
 	highp float fog_depth_begin;
 	highp float fog_depth_end;
@@ -750,6 +751,7 @@ layout(std140) uniform SceneData {
 	mediump float ambient_occlusion_affect_ao_channel;
 	mediump float opaque_prepass_threshold;
 
+	bool fog_additive;
 	bool fog_depth_enabled;
 	highp float fog_depth_begin;
 	highp float fog_depth_end;
@@ -2250,9 +2252,11 @@ FRAGMENT_SHADER_CODE
 		float rev_amount = 1.0 - fog_amount;
 
 		emission = emission * rev_amount + fog_color * fog_amount;
-		ambient_light *= rev_amount;
-		specular_light *= rev_amount;
-		diffuse_light *= rev_amount;
+		if(!fog_additive) {
+			ambient_light *= rev_amount;
+			specular_light *= rev_amount;
+			diffuse_light *= rev_amount;
+		}
 	}
 
 #ifdef USE_MULTIPLE_RENDER_TARGETS

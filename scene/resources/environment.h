@@ -159,6 +159,7 @@ private:
 	DOFBlurQuality dof_blur_near_quality;
 
 	bool fog_enabled;
+	bool fog_additive;
 	Color fog_color;
 	Color fog_sun_color;
 	float fog_sun_amount;
@@ -364,6 +365,9 @@ public:
 
 	void set_fog_enabled(bool p_enabled);
 	bool is_fog_enabled() const;
+
+	void set_fog_additive(bool p_additive);
+	bool is_fog_additive() const;
 
 	void set_fog_color(const Color &p_color);
 	Color get_fog_color() const;
