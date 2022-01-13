@@ -161,6 +161,33 @@ void PathFollow::_update_transform(bool p_update_xyz_rot) {
 		t.basis.scale_local(scale);
 
 		t.origin = pos + sideways * h_offset + up * v_offset;
+
+	} else if (rotation_mode == ROTATION_ORIENTED_VERTICAL) {
+		Vector3 forward = c->interpolate_baked(o_next, cubic) - pos;
+
+		// Try with the previous position
+		if (forward.length_squared() < CMP_EPSILON2) {
+			forward = pos - c->interpolate_baked(o_prev, cubic);
+		}
+
+		if (forward.length_squared() < CMP_EPSILON2) {
+			forward = Vector3(0, 0, 1);
+		} else {
+			forward.normalize();
+		}
+
+		// Global y axis
+		Vector3 up = path->get_global_transform().basis.elements[1];
+
+		Vector3 scale = t.basis.get_scale();
+		Vector3 sideways = up.cross(forward).normalized();
+		up = forward.cross(sideways).normalized();
+
+		t.basis.set(sideways, up, forward);
+		t.basis.scale_local(scale);
+
+		t.origin = pos + sideways * h_offset + up * v_offset;
+
 	} else if (rotation_mode != ROTATION_NONE) {
 		// perform parallel transport
 		//
@@ -308,7 +335,7 @@ void PathFollow::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "unit_offset", PROPERTY_HINT_RANGE, "0,1,0.0001,or_lesser,or_greater", PROPERTY_USAGE_EDITOR), "set_unit_offset", "get_unit_offset");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "h_offset"), "set_h_offset", "get_h_offset");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "v_offset"), "set_v_offset", "get_v_offset");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "rotation_mode", PROPERTY_HINT_ENUM, "None,Y,XY,XYZ,Oriented"), "set_rotation_mode", "get_rotation_mode");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "rotation_mode", PROPERTY_HINT_ENUM, "None,Y,XY,XYZ,Oriented,Oriented Vertical"), "set_rotation_mode", "get_rotation_mode");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "cubic_interp"), "set_cubic_interpolation", "get_cubic_interpolation");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "loop"), "set_loop", "has_loop");
 
