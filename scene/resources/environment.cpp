@@ -1248,6 +1248,7 @@ Environment::Environment() :
 	dof_blur_near_quality = DOF_BLUR_QUALITY_MEDIUM;
 
 	fog_enabled = false;
+	fog_additive = false;
 	fog_color = Color(0.5, 0.5, 0.5);
 	fog_sun_color = Color(0.8, 0.8, 0.0);
 	fog_sun_amount = 0;
