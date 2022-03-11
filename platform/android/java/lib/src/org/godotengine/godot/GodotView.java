@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -76,7 +76,7 @@ public class GodotView extends GLSurfaceView {
 	private final GodotRenderer godotRenderer;
 
 	public GodotView(Context context, Godot godot, XRMode xrMode, boolean p_use_gl3,
-			boolean p_use_32_bits, boolean p_use_debug_opengl) {
+			boolean p_use_32_bits, boolean p_use_debug_opengl, boolean p_translucent) {
 		super(context);
 		GLUtils.use_gl3 = p_use_gl3;
 		GLUtils.use_32 = p_use_32_bits;
@@ -86,7 +86,8 @@ public class GodotView extends GLSurfaceView {
 		this.inputHandler = new GodotInputHandler(this);
 		this.detector = new GestureDetector(context, new GodotGestureHandler(this));
 		this.godotRenderer = new GodotRenderer();
-		init(xrMode, false, 16, 0);
+
+		init(xrMode, p_translucent, 16, 0);
 	}
 
 	public void initInputDevices() {
@@ -121,6 +122,7 @@ public class GodotView extends GLSurfaceView {
 		setFocusableInTouchMode(true);
 		switch (xrMode) {
 			case OVR:
+			case OPENXR:
 				// Replace the default egl config chooser.
 				setEGLConfigChooser(new OvrConfigChooser());
 
@@ -139,6 +141,7 @@ public class GodotView extends GLSurfaceView {
 				 * is interpreted as any 32-bit surface with alpha by SurfaceFlinger.
 				 */
 				if (translucent) {
+					this.setZOrderOnTop(true);
 					this.getHolder().setFormat(PixelFormat.TRANSLUCENT);
 				}
 
@@ -154,16 +157,16 @@ public class GodotView extends GLSurfaceView {
 				 */
 
 				if (GLUtils.use_32) {
-					setEGLConfigChooser(translucent ?
-												  new RegularFallbackConfigChooser(8, 8, 8, 8, 24, stencil,
-														new RegularConfigChooser(8, 8, 8, 8, 16, stencil)) :
-												  new RegularFallbackConfigChooser(8, 8, 8, 8, 24, stencil,
-														new RegularConfigChooser(5, 6, 5, 0, 16, stencil)));
+					setEGLConfigChooser(translucent
+									? new RegularFallbackConfigChooser(8, 8, 8, 8, 24, stencil,
+											  new RegularConfigChooser(8, 8, 8, 8, 16, stencil))
+									: new RegularFallbackConfigChooser(8, 8, 8, 8, 24, stencil,
+											  new RegularConfigChooser(5, 6, 5, 0, 16, stencil)));
 
 				} else {
-					setEGLConfigChooser(translucent ?
-												  new RegularConfigChooser(8, 8, 8, 8, 16, stencil) :
-												  new RegularConfigChooser(5, 6, 5, 0, 16, stencil));
+					setEGLConfigChooser(translucent
+									? new RegularConfigChooser(8, 8, 8, 8, 16, stencil)
+									: new RegularConfigChooser(5, 6, 5, 0, 16, stencil));
 				}
 				break;
 		}

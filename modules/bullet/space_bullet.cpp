@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -967,7 +967,6 @@ bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_f
 
 	if (!p_body->get_kinematic_utilities()) {
 		p_body->init_kinematic_utilities();
-		p_body->reload_kinematic_shapes();
 	}
 
 	btVector3 initial_recover_motion(0, 0, 0);
@@ -1109,7 +1108,6 @@ int SpaceBullet::test_ray_separation(RigidBodyBullet *p_body, const Transform &p
 
 	if (!p_body->get_kinematic_utilities()) {
 		p_body->init_kinematic_utilities();
-		p_body->reload_kinematic_shapes();
 	}
 
 	btVector3 recover_motion(0, 0, 0);

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -288,6 +288,17 @@ void VisualServerViewport::draw_viewports() {
 
 		ERR_CONTINUE(!vp->render_target.is_valid());
 
+		if (vp->use_arvr) {
+			// In ARVR mode it is our interface that controls our size
+			if (arvr_interface.is_valid()) {
+				// override our size, make sure it matches our required size
+				vp->size = arvr_interface->get_render_targetsize();
+			} else {
+				// reset this, we can't render the output without a valid interface (this will likely be so when we're in the editor)
+				vp->size = Vector2(0, 0);
+			}
+		}
+
 		bool visible = vp->viewport_to_screen_rect != Rect2() || vp->update_mode == VS::VIEWPORT_UPDATE_ALWAYS || vp->update_mode == VS::VIEWPORT_UPDATE_ONCE || (vp->update_mode == VS::VIEWPORT_UPDATE_WHEN_VISIBLE && VSG::storage->render_target_was_used(vp->render_target));
 		visible = visible && vp->size.x > 1 && vp->size.y > 1;
 
@@ -298,8 +309,6 @@ void VisualServerViewport::draw_viewports() {
 		VSG::storage->render_target_clear_used(vp->render_target);
 
 		if (vp->use_arvr && arvr_interface.is_valid()) {
-			// override our size, make sure it matches our required size
-			vp->size = arvr_interface->get_render_targetsize();
 			VSG::storage->render_target_set_size(vp->render_target, vp->size.x, vp->size.y);
 
 			// render mono or left eye first
@@ -382,7 +391,15 @@ void VisualServerViewport::viewport_set_use_arvr(RID p_viewport, bool p_use_arvr
 	Viewport *viewport = viewport_owner.getornull(p_viewport);
 	ERR_FAIL_COND(!viewport);
 
+	if (viewport->use_arvr == p_use_arvr) {
+		return;
+	}
+
 	viewport->use_arvr = p_use_arvr;
+	if (!viewport->use_arvr && viewport->size.width > 0 && viewport->size.height > 0) {
+		// No longer controlled by our XR server, make sure we reset it
+		VSG::storage->render_target_set_size(viewport->render_target, viewport->size.width, viewport->size.height);
+	}
 }
 
 void VisualServerViewport::viewport_set_size(RID p_viewport, int p_width, int p_height) {
@@ -392,7 +409,10 @@ void VisualServerViewport::viewport_set_size(RID p_viewport, int p_width, int p_
 	ERR_FAIL_COND(!viewport);
 
 	viewport->size = Size2(p_width, p_height);
-	VSG::storage->render_target_set_size(viewport->render_target, p_width, p_height);
+	if (!viewport->use_arvr) {
+		// Only update if this is not controlled by our XR server
+		VSG::storage->render_target_set_size(viewport->render_target, p_width, p_height);
+	}
 }
 
 void VisualServerViewport::viewport_set_active(RID p_viewport, bool p_active) {

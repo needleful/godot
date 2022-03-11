@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -76,6 +76,11 @@ bool InputDefault::is_key_pressed(int p_scancode) const {
 	return keys_pressed.has(p_scancode);
 }
 
+bool InputDefault::is_physical_key_pressed(int p_scancode) const {
+	_THREAD_SAFE_METHOD_
+	return physical_keys_pressed.has(p_scancode);
+}
+
 bool InputDefault::is_mouse_button_pressed(int p_button) const {
 	_THREAD_SAFE_METHOD_
 	return (mouse_button_mask & (1 << (p_button - 1))) != 0;
@@ -91,18 +96,12 @@ bool InputDefault::is_joy_button_pressed(int p_device, int p_button) const {
 }
 
 bool InputDefault::is_action_pressed(const StringName &p_action, bool p_exact) const {
-#ifdef DEBUG_ENABLED
-	bool has_action = InputMap::get_singleton()->has_action(p_action);
-	ERR_FAIL_COND_V_MSG(!has_action, false, "Request for nonexistent InputMap action '" + String(p_action) + "'.");
-#endif
+	ERR_FAIL_COND_V_MSG(!InputMap::get_singleton()->has_action(p_action), false, InputMap::get_singleton()->suggest_actions(p_action));
 	return action_state.has(p_action) && action_state[p_action].pressed && (p_exact ? action_state[p_action].exact : true);
 }
 
 bool InputDefault::is_action_just_pressed(const StringName &p_action, bool p_exact) const {
-#ifdef DEBUG_ENABLED
-	bool has_action = InputMap::get_singleton()->has_action(p_action);
-	ERR_FAIL_COND_V_MSG(!has_action, false, "Request for nonexistent InputMap action '" + String(p_action) + "'.");
-#endif
+	ERR_FAIL_COND_V_MSG(!InputMap::get_singleton()->has_action(p_action), false, InputMap::get_singleton()->suggest_actions(p_action));
 	const Map<StringName, Action>::Element *E = action_state.find(p_action);
 	if (!E) {
 		return false;
@@ -120,10 +119,7 @@ bool InputDefault::is_action_just_pressed(const StringName &p_action, bool p_exa
 }
 
 bool InputDefault::is_action_just_released(const StringName &p_action, bool p_exact) const {
-#ifdef DEBUG_ENABLED
-	bool has_action = InputMap::get_singleton()->has_action(p_action);
-	ERR_FAIL_COND_V_MSG(!has_action, false, "Request for nonexistent InputMap action '" + String(p_action) + "'.");
-#endif
+	ERR_FAIL_COND_V_MSG(!InputMap::get_singleton()->has_action(p_action), false, InputMap::get_singleton()->suggest_actions(p_action));
 	const Map<StringName, Action>::Element *E = action_state.find(p_action);
 	if (!E) {
 		return false;
@@ -141,10 +137,7 @@ bool InputDefault::is_action_just_released(const StringName &p_action, bool p_ex
 }
 
 float InputDefault::get_action_strength(const StringName &p_action, bool p_exact) const {
-#ifdef DEBUG_ENABLED
-	bool has_action = InputMap::get_singleton()->has_action(p_action);
-	ERR_FAIL_COND_V_MSG(!has_action, false, "Request for nonexistent InputMap action '" + String(p_action) + "'.");
-#endif
+	ERR_FAIL_COND_V_MSG(!InputMap::get_singleton()->has_action(p_action), 0.0, InputMap::get_singleton()->suggest_actions(p_action));
 	const Map<StringName, Action>::Element *E = action_state.find(p_action);
 	if (!E) {
 		return 0.0f;
@@ -158,10 +151,7 @@ float InputDefault::get_action_strength(const StringName &p_action, bool p_exact
 }
 
 float InputDefault::get_action_raw_strength(const StringName &p_action, bool p_exact) const {
-#ifdef DEBUG_ENABLED
-	bool has_action = InputMap::get_singleton()->has_action(p_action);
-	ERR_FAIL_COND_V_MSG(!has_action, false, "Request for nonexistent InputMap action '" + String(p_action) + "'.");
-#endif
+	ERR_FAIL_COND_V_MSG(!InputMap::get_singleton()->has_action(p_action), 0.0, InputMap::get_singleton()->suggest_actions(p_action));
 	const Map<StringName, Action>::Element *E = action_state.find(p_action);
 	if (!E) {
 		return 0.0f;
@@ -185,11 +175,11 @@ Vector2 Input::get_vector(const StringName &p_negative_x, const StringName &p_po
 
 	if (p_deadzone < 0.0f) {
 		// If the deadzone isn't specified, get it from the average of the actions.
-		p_deadzone = (InputMap::get_singleton()->action_get_deadzone(p_positive_x) +
-							 InputMap::get_singleton()->action_get_deadzone(p_negative_x) +
-							 InputMap::get_singleton()->action_get_deadzone(p_positive_y) +
-							 InputMap::get_singleton()->action_get_deadzone(p_negative_y)) /
-					 4;
+		p_deadzone = 0.25 *
+				(InputMap::get_singleton()->action_get_deadzone(p_positive_x) +
+						InputMap::get_singleton()->action_get_deadzone(p_negative_x) +
+						InputMap::get_singleton()->action_get_deadzone(p_positive_y) +
+						InputMap::get_singleton()->action_get_deadzone(p_negative_y));
 	}
 
 	// Circular length limiting and deadzone.
@@ -329,6 +319,13 @@ void InputDefault::_parse_input_event_impl(const Ref<InputEvent> &p_event, bool 
 			keys_pressed.insert(k->get_scancode());
 		} else {
 			keys_pressed.erase(k->get_scancode());
+		}
+	}
+	if (k.is_valid() && !k->is_echo() && k->get_physical_scancode() != 0) {
+		if (k->is_pressed()) {
+			physical_keys_pressed.insert(k->get_physical_scancode());
+		} else {
+			physical_keys_pressed.erase(k->get_physical_scancode());
 		}
 	}
 
@@ -731,6 +728,7 @@ void InputDefault::release_pressed_events() {
 	flush_buffered_events(); // this is needed to release actions strengths
 
 	keys_pressed.clear();
+	physical_keys_pressed.clear();
 	joy_buttons_pressed.clear();
 	_joy_axis.clear();
 
@@ -777,7 +775,8 @@ InputDefault::InputDefault() {
 void InputDefault::joy_button(int p_device, int p_button, bool p_pressed) {
 	_THREAD_SAFE_METHOD_;
 	Joypad &joy = joy_names[p_device];
-	//printf("got button %i, mapping is %i\n", p_button, joy.mapping);
+	ERR_FAIL_INDEX(p_button, JOY_BUTTON_MAX);
+
 	if (joy.last_buttons[p_button] == p_pressed) {
 		return;
 	}
@@ -1157,7 +1156,7 @@ void InputDefault::parse_mapping(String p_mapping) {
 		String output = entry[idx].get_slice(":", 0).replace(" ", "");
 		String input = entry[idx].get_slice(":", 1).replace(" ", "");
 		ERR_CONTINUE_MSG(output.length() < 1 || input.length() < 2,
-				String(entry[idx] + "\nInvalid device mapping entry: " + entry[idx]));
+				vformat("Invalid device mapping entry \"%s\" in mapping:\n%s", entry[idx], p_mapping));
 
 		if (output == "platform" || output == "hint") {
 			continue;
@@ -1165,7 +1164,8 @@ void InputDefault::parse_mapping(String p_mapping) {
 
 		JoyAxisRange output_range = FULL_AXIS;
 		if (output[0] == '+' || output[0] == '-') {
-			ERR_CONTINUE_MSG(output.length() < 2, String(entry[idx] + "\nInvalid output: " + entry[idx]));
+			ERR_CONTINUE_MSG(output.length() < 2,
+					vformat("Invalid output entry \"%s\" in mapping:\n%s", entry[idx], p_mapping));
 			if (output[0] == '+') {
 				output_range = POSITIVE_HALF_AXIS;
 			} else if (output[0] == '-') {
@@ -1191,9 +1191,9 @@ void InputDefault::parse_mapping(String p_mapping) {
 		JoystickList output_button = _get_output_button(output);
 		JoystickList output_axis = _get_output_axis(output);
 		ERR_CONTINUE_MSG(output_button == JOY_INVALID_OPTION && output_axis == JOY_INVALID_OPTION,
-				String(entry[idx] + "\nUnrecognised output string: " + output));
+				vformat("Unrecognised output string \"%s\" in mapping:\n%s", output, p_mapping));
 		ERR_CONTINUE_MSG(output_button != JOY_INVALID_OPTION && output_axis != JOY_INVALID_OPTION,
-				String("BUG: Output string matched both button and axis: " + output));
+				vformat("Output string \"%s\" matched both button and axis in mapping:\n%s", output, p_mapping));
 
 		JoyBinding binding;
 		if (output_button != JOY_INVALID_OPTION) {
@@ -1218,13 +1218,13 @@ void InputDefault::parse_mapping(String p_mapping) {
 				break;
 			case 'h':
 				ERR_CONTINUE_MSG(input.length() != 4 || input[2] != '.',
-						String(entry[idx] + "\nInvalid hat input: " + input));
+						vformat("Invalid had input \"%s\" in mapping:\n%s", input, p_mapping));
 				binding.inputType = TYPE_HAT;
 				binding.input.hat.hat = input.substr(1, 1).to_int();
 				binding.input.hat.hat_mask = static_cast<HatMask>(input.right(3).to_int());
 				break;
 			default:
-				ERR_CONTINUE_MSG(true, String(entry[idx] + "\nUnrecognised input string: " + input));
+				ERR_CONTINUE_MSG(true, vformat("Unrecognized input string \"%s\" in mapping:\n%s", input, p_mapping));
 		}
 
 		mapping.bindings.push_back(binding);

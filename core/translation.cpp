@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -805,9 +805,12 @@ static const char *locale_names[] = {
 // - https://msdn.microsoft.com/en-us/library/windows/desktop/ms693062(v=vs.85).aspx
 
 static const char *locale_renames[][2] = {
-	{ "in", "id" }, //  Indonesian
-	{ "iw", "he" }, //  Hebrew
-	{ "no", "nb" }, //  Norwegian Bokmål
+	{ "in", "id" }, // Indonesian
+	{ "iw", "he" }, // Hebrew
+	{ "no", "nb" }, // Norwegian Bokmål
+	{ "C", "en" }, // "C" is the simple/default/untranslated Computer locale.
+	// ASCII-only, English, no currency symbols. Godot treats this as "en".
+	// See https://unix.stackexchange.com/a/87763/164141 "The C locale is"...
 	{ nullptr, nullptr }
 };
 
@@ -871,6 +874,10 @@ void Translation::add_message(const StringName &p_src_text, const StringName &p_
 	translation_map[p_src_text] = p_xlated_text;
 }
 StringName Translation::get_message(const StringName &p_src_text) const {
+	if (get_script_instance()) {
+		return get_script_instance()->call("_get_message", p_src_text);
+	}
+
 	const Map<StringName, StringName>::Element *E = translation_map.find(p_src_text);
 	if (!E) {
 		return StringName();
@@ -903,6 +910,8 @@ void Translation::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_message_count"), &Translation::get_message_count);
 	ClassDB::bind_method(D_METHOD("_set_messages"), &Translation::_set_messages);
 	ClassDB::bind_method(D_METHOD("_get_messages"), &Translation::_get_messages);
+
+	BIND_VMETHOD(MethodInfo(Variant::STRING, "_get_message", PropertyInfo(Variant::STRING, "src_message")));
 
 	ADD_PROPERTY(PropertyInfo(Variant::POOL_STRING_ARRAY, "messages", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL), "_set_messages", "_get_messages");
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "locale"), "set_locale", "get_locale");
@@ -1002,9 +1011,12 @@ Array TranslationServer::get_loaded_locales() const {
 		ERR_FAIL_COND_V(t.is_null(), Array());
 		String l = t->get_locale();
 
-		locales.push_back(l);
+		if (!locales.has(l)) {
+			locales.push_back(l);
+		}
 	}
 
+	locales.sort();
 	return locales;
 }
 
@@ -1171,7 +1183,6 @@ void TranslationServer::setup() {
 	}
 	fallback = GLOBAL_DEF("locale/fallback", "en");
 #ifdef TOOLS_ENABLED
-
 	{
 		String options = "";
 		int idx = 0;
@@ -1185,7 +1196,6 @@ void TranslationServer::setup() {
 		ProjectSettings::get_singleton()->set_custom_property_info("locale/fallback", PropertyInfo(Variant::STRING, "locale/fallback", PROPERTY_HINT_ENUM, options));
 	}
 #endif
-	//load translations
 }
 
 void TranslationServer::set_tool_translation(const Ref<Translation> &p_translation) {
@@ -1195,12 +1205,24 @@ void TranslationServer::set_tool_translation(const Ref<Translation> &p_translati
 StringName TranslationServer::tool_translate(const StringName &p_message) const {
 	if (tool_translation.is_valid()) {
 		StringName r = tool_translation->get_message(p_message);
-
 		if (r) {
 			return r;
 		}
 	}
+	return p_message;
+}
 
+void TranslationServer::set_doc_translation(const Ref<Translation> &p_translation) {
+	doc_translation = p_translation;
+}
+
+StringName TranslationServer::doc_translate(const StringName &p_message) const {
+	if (doc_translation.is_valid()) {
+		StringName r = doc_translation->get_message(p_message);
+		if (r) {
+			return r;
+		}
+	}
 	return p_message;
 }
 

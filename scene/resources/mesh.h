@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -148,9 +148,9 @@ public:
 	Size2 get_lightmap_size_hint() const;
 	void clear_cache() const;
 
-	typedef Vector<Vector<Face3>> (*ConvexDecompositionFunc)(const Vector<Face3> &p_faces, int p_max_convex_hulls);
+	typedef Vector<PoolVector<Vector3>> (*ConvexDecompositionFunc)(const real_t *p_vertices, int p_vertex_count, const uint32_t *p_triangles, int p_triangle_count, int p_max_convex_hulls, Vector<PoolVector<uint32_t>> *r_convex_indices);
 
-	static ConvexDecompositionFunc convex_composition_function;
+	static ConvexDecompositionFunc convex_decomposition_function;
 
 	Vector<Ref<Shape>> convex_decompose(int p_max_convex_hulls = -1) const;
 

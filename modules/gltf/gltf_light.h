@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -42,12 +42,12 @@ protected:
 	static void _bind_methods();
 
 private:
-	Color color;
-	float intensity = 0.0f;
+	Color color = Color(1.0f, 1.0f, 1.0f);
+	float intensity = 1.0f;
 	String type;
-	float range = 0.0f;
+	float range = INFINITY;
 	float inner_cone_angle = 0.0f;
-	float outer_cone_angle = 0.0f;
+	float outer_cone_angle = Math_TAU / 8.0f;
 
 public:
 	Color get_color();

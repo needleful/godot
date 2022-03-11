@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -3175,18 +3175,16 @@ void CanvasItemEditor::_draw_ruler_tool() {
 
 			const Vector2 end_to_begin = (end - begin);
 
-			float arc_1_start_angle =
-					end_to_begin.x < 0 ?
-							  (end_to_begin.y < 0 ? 3.0 * Math_PI / 2.0 - vertical_angle_rad : Math_PI / 2.0) :
-							  (end_to_begin.y < 0 ? 3.0 * Math_PI / 2.0 : Math_PI / 2.0 - vertical_angle_rad);
+			float arc_1_start_angle = end_to_begin.x < 0
+					? (end_to_begin.y < 0 ? 3.0 * Math_PI / 2.0 - vertical_angle_rad : Math_PI / 2.0)
+					: (end_to_begin.y < 0 ? 3.0 * Math_PI / 2.0 : Math_PI / 2.0 - vertical_angle_rad);
 			float arc_1_end_angle = arc_1_start_angle + vertical_angle_rad;
 			// Constrain arc to triangle height & max size
 			float arc_1_radius = MIN(MIN(arc_radius_max_length_percent * ruler_length, ABS(end_to_begin.y)), arc_max_radius);
 
-			float arc_2_start_angle =
-					end_to_begin.x < 0 ?
-							  (end_to_begin.y < 0 ? 0.0 : -horizontal_angle_rad) :
-							  (end_to_begin.y < 0 ? Math_PI - horizontal_angle_rad : Math_PI);
+			float arc_2_start_angle = end_to_begin.x < 0
+					? (end_to_begin.y < 0 ? 0.0 : -horizontal_angle_rad)
+					: (end_to_begin.y < 0 ? Math_PI - horizontal_angle_rad : Math_PI);
 			float arc_2_end_angle = arc_2_start_angle + horizontal_angle_rad;
 			// Constrain arc to triangle width & max size
 			float arc_2_radius = MIN(MIN(arc_radius_max_length_percent * ruler_length, ABS(end_to_begin.x)), arc_max_radius);
@@ -4218,8 +4216,10 @@ void CanvasItemEditor::_notification(int p_what) {
 		anchor_mode_button->set_icon(get_icon("Anchor", "EditorIcons"));
 
 		Ref<DynamicFont> font = zoom_reset->get_font("font")->duplicate(false);
-		font->set_outline_size(1);
-		font->set_outline_color(Color(0, 0, 0));
+		if (font.is_valid()) {
+			font->set_outline_size(1);
+			font->set_outline_color(Color(0, 0, 0));
+		}
 		zoom_reset->add_font_override("font", font);
 		zoom_reset->add_color_override("font_color", Color(1, 1, 1));
 
@@ -4513,9 +4513,13 @@ void CanvasItemEditor::_set_anchors_and_margins_to_keep_ratio() {
 			undo_redo->add_do_method(control, "set_anchor", MARGIN_BOTTOM, bottom_right_anchor.y, false, true);
 			undo_redo->add_do_method(control, "set_meta", "_edit_use_anchors_", true);
 
-			bool use_anchors = control->has_meta("_edit_use_anchors_") && control->get_meta("_edit_use_anchors_");
+			const bool use_anchors = control->has_meta("_edit_use_anchors_") && control->get_meta("_edit_use_anchors_");
 			undo_redo->add_undo_method(control, "_edit_set_state", control->_edit_get_state());
-			undo_redo->add_undo_method(control, "set_meta", "_edit_use_anchors_", use_anchors);
+			if (use_anchors) {
+				undo_redo->add_undo_method(control, "set_meta", "_edit_use_anchors_", true);
+			} else {
+				undo_redo->add_undo_method(control, "remove_meta", "_edit_use_anchors_");
+			}
 
 			anchors_mode = true;
 			anchor_mode_button->set_pressed(anchors_mode);
@@ -4787,7 +4791,11 @@ void CanvasItemEditor::_button_toggle_anchor_mode(bool p_status) {
 			continue;
 		}
 
-		control->set_meta("_edit_use_anchors_", p_status);
+		if (p_status) {
+			control->set_meta("_edit_use_anchors_", true);
+		} else {
+			control->remove_meta("_edit_use_anchors_");
+		}
 	}
 
 	anchors_mode = p_status;
@@ -5196,10 +5204,6 @@ void CanvasItemEditor::_popup_callback(int p_op) {
 					if (key_pos) {
 						ctrl->set_position(Point2());
 					}
-					/*
-                                   if (key_scale)
-				   AnimationPlayerEditor::singleton->get_track_editor()->insert_node_value_key(ctrl,"rect/size",ctrl->get_size());
-                                   */
 				}
 			}
 
@@ -5716,7 +5720,9 @@ CanvasItemEditor::CanvasItemEditor(EditorNode *p_editor) {
 	snap_rotation = false;
 	snap_scale = false;
 	snap_relative = false;
-	snap_pixel = false;
+	// Enable pixel snapping even if pixel snap rendering is disabled in the Project Settings.
+	// This results in crisper visuals by preventing 2D nodes from being placed at subpixel coordinates.
+	snap_pixel = true;
 	snap_target[0] = SNAP_TARGET_NONE;
 	snap_target[1] = SNAP_TARGET_NONE;
 
@@ -6515,13 +6521,13 @@ bool CanvasItemEditorViewport::can_drop_data(const Point2 &p_point, const Varian
 					}
 					memdelete(instanced_scene);
 				} else if (type == "Texture" ||
-						   type == "ImageTexture" ||
-						   type == "ViewportTexture" ||
-						   type == "CurveTexture" ||
-						   type == "GradientTexture" ||
-						   type == "StreamTexture" ||
-						   type == "AtlasTexture" ||
-						   type == "LargeTexture") {
+						type == "ImageTexture" ||
+						type == "ViewportTexture" ||
+						type == "CurveTexture" ||
+						type == "GradientTexture" ||
+						type == "StreamTexture" ||
+						type == "AtlasTexture" ||
+						type == "LargeTexture") {
 					Ref<Texture> texture = Ref<Texture>(Object::cast_to<Texture>(*res));
 					if (!texture.is_valid()) {
 						continue;

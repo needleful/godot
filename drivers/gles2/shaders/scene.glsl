@@ -206,6 +206,15 @@ uniform highp float light_spot_attenuation;
 uniform highp float light_spot_range;
 uniform highp float light_spot_angle;
 
+float get_omni_attenuation(float distance, float inv_range, float decay) {
+	float nd = distance * inv_range;
+	nd *= nd;
+	nd *= nd; // nd^4
+	nd = max(1.0 - nd, 0.0);
+	nd *= nd; // nd^2
+	return nd * pow(max(distance, 0.0001), -decay);
+}
+
 void light_compute(
 		vec3 N,
 		vec3 L,
@@ -546,9 +555,12 @@ VERTEX_SHADER_CODE
 	float normalized_distance = light_length / light_range;
 
 	if (normalized_distance < 1.0) {
+#ifdef USE_PHYSICAL_LIGHT_ATTENUATION
+		float omni_attenuation = get_omni_attenuation(light_length, 1.0 / light_range, light_attenuation);
+#else
 		float omni_attenuation = pow(1.0 - normalized_distance, light_attenuation);
+#endif
 
-		vec3 attenuation = vec3(omni_attenuation);
 		light_att = vec3(omni_attenuation);
 	} else {
 		light_att = vec3(0.0);
@@ -565,7 +577,12 @@ VERTEX_SHADER_CODE
 	float normalized_distance = light_length / light_range;
 
 	if (normalized_distance < 1.0) {
+#ifdef USE_PHYSICAL_LIGHT_ATTENUATION
+		float spot_attenuation = get_omni_attenuation(light_length, 1.0 / light_range, light_attenuation);
+#else
 		float spot_attenuation = pow(1.0 - normalized_distance, light_attenuation);
+#endif
+
 		vec3 spot_dir = light_direction;
 
 		float spot_cutoff = light_spot_angle;
@@ -987,7 +1004,7 @@ vec4 texture2D_bicubic(sampler2D tex, vec2 uv) {
 	vec2 p3 = (vec2(iuv.x + h1x, iuv.y + h1y) - vec2(0.5)) * texel_size;
 
 	return (g0(fuv.y) * (g0x * texture2D(tex, p0) + g1x * texture2D(tex, p1))) +
-		   (g1(fuv.y) * (g0x * texture2D(tex, p2) + g1x * texture2D(tex, p3)));
+			(g1(fuv.y) * (g0x * texture2D(tex, p2) + g1x * texture2D(tex, p3)));
 }
 #endif //USE_LIGHTMAP_FILTER_BICUBIC
 #endif
@@ -1221,6 +1238,17 @@ float GTR1(float NdotH, float a) {
 	float t = 1.0 + (a2 - 1.0) * NdotH * NdotH;
 	return (a2 - 1.0) / (M_PI * log(a2) * t);
 }
+
+#ifdef USE_PHYSICAL_LIGHT_ATTENUATION
+float get_omni_attenuation(float distance, float inv_range, float decay) {
+	float nd = distance * inv_range;
+	nd *= nd;
+	nd *= nd; // nd^4
+	nd = max(1.0 - nd, 0.0);
+	nd *= nd; // nd^2
+	return nd * pow(max(distance, 0.0001), -decay);
+}
+#endif
 
 void light_compute(
 		vec3 N,
@@ -1516,7 +1544,7 @@ float sample_shadow(highp sampler2D shadow, highp vec4 spos) {
 								   SAMPLE_SHADOW_TEXEL(shadow, pos + vec2(2.0 * shadow_pixel_size.x, 2.0 * shadow_pixel_size.y), depth),
 								   f.x),
 						   f.y)) *
-		   (1.0 / 9.0);
+			(1.0 / 9.0);
 #endif
 
 #ifdef SHADOW_MODE_PCF_5
@@ -1692,12 +1720,12 @@ FRAGMENT_SHADER_CODE
 #ifdef USE_RADIANCE_MAP
 
 	vec3 ref_vec = reflect(-eye_position, N);
+	float horizon = min(1.0 + dot(ref_vec, normal), 1.0);
 	ref_vec = normalize((radiance_inverse_xform * vec4(ref_vec, 0.0)).xyz);
 
 	ref_vec.z *= -1.0;
 
 	specular_light = textureCubeLod(radiance_map, ref_vec, roughness * RADIANCE_MAX_LOD).xyz * bg_energy;
-	float horizon = min(1.0 + dot(ref_vec, normal), 1.0);
 	specular_light *= horizon * horizon;
 #ifndef USE_LIGHTMAP
 	{
@@ -1856,7 +1884,11 @@ FRAGMENT_SHADER_CODE
 
 	float normalized_distance = light_length / light_range;
 	if (normalized_distance < 1.0) {
+#ifdef USE_PHYSICAL_LIGHT_ATTENUATION
+		float omni_attenuation = get_omni_attenuation(light_length, 1.0 / light_range, light_attenuation);
+#else
 		float omni_attenuation = pow(1.0 - normalized_distance, light_attenuation);
+#endif
 
 		light_att = vec3(omni_attenuation);
 	} else {
@@ -2138,7 +2170,12 @@ FRAGMENT_SHADER_CODE
 	float normalized_distance = light_length / light_range;
 
 	if (normalized_distance < 1.0) {
+#ifdef USE_PHYSICAL_LIGHT_ATTENUATION
+		float spot_attenuation = get_omni_attenuation(light_length, 1.0 / light_range, light_attenuation);
+#else
 		float spot_attenuation = pow(1.0 - normalized_distance, light_attenuation);
+#endif
+
 		vec3 spot_dir = light_direction;
 
 		float spot_cutoff = light_spot_angle;
@@ -2314,6 +2351,11 @@ FRAGMENT_SHADER_CODE
 #endif // defined(FOG_DEPTH_ENABLED) || defined(FOG_HEIGHT_ENABLED)
 
 #endif //unshaded
+
+#ifdef OUTPUT_LINEAR
+	// sRGB -> linear
+	gl_FragColor.rgb = mix(pow((gl_FragColor.rgb + vec3(0.055)) * (1.0 / (1.0 + 0.055)), vec3(2.4)), gl_FragColor.rgb * (1.0 / 12.92), vec3(lessThan(gl_FragColor.rgb, vec3(0.04045))));
+#endif
 
 #else // not RENDER_DEPTH
 //depth render

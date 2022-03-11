@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -54,7 +54,6 @@
 #include "main/main_timer_sync.h"
 #include "main/performance.h"
 #include "main/splash.gen.h"
-#include "main/splash_editor.gen.h"
 #include "main/tests/test_main.h"
 #include "modules/register_module_types.h"
 #include "platform/register_platform_apis.h"
@@ -76,8 +75,12 @@
 #include "editor/doc/doc_data_class_path.gen.h"
 #include "editor/editor_node.h"
 #include "editor/editor_settings.h"
+#include "editor/editor_translation.h"
 #include "editor/progress_dialog.h"
 #include "editor/project_manager.h"
+#ifndef NO_EDITOR_SPLASH
+#include "main/splash_editor.gen.h"
+#endif
 #endif
 
 /* Static members */
@@ -175,8 +178,11 @@ static String get_full_version_string() {
 // FIXME: Could maybe be moved to PhysicsServerManager and Physics2DServerManager directly
 // to have less code in main.cpp.
 void initialize_physics() {
-	// This must be defined BEFORE the 3d physics server is created
+	// This must be defined BEFORE the 3d physics server is created,
+	// otherwise it won't always show up in the project settings page.
 	GLOBAL_DEF("physics/3d/godot_physics/use_bvh", true);
+	GLOBAL_DEF("physics/3d/godot_physics/bvh_collision_margin", 0.1);
+	ProjectSettings::get_singleton()->set_custom_property_info("physics/3d/godot_physics/bvh_collision_margin", PropertyInfo(Variant::REAL, "physics/3d/godot_physics/bvh_collision_margin", PROPERTY_HINT_RANGE, "0.0,2.0,0.01"));
 
 	/// 3D Physics Server
 	physics_server = PhysicsServerManager::new_server(ProjectSettings::get_singleton()->get(PhysicsServerManager::setting_property_name));
@@ -215,8 +221,8 @@ void finalize_physics() {
 void Main::print_help(const char *p_binary) {
 	print_line(String(VERSION_NAME) + " v" + get_full_version_string() + " - " + String(VERSION_WEBSITE));
 	OS::get_singleton()->print("Free and open source software under the terms of the MIT license.\n");
-	OS::get_singleton()->print("(c) 2007-2021 Juan Linietsky, Ariel Manzur.\n");
-	OS::get_singleton()->print("(c) 2014-2021 Godot Engine contributors.\n");
+	OS::get_singleton()->print("(c) 2007-2022 Juan Linietsky, Ariel Manzur.\n");
+	OS::get_singleton()->print("(c) 2014-2022 Godot Engine contributors.\n");
 	OS::get_singleton()->print("\n");
 	OS::get_singleton()->print("Usage: %s [options] [path to scene or 'project.godot' file]\n", p_binary);
 	OS::get_singleton()->print("\n");
@@ -889,7 +895,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		editor = false;
 #else
 		const String error_msg = "Error: Couldn't load project data at path \"" + project_path + "\". Is the .pck file missing?\nIf you've renamed the executable, the associated .pck file should also be renamed to match the executable's name (without the extension).\n";
-		OS::get_singleton()->print("%s", error_msg.ascii().get_data());
+		OS::get_singleton()->print("%s", error_msg.utf8().get_data());
 		OS::get_singleton()->alert(error_msg);
 
 		goto error;
@@ -994,7 +1000,9 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 #ifdef TOOLS_ENABLED
 		if (!editor && !project_manager) {
 #endif
-			OS::get_singleton()->print("Error: Can't run project: no main scene defined.\n");
+			const String error_msg = "Error: Can't run project: no main scene defined in the project.\n";
+			OS::get_singleton()->print("%s", error_msg.utf8().get_data());
+			OS::get_singleton()->alert(error_msg);
 			goto error;
 #ifdef TOOLS_ENABLED
 		}
@@ -1036,17 +1044,17 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	GLOBAL_DEF("rendering/2d/options/use_nvidia_rect_flicker_workaround", false);
 
 	GLOBAL_DEF("display/window/size/width", 1024);
-	ProjectSettings::get_singleton()->set_custom_property_info("display/window/size/width", PropertyInfo(Variant::INT, "display/window/size/width", PROPERTY_HINT_RANGE, "0,7680,or_greater")); // 8K resolution
+	ProjectSettings::get_singleton()->set_custom_property_info("display/window/size/width", PropertyInfo(Variant::INT, "display/window/size/width", PROPERTY_HINT_RANGE, "0,7680,1,or_greater")); // 8K resolution
 	GLOBAL_DEF("display/window/size/height", 600);
-	ProjectSettings::get_singleton()->set_custom_property_info("display/window/size/height", PropertyInfo(Variant::INT, "display/window/size/height", PROPERTY_HINT_RANGE, "0,4320,or_greater")); // 8K resolution
+	ProjectSettings::get_singleton()->set_custom_property_info("display/window/size/height", PropertyInfo(Variant::INT, "display/window/size/height", PROPERTY_HINT_RANGE, "0,4320,1,or_greater")); // 8K resolution
 	GLOBAL_DEF("display/window/size/resizable", true);
 	GLOBAL_DEF("display/window/size/borderless", false);
 	GLOBAL_DEF("display/window/size/fullscreen", false);
 	GLOBAL_DEF("display/window/size/always_on_top", false);
 	GLOBAL_DEF("display/window/size/test_width", 0);
-	ProjectSettings::get_singleton()->set_custom_property_info("display/window/size/test_width", PropertyInfo(Variant::INT, "display/window/size/test_width", PROPERTY_HINT_RANGE, "0,7680,or_greater")); // 8K resolution
+	ProjectSettings::get_singleton()->set_custom_property_info("display/window/size/test_width", PropertyInfo(Variant::INT, "display/window/size/test_width", PROPERTY_HINT_RANGE, "0,7680,1,or_greater")); // 8K resolution
 	GLOBAL_DEF("display/window/size/test_height", 0);
-	ProjectSettings::get_singleton()->set_custom_property_info("display/window/size/test_height", PropertyInfo(Variant::INT, "display/window/size/test_height", PROPERTY_HINT_RANGE, "0,4320,or_greater")); // 8K resolution
+	ProjectSettings::get_singleton()->set_custom_property_info("display/window/size/test_height", PropertyInfo(Variant::INT, "display/window/size/test_height", PROPERTY_HINT_RANGE, "0,4320,1,or_greater")); // 8K resolution
 
 	if (use_custom_res) {
 		if (!force_res) {
@@ -1089,7 +1097,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	OS::get_singleton()->_vsync_via_compositor = video_mode.vsync_via_compositor;
 
 	if (tablet_driver == "") { // specified in project.godot
-		tablet_driver = GLOBAL_DEF_RST("display/window/tablet_driver", OS::get_singleton()->get_tablet_driver_name(0));
+		tablet_driver = GLOBAL_DEF_RST_NOVAL("display/window/tablet_driver", OS::get_singleton()->get_tablet_driver_name(0));
 	}
 
 	for (int i = 0; i < OS::get_singleton()->get_tablet_driver_count(); i++) {
@@ -1148,7 +1156,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	}
 
 	if (audio_driver == "") { // specified in project.godot
-		audio_driver = GLOBAL_DEF_RST("audio/driver", OS::get_singleton()->get_audio_driver_name(0));
+		audio_driver = GLOBAL_DEF_RST_NOVAL("audio/driver", OS::get_singleton()->get_audio_driver_name(0));
 	}
 
 	for (int i = 0; i < OS::get_singleton()->get_audio_driver_count(); i++) {
@@ -1392,8 +1400,10 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 		}
 
 #ifdef TOOLS_ENABLED
-		Ref<Image> icon = memnew(Image(app_icon_png));
-		OS::get_singleton()->set_icon(icon);
+		if (OS::get_singleton()->get_bundle_icon_path().empty()) {
+			Ref<Image> icon = memnew(Image(app_icon_png));
+			OS::get_singleton()->set_icon(icon);
+		}
 #endif
 	}
 
@@ -1403,7 +1413,7 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	GLOBAL_DEF("application/config/icon", String());
 	ProjectSettings::get_singleton()->set_custom_property_info("application/config/icon",
 			PropertyInfo(Variant::STRING, "application/config/icon",
-					PROPERTY_HINT_FILE, "*.png,*.webp,*.svg,*.svgz"));
+					PROPERTY_HINT_FILE, "*.png,*.webp,*.svg"));
 
 	GLOBAL_DEF("application/config/macos_native_icon", String());
 	ProjectSettings::get_singleton()->set_custom_property_info("application/config/macos_native_icon", PropertyInfo(Variant::STRING, "application/config/macos_native_icon", PROPERTY_HINT_FILE, "*.icns"));
@@ -1453,6 +1463,9 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	register_platform_apis();
 	register_module_types();
 
+	// Theme needs modules to be initialized so that sub-resources can be loaded.
+	initialize_theme();
+
 	GLOBAL_DEF("display/mouse_cursor/custom_image", String());
 	GLOBAL_DEF("display/mouse_cursor/custom_image_hotspot", Vector2());
 	GLOBAL_DEF("display/mouse_cursor/tooltip_position_offset", Point2(10, 10));
@@ -1486,7 +1499,6 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	VisualServer::get_singleton()->callbacks_register(visual_server_callbacks);
 
 	_start_success = true;
-	locale = String();
 
 	ClassDB::set_current_api(ClassDB::API_NONE); //no more api is registered at this point
 
@@ -1590,10 +1602,14 @@ bool Main::start() {
 		}
 	}
 
-	String main_loop_type;
 #ifdef TOOLS_ENABLED
 	if (doc_tool_path != "") {
 		Engine::get_singleton()->set_editor_hint(true); // Needed to instance editor-only classes for their default values
+
+		// Translate the class reference only when `-l LOCALE` parameter is given.
+		if (!locale.empty() && locale != "en") {
+			load_doc_translations(locale);
+		}
 
 		{
 			DirAccessRef da = DirAccess::open(doc_tool_path);
@@ -1661,6 +1677,7 @@ bool Main::start() {
 	if (editor) {
 		main_loop = memnew(SceneTree);
 	};
+	String main_loop_type = GLOBAL_DEF("application/run/main_loop_type", "SceneTree");
 
 	if (test != "") {
 #ifdef TOOLS_ENABLED
@@ -1677,7 +1694,9 @@ bool Main::start() {
 
 		if (check_only) {
 			if (!script_res->is_valid()) {
-				OS::get_singleton()->set_exit_code(1);
+				OS::get_singleton()->set_exit_code(EXIT_FAILURE);
+			} else {
+				OS::get_singleton()->set_exit_code(EXIT_SUCCESS);
 			}
 			return false;
 		}
@@ -1699,8 +1718,23 @@ bool Main::start() {
 			return false;
 		}
 
-	} else {
-		main_loop_type = GLOBAL_DEF("application/run/main_loop_type", "");
+	} else { // Not based on script path.
+		if (!editor && !ClassDB::class_exists(main_loop_type) && ScriptServer::is_global_class(main_loop_type)) {
+			String script_path = ScriptServer::get_global_class_path(main_loop_type);
+			Ref<Script> script_res = ResourceLoader::load(script_path, "Script", true);
+			StringName script_base = ScriptServer::get_global_class_native_base(main_loop_type);
+			Object *obj = ClassDB::instance(script_base);
+			MainLoop *script_loop = Object::cast_to<MainLoop>(obj);
+			if (!script_loop) {
+				if (obj) {
+					memdelete(obj);
+				}
+				OS::get_singleton()->alert("Error: Invalid MainLoop script base type: " + script_base);
+				ERR_FAIL_V_MSG(false, vformat("The global class %s does not inherit from SceneTree or MainLoop.", main_loop_type));
+			}
+			script_loop->set_init_script(script_res);
+			main_loop = script_loop;
+		}
 	}
 
 	if (!main_loop && main_loop_type == "") {
@@ -1843,7 +1877,8 @@ bool Main::start() {
 			String stretch_mode = GLOBAL_DEF("display/window/stretch/mode", "disabled");
 			String stretch_aspect = GLOBAL_DEF("display/window/stretch/aspect", "ignore");
 			Size2i stretch_size = Size2(GLOBAL_DEF("display/window/size/width", 0), GLOBAL_DEF("display/window/size/height", 0));
-			real_t stretch_shrink = GLOBAL_DEF("display/window/stretch/shrink", 1.0);
+			// out of compatibility reasons stretch_scale is called shrink when exposed to the user.
+			real_t stretch_scale = GLOBAL_DEF("display/window/stretch/shrink", 1.0);
 
 			SceneTree::StretchMode sml_sm = SceneTree::STRETCH_MODE_DISABLED;
 			if (stretch_mode == "2d") {
@@ -1863,7 +1898,7 @@ bool Main::start() {
 				sml_aspect = SceneTree::STRETCH_ASPECT_EXPAND;
 			}
 
-			sml->set_screen_stretch(sml_sm, sml_aspect, stretch_size, stretch_shrink);
+			sml->set_screen_stretch(sml_sm, sml_aspect, stretch_size, stretch_scale);
 
 			sml->set_auto_accept_quit(GLOBAL_DEF("application/config/auto_accept_quit", true));
 			sml->set_quit_on_go_back(GLOBAL_DEF("application/config/quit_on_go_back", true));
@@ -1877,6 +1912,10 @@ bool Main::start() {
 #else
 			OS::get_singleton()->set_window_title(appname);
 #endif
+
+			// Define a very small minimum window size to prevent bugs such as GH-37242.
+			// It can still be overridden by the user in a script.
+			OS::get_singleton()->set_min_window_size(Size2(64, 64));
 
 			int shadow_atlas_size = GLOBAL_GET("rendering/quality/shadow_atlas/size");
 			int shadow_atlas_q0_subdiv = GLOBAL_GET("rendering/quality/shadow_atlas/quadrant_0_subdiv");
@@ -1904,7 +1943,7 @@ bool Main::start() {
 			GLOBAL_DEF("display/window/stretch/aspect", "ignore");
 			ProjectSettings::get_singleton()->set_custom_property_info("display/window/stretch/aspect", PropertyInfo(Variant::STRING, "display/window/stretch/aspect", PROPERTY_HINT_ENUM, "ignore,keep,keep_width,keep_height,expand"));
 			GLOBAL_DEF("display/window/stretch/shrink", 1.0);
-			ProjectSettings::get_singleton()->set_custom_property_info("display/window/stretch/shrink", PropertyInfo(Variant::REAL, "display/window/stretch/shrink", PROPERTY_HINT_RANGE, "1.0,8.0,0.1"));
+			ProjectSettings::get_singleton()->set_custom_property_info("display/window/stretch/shrink", PropertyInfo(Variant::REAL, "display/window/stretch/shrink", PROPERTY_HINT_RANGE, "0.1,8,0.01,or_greater"));
 			sml->set_auto_accept_quit(GLOBAL_DEF("application/config/auto_accept_quit", true));
 			sml->set_quit_on_go_back(GLOBAL_DEF("application/config/quit_on_go_back", true));
 			GLOBAL_DEF("gui/common/snap_controls_to_pixels", true);
@@ -2022,7 +2061,7 @@ bool Main::start() {
 #endif
 	}
 
-	if (!hasicon) {
+	if (!hasicon && OS::get_singleton()->get_bundle_icon_path().empty()) {
 		Ref<Image> icon = memnew(Image(app_icon_png));
 		OS::get_singleton()->set_icon(icon);
 	}

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -725,7 +725,7 @@ void AnimationPlayer::_animation_process_animation(AnimationData *p_anim, float 
 					if (anim->has_loop()) {
 						at_anim_pos = Math::fposmod(p_time - pos, anim->get_length()); //seek to loop
 					} else {
-						at_anim_pos = MAX(anim->get_length(), p_time - pos); //seek to end
+						at_anim_pos = MIN(anim->get_length(), p_time - pos); //seek to end
 					}
 
 					if (player->is_playing() || p_seeked) {
@@ -753,6 +753,7 @@ void AnimationPlayer::_animation_process_animation(AnimationData *p_anim, float 
 							}
 						} else {
 							player->play(anim_name);
+							player->seek(0.0, true);
 							nc->animation_playing = true;
 							playing_caches.insert(nc);
 						}

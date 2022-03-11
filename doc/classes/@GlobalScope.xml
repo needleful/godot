@@ -883,7 +883,7 @@
 		<constant name="KEY_MASK_CTRL" value="268435456" enum="KeyModifierMask">
 			Ctrl key mask.
 		</constant>
-		<constant name="KEY_MASK_CMD" value="268435456" enum="KeyModifierMask">
+		<constant name="KEY_MASK_CMD" value="platform-dependent" enum="KeyModifierMask">
 			Command key mask. On macOS, this is equivalent to [constant KEY_MASK_META]. On other platforms, this is equivalent to [constant KEY_MASK_CTRL]. This mask should be preferred to [constant KEY_MASK_META] or [constant KEY_MASK_CTRL] for system shortcuts as it handles all platforms correctly.
 		</constant>
 		<constant name="KEY_MASK_KPAD" value="536870912" enum="KeyModifierMask">
@@ -1006,8 +1006,11 @@
 		<constant name="JOY_BUTTON_22" value="22" enum="JoystickList">
 			Gamepad button 22.
 		</constant>
-		<constant name="JOY_BUTTON_MAX" value="23" enum="JoystickList">
-			Represents the maximum number of joystick buttons supported.
+		<constant name="JOY_BUTTON_MAX" value="128" enum="JoystickList">
+			The maximum number of game controller buttons supported by the engine. The actual limit may be lower on specific platforms:
+			- Android: Up to 36 buttons.
+			- Linux: Up to 80 buttons.
+			- Windows and macOS: Up to 128 buttons.
 		</constant>
 		<constant name="JOY_SONY_CIRCLE" value="1" enum="JoystickList">
 			DualShock circle button.
@@ -1370,7 +1373,7 @@
 			Hints that an integer or float property should be within a range specified via the hint string [code]"min,max"[/code] or [code]"min,max,step"[/code]. The hint string can optionally include [code]"or_greater"[/code] and/or [code]"or_lesser"[/code] to allow manual input going respectively above the max or below the min values. Example: [code]"-360,360,1,or_greater,or_lesser"[/code].
 		</constant>
 		<constant name="PROPERTY_HINT_EXP_RANGE" value="2" enum="PropertyHint">
-			Hints that an integer or float property should be within an exponential range specified via the hint string [code]"min,max"[/code] or [code]"min,max,step"[/code]. The hint string can optionally include [code]"or_greater"[/code] and/or [code]"or_lesser"[/code] to allow manual input going respectively above the max or below the min values. Example: [code]"0.01,100,0.01,or_greater"[/code].
+			Hints that a float property should be within an exponential range specified via the hint string [code]"min,max"[/code] or [code]"min,max,step"[/code]. The hint string can optionally include [code]"or_greater"[/code] and/or [code]"or_lesser"[/code] to allow manual input going respectively above the max or below the min values. Example: [code]"0.01,100,0.01,or_greater"[/code].
 		</constant>
 		<constant name="PROPERTY_HINT_ENUM" value="3" enum="PropertyHint">
 			Hints that an integer, float or string property is an enumerated value to pick in a list specified via a hint string such as [code]"Hello,Something,Else"[/code].

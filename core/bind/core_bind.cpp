@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -527,6 +527,10 @@ String _OS::get_locale() const {
 	return OS::get_singleton()->get_locale();
 }
 
+String _OS::get_locale_language() const {
+	return OS::get_singleton()->get_locale_language();
+}
+
 String _OS::get_latin_keyboard_variant() const {
 	switch (OS::get_singleton()->get_latin_keyboard_variant()) {
 		case OS::LATIN_KEYBOARD_QWERTY:
@@ -915,7 +919,7 @@ void _OS::delay_msec(int p_msec) const {
 	OS::get_singleton()->delay_usec(int64_t(p_msec) * 1000);
 }
 
-uint32_t _OS::get_ticks_msec() const {
+uint64_t _OS::get_ticks_msec() const {
 	return OS::get_singleton()->get_ticks_msec();
 }
 
@@ -1333,6 +1337,7 @@ void _OS::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_ticks_usec"), &_OS::get_ticks_usec);
 	ClassDB::bind_method(D_METHOD("get_splash_tick_msec"), &_OS::get_splash_tick_msec);
 	ClassDB::bind_method(D_METHOD("get_locale"), &_OS::get_locale);
+	ClassDB::bind_method(D_METHOD("get_locale_language"), &_OS::get_locale_language);
 	ClassDB::bind_method(D_METHOD("get_latin_keyboard_variant"), &_OS::get_latin_keyboard_variant);
 	ClassDB::bind_method(D_METHOD("get_model_name"), &_OS::get_model_name);
 
@@ -1446,6 +1451,7 @@ void _OS::_bind_methods() {
 	// to avoid using values from the documentation writer's own OS instance.
 	ADD_PROPERTY_DEFAULT("clipboard", "");
 	ADD_PROPERTY_DEFAULT("current_screen", 0);
+	ADD_PROPERTY_DEFAULT("tablet_driver", "");
 	ADD_PROPERTY_DEFAULT("exit_code", 0);
 	ADD_PROPERTY_DEFAULT("vsync_enabled", true);
 	ADD_PROPERTY_DEFAULT("vsync_via_compositor", false);
@@ -2612,6 +2618,12 @@ void _Thread::_start_func(void *ud) {
 	Ref<_Thread> *tud = (Ref<_Thread> *)ud;
 	Ref<_Thread> t = *tud;
 	memdelete(tud);
+
+	Object *target_instance = ObjectDB::get_instance(t->target_instance_id);
+	if (!target_instance) {
+		ERR_FAIL_MSG(vformat("Could not call function '%s' on previously freed instance to start thread %s.", t->target_method, t->get_id()));
+	}
+
 	Variant::CallError ce;
 	const Variant *arg[1] = { &t->userdata };
 	int argc = 0;
@@ -2630,15 +2642,17 @@ void _Thread::_start_func(void *ud) {
 		// We must check if we are in case b).
 		int target_param_count = 0;
 		int target_default_arg_count = 0;
-		Ref<Script> script = t->target_instance->get_script();
+		Ref<Script> script = target_instance->get_script();
 		if (script.is_valid()) {
 			MethodInfo mi = script->get_method_info(t->target_method);
 			target_param_count = mi.arguments.size();
 			target_default_arg_count = mi.default_arguments.size();
 		} else {
-			MethodBind *method = ClassDB::get_method(t->target_instance->get_class_name(), t->target_method);
-			target_param_count = method->get_argument_count();
-			target_default_arg_count = method->get_default_argument_count();
+			MethodBind *method = ClassDB::get_method(target_instance->get_class_name(), t->target_method);
+			if (method) {
+				target_param_count = method->get_argument_count();
+				target_default_arg_count = method->get_default_argument_count();
+			}
 		}
 		if (target_param_count >= 1 && target_default_arg_count < target_param_count) {
 			argc = 1;
@@ -2647,7 +2661,7 @@ void _Thread::_start_func(void *ud) {
 
 	Thread::set_name(t->target_method);
 
-	t->ret = t->target_instance->call(t->target_method, arg, argc, ce);
+	t->ret = target_instance->call(t->target_method, arg, argc, ce);
 	if (ce.error != Variant::CallError::CALL_OK) {
 		String reason;
 		switch (ce.error) {
@@ -2667,21 +2681,24 @@ void _Thread::_start_func(void *ud) {
 			}
 		}
 
+		t->running.clear();
 		ERR_FAIL_MSG("Could not call function '" + t->target_method.operator String() + "' to start thread " + t->get_id() + ": " + reason + ".");
 	}
+
+	t->running.clear();
 }
 
 Error _Thread::start(Object *p_instance, const StringName &p_method, const Variant &p_userdata, Priority p_priority) {
-	ERR_FAIL_COND_V_MSG(active.is_set(), ERR_ALREADY_IN_USE, "Thread already started.");
+	ERR_FAIL_COND_V_MSG(is_active(), ERR_ALREADY_IN_USE, "Thread already started.");
 	ERR_FAIL_COND_V(!p_instance, ERR_INVALID_PARAMETER);
 	ERR_FAIL_COND_V(p_method == StringName(), ERR_INVALID_PARAMETER);
 	ERR_FAIL_INDEX_V(p_priority, PRIORITY_MAX, ERR_INVALID_PARAMETER);
 
 	ret = Variant();
 	target_method = p_method;
-	target_instance = p_instance;
+	target_instance_id = p_instance->get_instance_id();
 	userdata = p_userdata;
-	active.set();
+	running.set();
 
 	Ref<_Thread> *ud = memnew(Ref<_Thread>(this));
 
@@ -2697,16 +2714,20 @@ String _Thread::get_id() const {
 }
 
 bool _Thread::is_active() const {
-	return active.is_set();
+	return thread.is_started();
 }
+
+bool _Thread::is_alive() const {
+	return running.is_set();
+}
+
 Variant _Thread::wait_to_finish() {
-	ERR_FAIL_COND_V_MSG(!active.is_set(), Variant(), "Thread must be active to wait for its completion.");
+	ERR_FAIL_COND_V_MSG(!is_active(), Variant(), "Thread must have been started to wait for its completion.");
 	thread.wait_to_finish();
 	Variant r = ret;
 	target_method = StringName();
-	target_instance = nullptr;
+	target_instance_id = ObjectID();
 	userdata = Variant();
-	active.clear();
 
 	return r;
 }
@@ -2715,6 +2736,7 @@ void _Thread::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("start", "instance", "method", "userdata", "priority"), &_Thread::start, DEFVAL(Variant()), DEFVAL(PRIORITY_NORMAL));
 	ClassDB::bind_method(D_METHOD("get_id"), &_Thread::get_id);
 	ClassDB::bind_method(D_METHOD("is_active"), &_Thread::is_active);
+	ClassDB::bind_method(D_METHOD("is_alive"), &_Thread::is_alive);
 	ClassDB::bind_method(D_METHOD("wait_to_finish"), &_Thread::wait_to_finish);
 
 	BIND_ENUM_CONSTANT(PRIORITY_LOW);
@@ -2722,11 +2744,11 @@ void _Thread::_bind_methods() {
 	BIND_ENUM_CONSTANT(PRIORITY_HIGH);
 }
 _Thread::_Thread() {
-	target_instance = nullptr;
+	target_instance_id = ObjectID();
 }
 
 _Thread::~_Thread() {
-	ERR_FAIL_COND_MSG(active.is_set(), "Reference to a Thread object was lost while the thread is still running...");
+	ERR_FAIL_COND_MSG(is_active(), "Reference to a Thread object was lost while the thread is still running...");
 }
 
 /////////////////////////////////////
@@ -2886,6 +2908,42 @@ StringName _ClassDB::get_category(const StringName &p_node) const {
 	return ClassDB::get_category(p_node);
 }
 
+bool _ClassDB::has_enum(const StringName &p_class, const StringName &p_name, bool p_no_inheritance) const {
+	return ClassDB::has_enum(p_class, p_name, p_no_inheritance);
+}
+
+PoolStringArray _ClassDB::get_enum_list(const StringName &p_class, bool p_no_inheritance) const {
+	List<StringName> enums;
+	ClassDB::get_enum_list(p_class, &enums, p_no_inheritance);
+
+	PoolStringArray ret;
+	ret.resize(enums.size());
+	int idx = 0;
+	for (List<StringName>::Element *E = enums.front(); E; E = E->next()) {
+		ret.set(idx++, E->get());
+	}
+
+	return ret;
+}
+
+PoolStringArray _ClassDB::get_enum_constants(const StringName &p_class, const StringName &p_enum, bool p_no_inheritance) const {
+	List<StringName> constants;
+	ClassDB::get_enum_constants(p_class, p_enum, &constants, p_no_inheritance);
+
+	PoolStringArray ret;
+	ret.resize(constants.size());
+	int idx = 0;
+	for (List<StringName>::Element *E = constants.front(); E; E = E->next()) {
+		ret.set(idx++, E->get());
+	}
+
+	return ret;
+}
+
+StringName _ClassDB::get_integer_constant_enum(const StringName &p_class, const StringName &p_name, bool p_no_inheritance) const {
+	return ClassDB::get_integer_constant_enum(p_class, p_name, p_no_inheritance);
+}
+
 bool _ClassDB::is_class_enabled(StringName p_class) const {
 	return ClassDB::is_class_enabled(p_class);
 }
@@ -2915,6 +2973,11 @@ void _ClassDB::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("class_has_integer_constant", "class", "name"), &_ClassDB::has_integer_constant);
 	ClassDB::bind_method(D_METHOD("class_get_integer_constant", "class", "name"), &_ClassDB::get_integer_constant);
+
+	ClassDB::bind_method(D_METHOD("class_has_enum", "class", "name", "no_inheritance"), &_ClassDB::has_enum, DEFVAL(false));
+	ClassDB::bind_method(D_METHOD("class_get_enum_list", "class", "no_inheritance"), &_ClassDB::get_enum_list, DEFVAL(false));
+	ClassDB::bind_method(D_METHOD("class_get_enum_constants", "class", "enum", "no_inheritance"), &_ClassDB::get_enum_constants, DEFVAL(false));
+	ClassDB::bind_method(D_METHOD("class_get_integer_constant_enum", "class", "name", "no_inheritance"), &_ClassDB::get_integer_constant_enum, DEFVAL(false));
 
 	ClassDB::bind_method(D_METHOD("class_get_category", "class"), &_ClassDB::get_category);
 	ClassDB::bind_method(D_METHOD("is_class_enabled", "class"), &_ClassDB::is_class_enabled);

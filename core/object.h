@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -41,9 +41,7 @@
 #include "core/variant.h"
 #include "core/vmap.h"
 
-#ifdef DEBUG_ENABLED
-#include <atomic> // For ObjectRC*
-#endif
+#include <atomic>
 
 #define VARIANT_ARG_LIST const Variant &p_arg1 = Variant(), const Variant &p_arg2 = Variant(), const Variant &p_arg3 = Variant(), const Variant &p_arg4 = Variant(), const Variant &p_arg5 = Variant()
 #define VARIANT_ARG_PASS p_arg1, p_arg2, p_arg3, p_arg4, p_arg5
@@ -333,7 +331,7 @@ protected:                                                                      
 		initialize_class();                                                                                                             \
 	}                                                                                                                                   \
 	_FORCE_INLINE_ bool (Object::*_get_get() const)(const StringName &p_name, Variant &) const {                                        \
-		return (bool (Object::*)(const StringName &, Variant &) const) & m_class::_get;                                                 \
+		return (bool(Object::*)(const StringName &, Variant &) const) & m_class::_get;                                                  \
 	}                                                                                                                                   \
 	virtual bool _getv(const StringName &p_name, Variant &r_ret) const {                                                                \
 		if (m_class::_get_get() != m_inherits::_get_get()) {                                                                            \
@@ -343,7 +341,7 @@ protected:                                                                      
 		return m_inherits::_getv(p_name, r_ret);                                                                                        \
 	}                                                                                                                                   \
 	_FORCE_INLINE_ bool (Object::*_get_set() const)(const StringName &p_name, const Variant &p_property) {                              \
-		return (bool (Object::*)(const StringName &, const Variant &)) & m_class::_set;                                                 \
+		return (bool(Object::*)(const StringName &, const Variant &)) & m_class::_set;                                                  \
 	}                                                                                                                                   \
 	virtual bool _setv(const StringName &p_name, const Variant &p_property) {                                                           \
 		if (m_inherits::_setv(p_name, p_property))                                                                                      \
@@ -354,7 +352,7 @@ protected:                                                                      
 		return false;                                                                                                                   \
 	}                                                                                                                                   \
 	_FORCE_INLINE_ void (Object::*_get_get_property_list() const)(List<PropertyInfo> * p_list) const {                                  \
-		return (void (Object::*)(List<PropertyInfo> *) const) & m_class::_get_property_list;                                            \
+		return (void(Object::*)(List<PropertyInfo> *) const) & m_class::_get_property_list;                                             \
 	}                                                                                                                                   \
 	virtual void _get_property_listv(List<PropertyInfo> *p_list, bool p_reversed) const {                                               \
 		if (!p_reversed) {                                                                                                              \
@@ -373,7 +371,7 @@ protected:                                                                      
 		}                                                                                                                               \
 	}                                                                                                                                   \
 	_FORCE_INLINE_ void (Object::*_get_notification() const)(int) {                                                                     \
-		return (void (Object::*)(int)) & m_class::_notification;                                                                        \
+		return (void(Object::*)(int)) & m_class::_notification;                                                                         \
 	}                                                                                                                                   \
 	virtual void _notificationv(int p_notification, bool p_reversed) {                                                                  \
 		if (!p_reversed)                                                                                                                \
@@ -476,9 +474,7 @@ private:
 	int _predelete_ok;
 	Set<Object *> change_receptors;
 	ObjectID _instance_id;
-#ifdef DEBUG_ENABLED
 	std::atomic<ObjectRC *> _rc;
-#endif
 	bool _predelete();
 	void _postinitialize();
 	bool _can_translate;
@@ -590,9 +586,7 @@ public:
 		return &ptr;
 	}
 
-#ifdef DEBUG_ENABLED
 	ObjectRC *_use_rc();
-#endif
 
 	bool _is_gpl_reversed() const { return false; }
 
@@ -798,6 +792,7 @@ public:
 	static void debug_objects(DebugFunc p_func);
 	static int get_object_count();
 
+	// This one may give false positives because a new object may be allocated at the same memory of a previously freed one
 	_FORCE_INLINE_ static bool instance_validate(Object *p_ptr) {
 		rw_lock.read_lock();
 

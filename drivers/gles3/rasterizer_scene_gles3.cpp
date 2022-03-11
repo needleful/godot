@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -838,7 +838,7 @@ void RasterizerSceneGLES3::environment_set_dof_blur_near(RID p_env, bool p_enabl
 	env->dof_blur_near_quality = p_quality;
 }
 
-void RasterizerSceneGLES3::environment_set_glow(RID p_env, bool p_enable, int p_level_flags, float p_intensity, float p_strength, float p_bloom_threshold, VS::EnvironmentGlowBlendMode p_blend_mode, float p_hdr_bleed_threshold, float p_hdr_bleed_scale, float p_hdr_luminance_cap, bool p_bicubic_upscale) {
+void RasterizerSceneGLES3::environment_set_glow(RID p_env, bool p_enable, int p_level_flags, float p_intensity, float p_strength, float p_bloom_threshold, VS::EnvironmentGlowBlendMode p_blend_mode, float p_hdr_bleed_threshold, float p_hdr_bleed_scale, float p_hdr_luminance_cap, bool p_bicubic_upscale, bool p_high_quality) {
 	Environment *env = environment_owner.getornull(p_env);
 	ERR_FAIL_COND(!env);
 
@@ -852,6 +852,7 @@ void RasterizerSceneGLES3::environment_set_glow(RID p_env, bool p_enable, int p_
 	env->glow_hdr_bleed_scale = p_hdr_bleed_scale;
 	env->glow_hdr_luminance_cap = p_hdr_luminance_cap;
 	env->glow_bicubic_upscale = p_bicubic_upscale;
+	env->glow_high_quality = p_high_quality;
 }
 void RasterizerSceneGLES3::environment_set_fog(RID p_env, bool p_enable, float p_begin, float p_end, RID p_gradient_texture) {
 }
@@ -1925,8 +1926,6 @@ void RasterizerSceneGLES3::_render_list(RenderList::Element **p_elements, int p_
 	state.current_depth_test = true;
 	glEnable(GL_DEPTH_TEST);
 
-	state.scene_shader.set_conditional(SceneShaderGLES3::USE_SKELETON, false);
-
 	state.current_blend_mode = -1;
 	state.current_line_width = -1;
 	state.current_depth_draw = -1;
@@ -1939,16 +1938,20 @@ void RasterizerSceneGLES3::_render_list(RenderList::Element **p_elements, int p_
 	int current_blend_mode = -1;
 
 	uint32_t prev_shading = 0xFFFFFFFF;
-	RasterizerStorageGLES3::Skeleton *prev_skeleton = nullptr;
-
 	state.scene_shader.set_conditional(SceneShaderGLES3::SHADELESS, true); //by default unshaded (easier to set)
+
+	RasterizerStorageGLES3::Skeleton *prev_skeleton = nullptr;
+	state.scene_shader.set_conditional(SceneShaderGLES3::USE_SKELETON, false);
 
 	bool first = true;
 	bool prev_use_instancing = false;
+	state.scene_shader.set_conditional(SceneShaderGLES3::USE_INSTANCING, false);
 	bool prev_octahedral_compression = false;
+	state.scene_shader.set_conditional(SceneShaderGLES3::ENABLE_OCTAHEDRAL_COMPRESSION, false);
 
 	storage->info.render.draw_call_count += p_element_count;
 	bool prev_opaque_prepass = false;
+	state.scene_shader.set_conditional(SceneShaderGLES3::USE_OPAQUE_PREPASS, false);
 
 	for (int i = 0; i < p_element_count; i++) {
 		RenderList::Element *e = p_elements[i];
@@ -2110,7 +2113,11 @@ void RasterizerSceneGLES3::_render_list(RenderList::Element **p_elements, int p_
 			}
 		}
 
-		bool octahedral_compression = ((RasterizerStorageGLES3::Surface *)e->geometry)->format & VisualServer::ArrayFormat::ARRAY_FLAG_USE_OCTAHEDRAL_COMPRESSION;
+		state.scene_shader.set_conditional(SceneShaderGLES3::USE_PHYSICAL_LIGHT_ATTENUATION, storage->config.use_physical_light_attenuation);
+
+		bool octahedral_compression = e->instance->base_type != VS::INSTANCE_IMMEDIATE &&
+				((RasterizerStorageGLES3::Surface *)e->geometry)->format & VisualServer::ArrayFormat::ARRAY_FLAG_USE_OCTAHEDRAL_COMPRESSION &&
+				!(((RasterizerStorageGLES3::Surface *)e->geometry)->blend_shapes.size() && e->instance->blend_values.size());
 		if (octahedral_compression != prev_octahedral_compression) {
 			state.scene_shader.set_conditional(SceneShaderGLES3::ENABLE_OCTAHEDRAL_COMPRESSION, octahedral_compression);
 			rebind = true;
@@ -3807,6 +3814,7 @@ void RasterizerSceneGLES3::_post_process(Environment *env, const CameraMatrix &p
 			}
 
 			state.effect_blur_shader.set_conditional(EffectBlurShaderGLES3::GLOW_GAUSSIAN_HORIZONTAL, true);
+			state.effect_blur_shader.set_conditional(EffectBlurShaderGLES3::USE_GLOW_HIGH_QUALITY, env->glow_high_quality);
 			state.effect_blur_shader.bind();
 			state.effect_blur_shader.set_uniform(EffectBlurShaderGLES3::PIXEL_SIZE, Vector2(1.0 / vp_w, 1.0 / vp_h));
 			state.effect_blur_shader.set_uniform(EffectBlurShaderGLES3::LOD, float(i));
@@ -3865,6 +3873,7 @@ void RasterizerSceneGLES3::_post_process(Environment *env, const CameraMatrix &p
 	if (env) {
 		state.tonemap_shader.set_conditional(TonemapShaderGLES3::USE_FILMIC_TONEMAPPER, env->tone_mapper == VS::ENV_TONE_MAPPER_FILMIC);
 		state.tonemap_shader.set_conditional(TonemapShaderGLES3::USE_ACES_TONEMAPPER, env->tone_mapper == VS::ENV_TONE_MAPPER_ACES);
+		state.tonemap_shader.set_conditional(TonemapShaderGLES3::USE_ACES_FITTED_TONEMAPPER, env->tone_mapper == VS::ENV_TONE_MAPPER_ACES_FITTED);
 		state.tonemap_shader.set_conditional(TonemapShaderGLES3::USE_REINHARD_TONEMAPPER, env->tone_mapper == VS::ENV_TONE_MAPPER_REINHARD);
 		state.tonemap_shader.set_conditional(TonemapShaderGLES3::USE_AUTO_EXPOSURE, env->auto_exposure);
 		state.tonemap_shader.set_conditional(TonemapShaderGLES3::USE_GLOW_FILTER_BICUBIC, env->glow_bicubic_upscale);
@@ -3966,6 +3975,7 @@ void RasterizerSceneGLES3::_post_process(Environment *env, const CameraMatrix &p
 	state.tonemap_shader.set_conditional(TonemapShaderGLES3::USE_AUTO_EXPOSURE, false);
 	state.tonemap_shader.set_conditional(TonemapShaderGLES3::USE_FILMIC_TONEMAPPER, false);
 	state.tonemap_shader.set_conditional(TonemapShaderGLES3::USE_ACES_TONEMAPPER, false);
+	state.tonemap_shader.set_conditional(TonemapShaderGLES3::USE_ACES_FITTED_TONEMAPPER, false);
 	state.tonemap_shader.set_conditional(TonemapShaderGLES3::USE_REINHARD_TONEMAPPER, false);
 	state.tonemap_shader.set_conditional(TonemapShaderGLES3::USE_GLOW_LEVEL1, false);
 	state.tonemap_shader.set_conditional(TonemapShaderGLES3::USE_GLOW_LEVEL2, false);
@@ -5250,18 +5260,28 @@ RasterizerSceneGLES3::RasterizerSceneGLES3() {
 }
 
 RasterizerSceneGLES3::~RasterizerSceneGLES3() {
-	memdelete(default_material.get_data());
-	memdelete(default_material_twosided.get_data());
-	memdelete(default_shader.get_data());
-	memdelete(default_shader_twosided.get_data());
+	storage->free(default_material);
+	default_material = RID();
+	storage->free(default_material_twosided);
+	default_material_twosided = RID();
+	storage->free(default_shader);
+	default_shader = RID();
+	storage->free(default_shader_twosided);
+	default_shader_twosided = RID();
 
-	memdelete(default_worldcoord_material.get_data());
-	memdelete(default_worldcoord_material_twosided.get_data());
-	memdelete(default_worldcoord_shader.get_data());
-	memdelete(default_worldcoord_shader_twosided.get_data());
+	storage->free(default_worldcoord_material);
+	default_worldcoord_material = RID();
+	storage->free(default_worldcoord_material_twosided);
+	default_worldcoord_material_twosided = RID();
+	storage->free(default_worldcoord_shader);
+	default_worldcoord_shader = RID();
+	storage->free(default_worldcoord_shader_twosided);
+	default_worldcoord_shader_twosided = RID();
 
-	memdelete(default_overdraw_material.get_data());
-	memdelete(default_overdraw_shader.get_data());
+	storage->free(default_overdraw_material);
+	default_overdraw_material = RID();
+	storage->free(default_overdraw_shader);
+	default_overdraw_shader = RID();
 
 	memfree(state.spot_array_tmp);
 	memfree(state.omni_array_tmp);

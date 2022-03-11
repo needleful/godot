@@ -6,8 +6,8 @@
 	<description>
 		Contains global variables accessible from everywhere. Use [method get_setting], [method set_setting] or [method has_setting] to access them. Variables stored in [code]project.godot[/code] are also loaded into ProjectSettings, making this object very useful for reading custom game configuration options.
 		When naming a Project Settings property, use the full path to the setting including the category. For example, [code]"application/config/name"[/code] for the project name. Category and property names can be viewed in the Project Settings dialog.
-		[b]Feature tags:[/b] Project settings can be overridden for specific platforms and configurations (debug, release, ...) using [url=https://docs.godotengine.org/en/latest/tutorials/export/feature_tags.html]feature tags[/url].
-		[b]Overriding:[/b] Any project setting can be overridden by creating a file named [code]override.cfg[/code] in the project's root directory. This can also be used in exported projects by placing this file in the same directory as the project binary. Overriding will still take the base project settings' [url=https://docs.godotengine.org/en/latest/tutorials/export/feature_tags.html]feature tags[/url] in account. Therefore, make sure to [i]also[/i] override the setting with the desired feature tags if you want them to override base project settings on all platforms and configurations.
+		[b]Feature tags:[/b] Project settings can be overridden for specific platforms and configurations (debug, release, ...) using [url=https://docs.godotengine.org/en/3.4/tutorials/export/feature_tags.html]feature tags[/url].
+		[b]Overriding:[/b] Any project setting can be overridden by creating a file named [code]override.cfg[/code] in the project's root directory. This can also be used in exported projects by placing this file in the same directory as the project binary. Overriding will still take the base project settings' [url=https://docs.godotengine.org/en/3.4/tutorials/export/feature_tags.html]feature tags[/url] in account. Therefore, make sure to [i]also[/i] override the setting with the desired feature tags if you want them to override base project settings on all platforms and configurations.
 	</description>
 	<tutorials>
 		<link title="3D Physics Tests Demo">https://godotengine.org/asset-library/asset/675</link>
@@ -163,6 +163,7 @@
 				[codeblock]
 				ProjectSettings.set_setting("application/config/name", "Example")
 				[/codeblock]
+				This can also be used to erase custom project settings. To do this change the setting value to [code]null[/code].
 			</description>
 		</method>
 	</methods>
@@ -206,6 +207,12 @@
 		</member>
 		<member name="application/config/use_custom_user_dir" type="bool" setter="" getter="" default="false">
 			If [code]true[/code], the project will save user data to its own user directory (see [member application/config/custom_user_dir_name]). This setting is only effective on desktop platforms. A name must be set in the [member application/config/custom_user_dir_name] setting for this to take effect. If [code]false[/code], the project will save user data to [code](OS user data directory)/Godot/app_userdata/(project name)[/code].
+		</member>
+		<member name="application/config/use_hidden_project_data_directory" type="bool" setter="" getter="" default="true">
+			If [code]true[/code], the project will use a hidden directory ([code].import[/code]) for storing project-specific data (metadata, shader cache, etc.).
+			If [code]false[/code], a non-hidden directory ([code]import[/code]) will be used instead.
+			[b]Note:[/b] Restart the application after changing this setting.
+			[b]Note:[/b] Changing this value can help on platforms or with third-party tools where hidden directory patterns are disallowed. Only modify this setting if you know that your environment requires it, as changing the default can impact compatibility with some external tools or plugins which expect the default [code].import[/code] folder.
 		</member>
 		<member name="application/config/windows_native_icon" type="String" setter="" getter="" default="&quot;&quot;">
 			Icon set in [code].ico[/code] format used on Windows to set the game's icon. This is done automatically on start by calling [method OS.set_native_icon].
@@ -257,7 +264,7 @@
 		<member name="audio/default_bus_layout" type="String" setter="" getter="" default="&quot;res://default_bus_layout.tres&quot;">
 			Default [AudioBusLayout] resource file to use in the project, unless overridden by the scene.
 		</member>
-		<member name="audio/driver" type="String" setter="" getter="" default="&quot;PulseAudio&quot;">
+		<member name="audio/driver" type="String" setter="" getter="">
 			Specifies the audio driver to use. This setting is platform-dependent as each platform supports different audio drivers. If left empty, the default audio driver will be used.
 		</member>
 		<member name="audio/enable_audio_input" type="bool" setter="" getter="" default="false">
@@ -266,8 +273,13 @@
 		<member name="audio/mix_rate" type="int" setter="" getter="" default="44100">
 			The mixing rate used for audio (in Hz). In general, it's better to not touch this and leave it to the host operating system.
 		</member>
+		<member name="audio/mix_rate.web" type="int" setter="" getter="" default="0">
+			Safer override for [member audio/mix_rate] in the Web platform. Here [code]0[/code] means "let the browser choose" (since some browsers do not like forcing the mix rate).
+		</member>
 		<member name="audio/output_latency" type="int" setter="" getter="" default="15">
-			Output latency in milliseconds for audio. Lower values will result in lower audio latency at the cost of increased CPU usage. Low values may result in audible cracking on slower hardware.
+			Specifies the preferred output latency in milliseconds for audio. Lower values will result in lower audio latency at the cost of increased CPU usage. Low values may result in audible cracking on slower hardware.
+			Audio output latency may be constrained by the host operating system and audio hardware drivers. If the host can not provide the specified audio output latency then Godot will attempt to use the nearest latency allowed by the host. As such you should always use [method AudioServer.get_output_latency] to determine the actual audio output latency.
+			[b]Note:[/b] This setting is ignored on Windows.
 		</member>
 		<member name="audio/output_latency.web" type="int" setter="" getter="" default="50">
 			Safer override for [member audio/output_latency] in the Web platform, to avoid audio issues especially on mobile devices.
@@ -387,9 +399,10 @@
 			Message to be displayed before the backtrace when the engine crashes.
 		</member>
 		<member name="debug/settings/fps/force_fps" type="int" setter="" getter="" default="0">
-			Maximum number of frames per second allowed. The actual number of frames per second may still be below this value if the game is lagging.
+			Maximum number of frames per second allowed. The actual number of frames per second may still be below this value if the game is lagging. See also [member physics/common/physics_fps].
 			If [member display/window/vsync/use_vsync] is enabled, it takes precedence and the forced FPS number cannot exceed the monitor's refresh rate.
 			This setting is therefore mostly relevant for lowering the maximum FPS below VSync, e.g. to perform non-real-time rendering of static frames, or test the project under lag conditions.
+			[b]Note:[/b] This property is only read when the project starts. To change the rendering FPS cap at runtime, set [member Engine.target_fps] instead.
 		</member>
 		<member name="debug/settings/gdscript/max_call_stack" type="int" setter="" getter="" default="1024">
 			Maximum call stack allowed for debugging GDScript.
@@ -447,10 +460,14 @@
 			If [code]true[/code], the home indicator is hidden automatically. This only affects iOS devices without a physical home button.
 		</member>
 		<member name="display/window/per_pixel_transparency/allowed" type="bool" setter="" getter="" default="false">
-			If [code]true[/code], allows per-pixel transparency in a desktop window. This affects performance, so leave it on [code]false[/code] unless you need it.
+			If [code]true[/code], allows per-pixel transparency for the window background. This affects performance, so leave it on [code]false[/code] unless you need it.
+			See [member OS.window_per_pixel_transparency_enabled] for more details.
+			[b]Note:[/b] This feature is implemented on HTML5, Linux, macOS, Windows, and Android.
 		</member>
 		<member name="display/window/per_pixel_transparency/enabled" type="bool" setter="" getter="" default="false">
 			Sets the window background to transparent when it starts.
+			See [member OS.window_per_pixel_transparency_enabled] for more details.
+			[b]Note:[/b] This feature is implemented on HTML5, Linux, macOS, Windows, and Android.
 		</member>
 		<member name="display/window/size/always_on_top" type="bool" setter="" getter="" default="false">
 			Forces the main window to be always on top.
@@ -481,7 +498,7 @@
 		<member name="display/window/size/width" type="int" setter="" getter="" default="1024">
 			Sets the game's main viewport width. On desktop platforms, this is the default window size. Stretch mode settings also use this as a reference when enabled.
 		</member>
-		<member name="display/window/tablet_driver" type="String" setter="" getter="" default="&quot;&quot;">
+		<member name="display/window/tablet_driver" type="String" setter="" getter="">
 			Specifies the tablet driver to use. If left empty, the default driver will be used.
 		</member>
 		<member name="display/window/vsync/use_vsync" type="bool" setter="" getter="" default="true">
@@ -508,7 +525,7 @@
 		<member name="gui/common/default_scroll_deadzone" type="int" setter="" getter="" default="0">
 			Default value for [member ScrollContainer.scroll_deadzone], which will be used for all [ScrollContainer]s unless overridden.
 		</member>
-		<member name="gui/common/swap_ok_cancel" type="bool" setter="" getter="" default="false">
+		<member name="gui/common/swap_ok_cancel" type="bool" setter="" getter="">
 			If [code]true[/code], swaps OK and Cancel buttons in dialogs on Windows and UWP to follow interface conventions.
 		</member>
 		<member name="gui/common/text_edit_undo_stack_max_size" type="int" setter="" getter="" default="1024">
@@ -1001,6 +1018,11 @@
 			Size of the hash table used for the broad-phase 2D hash grid algorithm.
 			[b]Note:[/b] Not used if [member ProjectSettings.physics/2d/use_bvh] is enabled.
 		</member>
+		<member name="physics/2d/bvh_collision_margin" type="float" setter="" getter="" default="1.0">
+			Additional expansion applied to object bounds in the 2D physics bounding volume hierarchy. This can reduce BVH processing at the cost of a slightly coarser broadphase, which can stress the physics more in some situations.
+			The default value will work well in most situations. A value of 0.0 will turn this optimization off, and larger values may work better for larger, faster moving objects.
+			[b]Note:[/b] Used only if [member ProjectSettings.physics/2d/use_bvh] is enabled.
+		</member>
 		<member name="physics/2d/cell_size" type="int" setter="" getter="" default="128">
 			Cell size used for the broad-phase 2D hash grid algorithm (in pixels).
 			[b]Note:[/b] Not used if [member ProjectSettings.physics/2d/use_bvh] is enabled.
@@ -1080,6 +1102,11 @@
 			The default linear damp in 3D.
 			[b]Note:[/b] Good values are in the range [code]0[/code] to [code]1[/code]. At value [code]0[/code] objects will keep moving with the same velocity. Values greater than [code]1[/code] will aim to reduce the velocity to [code]0[/code] in less than a second e.g. a value of [code]2[/code] will aim to reduce the velocity to [code]0[/code] in half a second. A value equal to or greater than the physics frame rate ([member ProjectSettings.physics/common/physics_fps], [code]60[/code] by default) will bring the object to a stop in one iteration.
 		</member>
+		<member name="physics/3d/godot_physics/bvh_collision_margin" type="float" setter="" getter="" default="0.1">
+			Additional expansion applied to object bounds in the 3D physics bounding volume hierarchy. This can reduce BVH processing at the cost of a slightly coarser broadphase, which can stress the physics more in some situations.
+			The default value will work well in most situations. A value of 0.0 will turn this optimization off, and larger values may work better for larger, faster moving objects.
+			[b]Note:[/b] Used only if [member ProjectSettings.physics/3d/godot_physics/use_bvh] is enabled.
+		</member>
 		<member name="physics/3d/godot_physics/use_bvh" type="bool" setter="" getter="" default="true">
 			Enables the use of bounding volume hierarchy instead of octree for 3D physics spatial partitioning. This may give better performance.
 		</member>
@@ -1097,8 +1124,9 @@
 			If disabled, the legacy behavior is used, which consists in queuing the picking input events during pause (so nodes won't get them) and flushing that queue on resume, against the state of the 2D/3D world at that point.
 		</member>
 		<member name="physics/common/physics_fps" type="int" setter="" getter="" default="60">
-			The number of fixed iterations per second. This controls how often physics simulation and [method Node._physics_process] methods are run.
+			The number of fixed iterations per second. This controls how often physics simulation and [method Node._physics_process] methods are run. See also [member debug/settings/fps/force_fps].
 			[b]Note:[/b] This property is only read when the project starts. To change the physics FPS at runtime, set [member Engine.iterations_per_second] instead.
+			[b]Note:[/b] Only 8 physics ticks may be simulated per rendered frame at most. If more than 8 physics ticks have to be simulated per rendered frame to keep up with rendering, the game will appear to slow down (even if [code]delta[/code] is used consistently in physics calculations). Therefore, it is recommended not to increase [member physics/common/physics_fps] above 240. Otherwise, the game will slow down when the rendering framerate goes below 30 FPS.
 		</member>
 		<member name="physics/common/physics_jitter_fix" type="float" setter="" getter="" default="0.5">
 			Controls how much physics ticks are synchronized with real time. For 0 or less, the ticks are synchronized. Such values are recommended for network games, where clock synchronization matters. Higher values cause higher deviation of in-game clock and real clock, but allows smoothing out framerate jitters. The default value of 0.5 should be fine for most; values above 2 could cause the game to react to dropped frames with a noticeable delay and are not recommended.
@@ -1202,8 +1230,11 @@
 		<member name="rendering/gles2/compatibility/disable_half_float" type="bool" setter="" getter="" default="false">
 			The use of half-float vertex compression may be producing rendering errors on some platforms (especially iOS). These have been seen particularly in particles. Disabling half-float may resolve these problems.
 		</member>
+		<member name="rendering/gles2/compatibility/disable_half_float.iOS" type="bool" setter="" getter="" default="true">
+			iOS specific override for [member rendering/gles2/compatibility/disable_half_float], due to poor support for half-float vertex compression on many devices.
+		</member>
 		<member name="rendering/gles2/compatibility/enable_high_float.Android" type="bool" setter="" getter="" default="false">
-			If [code]true[/code] and available on the target device, enables high floating point precision for all shader computations in GLES2.
+			If [code]true[/code] and available on the target Android device, enables high floating point precision for all shader computations in GLES2.
 			[b]Warning:[/b] High floating point precision can be extremely slow on older devices and is often not available at all. Use with caution.
 		</member>
 		<member name="rendering/limits/buffers/blend_shape_max_buffer_size_kb" type="int" setter="" getter="" default="4096">
@@ -1233,13 +1264,13 @@
 		<member name="rendering/limits/time/time_rollover_secs" type="float" setter="" getter="" default="3600">
 			Shaders have a time variable that constantly increases. At some point, it needs to be rolled back to zero to avoid precision errors on shader animations. This setting specifies when (in seconds).
 		</member>
-		<member name="rendering/lossless_compression/force_png" type="bool" setter="" getter="" default="false">
+		<member name="rendering/misc/lossless_compression/force_png" type="bool" setter="" getter="" default="false">
 			If [code]true[/code], the texture importer will import lossless textures using the PNG format. Otherwise, it will default to using WebP.
 		</member>
-		<member name="rendering/lossless_compression/webp_compression_level" type="int" setter="" getter="" default="2">
+		<member name="rendering/misc/lossless_compression/webp_compression_level" type="int" setter="" getter="" default="2">
 			The default compression level for lossless WebP. Higher levels result in smaller files at the cost of compression speed. Decompression speed is mostly unaffected by the compression level. Supported values are 0 to 9. Note that compression levels above 6 are very slow and offer very little savings.
 		</member>
-		<member name="rendering/mesh_storage/split_stream" type="bool" setter="" getter="" default="false">
+		<member name="rendering/misc/mesh_storage/split_stream" type="bool" setter="" getter="" default="false">
 			On import, mesh vertex data will be split into two streams within a single vertex buffer, one for position data and the other for interleaved attributes data. Recommended to be enabled if targeting mobile devices. Requires manual reimport of meshes after toggling.
 		</member>
 		<member name="rendering/misc/occlusion_culling/max_active_spheres" type="int" setter="" getter="" default="8">
@@ -1249,7 +1280,7 @@
 		<member name="rendering/portals/advanced/flip_imported_portals" type="bool" setter="" getter="" default="false">
 			The default convention is for portal normals to point outward (face outward) from the source room.
 			If you accidentally build your level with portals facing the wrong way, this setting can fix the problem.
-			It will flip named portal meshes (i.e. [code]-portal[/code]) on the initial convertion to [Portal] nodes.
+			It will flip named portal meshes (i.e. [code]-portal[/code]) on the initial conversion to [Portal] nodes.
 		</member>
 		<member name="rendering/portals/debug/logging" type="bool" setter="" getter="" default="true">
 			Show conversion logs.
@@ -1271,11 +1302,12 @@
 			[b]Note:[/b] Generally you should only use this option if you encounter bugs when it is set to [code]false[/code], i.e. there are problems with the default method.
 		</member>
 		<member name="rendering/quality/depth/hdr" type="bool" setter="" getter="" default="true">
-			If [code]true[/code], allocates the main framebuffer with high dynamic range. High dynamic range allows the use of [Color] values greater than 1.
+			If [code]true[/code], allocates the root [Viewport]'s framebuffer with high dynamic range. High dynamic range allows the use of [Color] values greater than 1. This must be set to [code]true[/code] for glow rendering to work if [member Environment.glow_hdr_threshold] is greater than or equal to [code]1.0[/code].
 			[b]Note:[/b] Only available on the GLES3 backend.
 		</member>
 		<member name="rendering/quality/depth/hdr.mobile" type="bool" setter="" getter="" default="false">
-			Lower-end override for [member rendering/quality/depth/hdr] on mobile devices, due to performance concerns or driver support.
+			Lower-end override for [member rendering/quality/depth/hdr] on mobile devices, due to performance concerns or driver support. This must be set to [code]true[/code] for glow rendering to work if [member Environment.glow_hdr_threshold] is greater than or equal to [code]1.0[/code].
+			[b]Note:[/b] Only available on the GLES3 backend.
 		</member>
 		<member name="rendering/quality/depth_prepass/disable_for_vendors" type="String" setter="" getter="" default="&quot;PowerVR,Mali,Adreno,Apple&quot;">
 			Disables depth pre-pass for some GPU vendors (usually mobile), as their architecture already does this.
@@ -1319,7 +1351,7 @@
 			If [code]true[/code], uses nearest-neighbor mipmap filtering when using mipmaps (also called "bilinear filtering"), which will result in visible seams appearing between mipmap stages. This may increase performance in mobile as less memory bandwidth is used. If [code]false[/code], linear mipmap filtering (also called "trilinear filtering") is used.
 		</member>
 		<member name="rendering/quality/intended_usage/framebuffer_allocation" type="int" setter="" getter="" default="2">
-			Strategy used for framebuffer allocation. The simpler it is, the less resources it uses (but the less features it supports). If set to "2D Without Sampling" or "3D Without Effects", sample buffers will not be allocated. This means [code]SCREEN_TEXTURE[/code] and [code]DEPTH_TEXTURE[/code] will not be available in shaders and post-processing effects will not be available in the [Environment].
+			Strategy used for framebuffer allocation. The simpler it is, the less resources it uses (but the less features it supports). If set to "2D Without Sampling" or "3D Without Effects", sample buffers will not be allocated. This means [code]SCREEN_TEXTURE[/code] and [code]DEPTH_TEXTURE[/code] will not be available in shaders and post-processing effects such as glow will not be available in [Environment].
 		</member>
 		<member name="rendering/quality/intended_usage/framebuffer_allocation.mobile" type="int" setter="" getter="" default="3">
 			Lower-end override for [member rendering/quality/intended_usage/framebuffer_allocation] on mobile devices, due to performance concerns or driver support.
@@ -1370,6 +1402,10 @@
 		<member name="rendering/quality/shading/force_vertex_shading.mobile" type="bool" setter="" getter="" default="true">
 			Lower-end override for [member rendering/quality/shading/force_vertex_shading] on mobile devices, due to performance concerns or driver support.
 		</member>
+		<member name="rendering/quality/shading/use_physical_light_attenuation" type="bool" setter="" getter="" default="false">
+			If [code]true[/code], enables new physical light attenuation for [OmniLight]s and [SpotLight]s. This results in more realistic lighting appearance with a very small performance cost. When physical light attenuation is enabled, lights will appear to be darker as a result of the new attenuation formula. This can be compensated by adjusting the lights' energy or attenuation values.
+			Changes to this setting will only be applied upon restarting the application.
+		</member>
 		<member name="rendering/quality/shadow_atlas/cubemap_size" type="int" setter="" getter="" default="512">
 			Size for cubemap into which the shadow is rendered before being copied into the shadow atlas. A higher number can result in higher resolution shadows when used with a higher [member rendering/quality/shadow_atlas/size]. Setting higher than a quarter of the [member rendering/quality/shadow_atlas/size] will not result in a perceptible increase in visual quality.
 		</member>
@@ -1408,9 +1444,15 @@
 			See also [member rendering/quality/skinning/force_software_skinning].
 			[b]Note:[/b] When the software skinning fallback is triggered, custom vertex shaders will behave in a different way, because the bone transform will be already applied to the modelview matrix.
 		</member>
+		<member name="rendering/quality/spatial_partitioning/bvh_collision_margin" type="float" setter="" getter="" default="0.1">
+			Additional expansion applied to object bounds in the 3D rendering bounding volume hierarchy. This can reduce BVH processing at the cost of a slightly reduced accuracy.
+			The default value will work well in most situations. A value of 0.0 will turn this optimization off, and larger values may work better for larger, faster moving objects.
+			[b]Note:[/b] Used only if [member ProjectSettings.rendering/quality/spatial_partitioning/use_bvh] is enabled.
+		</member>
 		<member name="rendering/quality/spatial_partitioning/render_tree_balance" type="float" setter="" getter="" default="0.0">
 			The rendering octree balance can be changed to favor smaller ([code]0[/code]), or larger ([code]1[/code]) branches.
 			Larger branches can increase performance significantly in some projects.
+			[b]Note:[/b] Not used if [member ProjectSettings.rendering/quality/spatial_partitioning/use_bvh] is enabled.
 		</member>
 		<member name="rendering/quality/spatial_partitioning/use_bvh" type="bool" setter="" getter="" default="true">
 			Enables the use of bounding volume hierarchy instead of octree for rendering spatial partitioning. This may give better performance.
@@ -1439,23 +1481,23 @@
 		</member>
 		<member name="rendering/vram_compression/import_bptc" type="bool" setter="" getter="" default="false">
 			If [code]true[/code], the texture importer will import VRAM-compressed textures using the BPTC algorithm. This texture compression algorithm is only supported on desktop platforms, and only when using the GLES3 renderer.
-			[b]Note:[/b] Changing this setting does [i]not[/i] impact textures that were already imported before. To make this setting apply to textures that were already imported, exit the editor, remove the [code].import/[/code] folder located inside the project folder then restart the editor.
+			[b]Note:[/b] Changing this setting does [i]not[/i] impact textures that were already imported before. To make this setting apply to textures that were already imported, exit the editor, remove the [code].import/[/code] folder located inside the project folder then restart the editor (see [member application/config/use_hidden_project_data_directory]).
 		</member>
 		<member name="rendering/vram_compression/import_etc" type="bool" setter="" getter="" default="false">
 			If [code]true[/code], the texture importer will import VRAM-compressed textures using the Ericsson Texture Compression algorithm. This algorithm doesn't support alpha channels in textures.
-			[b]Note:[/b] Changing this setting does [i]not[/i] impact textures that were already imported before. To make this setting apply to textures that were already imported, exit the editor, remove the [code].import/[/code] folder located inside the project folder then restart the editor.
+			[b]Note:[/b] Changing this setting does [i]not[/i] impact textures that were already imported before. To make this setting apply to textures that were already imported, exit the editor, remove the [code].import/[/code] folder located inside the project folder then restart the editor (see [member application/config/use_hidden_project_data_directory]).
 		</member>
 		<member name="rendering/vram_compression/import_etc2" type="bool" setter="" getter="" default="true">
 			If [code]true[/code], the texture importer will import VRAM-compressed textures using the Ericsson Texture Compression 2 algorithm. This texture compression algorithm is only supported when using the GLES3 renderer.
-			[b]Note:[/b] Changing this setting does [i]not[/i] impact textures that were already imported before. To make this setting apply to textures that were already imported, exit the editor, remove the [code].import/[/code] folder located inside the project folder then restart the editor.
+			[b]Note:[/b] Changing this setting does [i]not[/i] impact textures that were already imported before. To make this setting apply to textures that were already imported, exit the editor, remove the [code].import/[/code] folder located inside the project folder then restart the editor (see [member application/config/use_hidden_project_data_directory]).
 		</member>
 		<member name="rendering/vram_compression/import_pvrtc" type="bool" setter="" getter="" default="false">
 			If [code]true[/code], the texture importer will import VRAM-compressed textures using the PowerVR Texture Compression algorithm. This texture compression algorithm is only supported on iOS.
-			[b]Note:[/b] Changing this setting does [i]not[/i] impact textures that were already imported before. To make this setting apply to textures that were already imported, exit the editor, remove the [code].import/[/code] folder located inside the project folder then restart the editor.
+			[b]Note:[/b] Changing this setting does [i]not[/i] impact textures that were already imported before. To make this setting apply to textures that were already imported, exit the editor, remove the [code].import/[/code] folder located inside the project folder then restart the editor (see [member application/config/use_hidden_project_data_directory]).
 		</member>
 		<member name="rendering/vram_compression/import_s3tc" type="bool" setter="" getter="" default="true">
 			If [code]true[/code], the texture importer will import VRAM-compressed textures using the S3 Texture Compression algorithm. This algorithm is only supported on desktop platforms and consoles.
-			[b]Note:[/b] Changing this setting does [i]not[/i] impact textures that were already imported before. To make this setting apply to textures that were already imported, exit the editor, remove the [code].import/[/code] folder located inside the project folder then restart the editor.
+			[b]Note:[/b] Changing this setting does [i]not[/i] impact textures that were already imported before. To make this setting apply to textures that were already imported, exit the editor, remove the [code].import/[/code] folder located inside the project folder then restart the editor (see [member application/config/use_hidden_project_data_directory]).
 		</member>
 		<member name="world/2d/cell_size" type="int" setter="" getter="" default="100">
 			Cell size used for the 2D hash grid that [VisibilityNotifier2D] uses (in pixels).

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -31,13 +31,10 @@
 #include "editor_settings.h"
 
 #include "core/io/certs_compressed.gen.h"
-#include "core/io/compression.h"
 #include "core/io/config_file.h"
-#include "core/io/file_access_memory.h"
 #include "core/io/ip.h"
 #include "core/io/resource_loader.h"
 #include "core/io/resource_saver.h"
-#include "core/io/translation_loader_po.h"
 #include "core/os/dir_access.h"
 #include "core/os/file_access.h"
 #include "core/os/keyboard.h"
@@ -45,7 +42,7 @@
 #include "core/project_settings.h"
 #include "core/version.h"
 #include "editor/editor_node.h"
-#include "editor/translations.gen.h"
+#include "editor/editor_translation.h"
 #include "scene/main/node.h"
 #include "scene/main/scene_tree.h"
 #include "scene/main/viewport.h"
@@ -267,17 +264,14 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 		const Vector<String> locales_to_skip = String("ar,bn,fa,he,hi,ml,si,ta,te,ur").split(",");
 
 		String best;
-
-		EditorTranslationList *etl = _editor_translations;
-
-		while (etl->data) {
-			const String &locale = etl->lang;
+		const Vector<String> &locales = get_editor_locales();
+		for (int i = 0; i < locales.size(); i++) {
+			const String &locale = locales[i];
 
 			// Skip locales which we can't render properly (see above comment).
 			// Test against language code without regional variants (e.g. ur_PK).
 			String lang_code = locale.get_slice("_", 0);
 			if (locales_to_skip.find(lang_code) != -1) {
-				etl++;
 				continue;
 			}
 
@@ -291,8 +285,6 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 			if (best == String() && host_lang.begins_with(locale)) {
 				best = locale;
 			}
-
-			etl++;
 		}
 
 		if (best == String()) {
@@ -325,15 +317,17 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	hints["interface/editor/font_hinting"] = PropertyInfo(Variant::INT, "interface/editor/font_hinting", PROPERTY_HINT_ENUM, "Auto (Light),None,Light,Normal", PROPERTY_USAGE_DEFAULT);
 #endif
 	_initial_set("interface/editor/main_font", "");
-	hints["interface/editor/main_font"] = PropertyInfo(Variant::STRING, "interface/editor/main_font", PROPERTY_HINT_GLOBAL_FILE, "*.ttf,*.otf", PROPERTY_USAGE_DEFAULT);
+	hints["interface/editor/main_font"] = PropertyInfo(Variant::STRING, "interface/editor/main_font", PROPERTY_HINT_GLOBAL_FILE, "*.ttf,*.otf,*.woff", PROPERTY_USAGE_DEFAULT);
 	_initial_set("interface/editor/main_font_bold", "");
-	hints["interface/editor/main_font_bold"] = PropertyInfo(Variant::STRING, "interface/editor/main_font_bold", PROPERTY_HINT_GLOBAL_FILE, "*.ttf,*.otf", PROPERTY_USAGE_DEFAULT);
+	hints["interface/editor/main_font_bold"] = PropertyInfo(Variant::STRING, "interface/editor/main_font_bold", PROPERTY_HINT_GLOBAL_FILE, "*.ttf,*.otf,*.woff", PROPERTY_USAGE_DEFAULT);
 	_initial_set("interface/editor/code_font", "");
-	hints["interface/editor/code_font"] = PropertyInfo(Variant::STRING, "interface/editor/code_font", PROPERTY_HINT_GLOBAL_FILE, "*.ttf,*.otf", PROPERTY_USAGE_DEFAULT);
+	hints["interface/editor/code_font"] = PropertyInfo(Variant::STRING, "interface/editor/code_font", PROPERTY_HINT_GLOBAL_FILE, "*.ttf,*.otf,*.woff", PROPERTY_USAGE_DEFAULT);
 	_initial_set("interface/editor/dim_editor_on_dialog_popup", true);
 	_initial_set("interface/editor/low_processor_mode_sleep_usec", 6900); // ~144 FPS
 	hints["interface/editor/low_processor_mode_sleep_usec"] = PropertyInfo(Variant::REAL, "interface/editor/low_processor_mode_sleep_usec", PROPERTY_HINT_RANGE, "1,100000,1", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
-	_initial_set("interface/editor/unfocused_low_processor_mode_sleep_usec", 100000); // 10 FPS
+	// Note: Don't go low on the editor unfocused FPS, as it seems to cause stalls in the game
+	// when using the profiler (see GH-51222).
+	_initial_set("interface/editor/unfocused_low_processor_mode_sleep_usec", 50000); // 20 FPS
 	// Allow an unfocused FPS limit as low as 1 FPS for those who really need low power usage
 	// (but don't need to preview particles or shaders while the editor is unfocused).
 	// With very low FPS limits, the editor can take a small while to become usable after being focused again,
@@ -444,6 +438,7 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	_initial_set("text_editor/navigation/show_minimap", true);
 	_initial_set("text_editor/navigation/minimap_width", 80);
 	hints["text_editor/navigation/minimap_width"] = PropertyInfo(Variant::INT, "text_editor/navigation/minimap_width", PROPERTY_HINT_RANGE, "50,250,1");
+	_initial_set("text_editor/navigation/mouse_extra_buttons_navigate_history", true);
 
 	// Appearance
 	_initial_set("text_editor/appearance/show_line_numbers", true);
@@ -545,6 +540,9 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	_initial_set("editors/3d/default_z_near", 0.05);
 	_initial_set("editors/3d/default_z_far", 500.0);
 
+	_initial_set("editors/3d/lightmap_baking_number_of_cpu_threads", 0);
+	hints["editors/3d/lightmap_baking_number_of_cpu_threads"] = PropertyInfo(Variant::INT, "editors/3d/lightmap_baking_number_of_cpu_threads", PROPERTY_HINT_RANGE, "-2,128,1", PROPERTY_USAGE_DEFAULT);
+
 	// 3D: Navigation
 	_initial_set("editors/3d/navigation/navigation_scheme", 0);
 	_initial_set("editors/3d/navigation/invert_y_axis", false);
@@ -564,24 +562,20 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	_initial_set("editors/3d/navigation/warped_mouse_panning", true);
 
 	// 3D: Navigation feel
-	_initial_set("editors/3d/navigation_feel/orbit_sensitivity", 0.4);
-	hints["editors/3d/navigation_feel/orbit_sensitivity"] = PropertyInfo(Variant::REAL, "editors/3d/navigation_feel/orbit_sensitivity", PROPERTY_HINT_RANGE, "0.0, 2, 0.01");
-	_initial_set("editors/3d/navigation_feel/orbit_inertia", 0.05);
-	hints["editors/3d/navigation_feel/orbit_inertia"] = PropertyInfo(Variant::REAL, "editors/3d/navigation_feel/orbit_inertia", PROPERTY_HINT_RANGE, "0.0, 1, 0.01");
-	_initial_set("editors/3d/navigation_feel/translation_inertia", 0.15);
-	hints["editors/3d/navigation_feel/translation_inertia"] = PropertyInfo(Variant::REAL, "editors/3d/navigation_feel/translation_inertia", PROPERTY_HINT_RANGE, "0.0, 1, 0.01");
-	_initial_set("editors/3d/navigation_feel/zoom_inertia", 0.075);
-	hints["editors/3d/navigation_feel/zoom_inertia"] = PropertyInfo(Variant::REAL, "editors/3d/navigation_feel/zoom_inertia", PROPERTY_HINT_RANGE, "0.0, 1, 0.01");
-	_initial_set("editors/3d/navigation_feel/manipulation_orbit_inertia", 0.075);
-	hints["editors/3d/navigation_feel/manipulation_orbit_inertia"] = PropertyInfo(Variant::REAL, "editors/3d/navigation_feel/manipulation_orbit_inertia", PROPERTY_HINT_RANGE, "0.0, 1, 0.01");
-	_initial_set("editors/3d/navigation_feel/manipulation_translation_inertia", 0.075);
-	hints["editors/3d/navigation_feel/manipulation_translation_inertia"] = PropertyInfo(Variant::REAL, "editors/3d/navigation_feel/manipulation_translation_inertia", PROPERTY_HINT_RANGE, "0.0, 1, 0.01");
+	_initial_set("editors/3d/navigation_feel/orbit_sensitivity", 0.25);
+	hints["editors/3d/navigation_feel/orbit_sensitivity"] = PropertyInfo(Variant::REAL, "editors/3d/navigation_feel/orbit_sensitivity", PROPERTY_HINT_RANGE, "0.01, 2, 0.001");
+	_initial_set("editors/3d/navigation_feel/orbit_inertia", 0.0);
+	hints["editors/3d/navigation_feel/orbit_inertia"] = PropertyInfo(Variant::REAL, "editors/3d/navigation_feel/orbit_inertia", PROPERTY_HINT_RANGE, "0, 1, 0.001");
+	_initial_set("editors/3d/navigation_feel/translation_inertia", 0.05);
+	hints["editors/3d/navigation_feel/translation_inertia"] = PropertyInfo(Variant::REAL, "editors/3d/navigation_feel/translation_inertia", PROPERTY_HINT_RANGE, "0, 1, 0.001");
+	_initial_set("editors/3d/navigation_feel/zoom_inertia", 0.05);
+	hints["editors/3d/navigation_feel/zoom_inertia"] = PropertyInfo(Variant::REAL, "editors/3d/navigation_feel/zoom_inertia", PROPERTY_HINT_RANGE, "0, 1, 0.001");
 
 	// 3D: Freelook
 	_initial_set("editors/3d/freelook/freelook_navigation_scheme", false);
 	hints["editors/3d/freelook/freelook_navigation_scheme"] = PropertyInfo(Variant::INT, "editors/3d/freelook/freelook_navigation_scheme", PROPERTY_HINT_ENUM, "Default,Partially Axis-Locked (id Tech),Fully Axis-Locked (Minecraft)");
-	_initial_set("editors/3d/freelook/freelook_inertia", 0.1);
-	hints["editors/3d/freelook/freelook_inertia"] = PropertyInfo(Variant::REAL, "editors/3d/freelook/freelook_inertia", PROPERTY_HINT_RANGE, "0.0, 1, 0.01");
+	_initial_set("editors/3d/freelook/freelook_inertia", 0.0);
+	hints["editors/3d/freelook/freelook_inertia"] = PropertyInfo(Variant::REAL, "editors/3d/freelook/freelook_inertia", PROPERTY_HINT_RANGE, "0, 1, 0.001");
 	_initial_set("editors/3d/freelook/freelook_base_speed", 5.0);
 	hints["editors/3d/freelook/freelook_base_speed"] = PropertyInfo(Variant::REAL, "editors/3d/freelook/freelook_base_speed", PROPERTY_HINT_RANGE, "0.0, 10, 0.01");
 	_initial_set("editors/3d/freelook/freelook_activation_modifier", 0);
@@ -1002,31 +996,14 @@ fail:
 void EditorSettings::setup_language() {
 	String lang = get("interface/editor/editor_language");
 	if (lang == "en") {
-		return; //none to do
+		return; // Default, nothing to do.
 	}
 
-	EditorTranslationList *etl = _editor_translations;
+	// Load editor translation for configured/detected locale.
+	load_editor_translations(lang);
 
-	while (etl->data) {
-		if (etl->lang == lang) {
-			Vector<uint8_t> data;
-			data.resize(etl->uncomp_size);
-			Compression::decompress(data.ptrw(), etl->uncomp_size, etl->data, etl->comp_size, Compression::MODE_DEFLATE);
-
-			FileAccessMemory *fa = memnew(FileAccessMemory);
-			fa->open_custom(data.ptr(), data.size());
-
-			Ref<Translation> tr = TranslationLoaderPO::load_translation(fa, nullptr);
-
-			if (tr.is_valid()) {
-				tr->set_locale(etl->lang);
-				TranslationServer::get_singleton()->set_tool_translation(tr);
-				break;
-			}
-		}
-
-		etl++;
-	}
+	// Load class reference translation.
+	load_doc_translations(lang);
 }
 
 void EditorSettings::setup_network() {
@@ -1471,7 +1448,7 @@ float EditorSettings::get_auto_display_scale() const {
 	return OS::get_singleton()->get_screen_max_scale();
 #else
 	const int screen = OS::get_singleton()->get_current_screen();
-	// Use the smallest dimension to use a correct display scale on portait displays.
+	// Use the smallest dimension to use a correct display scale on portrait displays.
 	const int smallest_dimension = MIN(OS::get_singleton()->get_screen_size(screen).x, OS::get_singleton()->get_screen_size(screen).y);
 	if (OS::get_singleton()->get_screen_dpi(screen) >= 192 && smallest_dimension >= 1400) {
 		// hiDPI display.

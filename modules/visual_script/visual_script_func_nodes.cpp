@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -1005,7 +1005,7 @@ PropertyInfo VisualScriptPropertySet::get_input_value_port_info(int p_idx) const
 			if (index != StringName()) {
 				detail_prop_name += "." + String(index);
 			}
-			PropertyInfo pinfo = PropertyInfo(E->get().type, detail_prop_name, PROPERTY_HINT_TYPE_STRING, E->get().hint_string);
+			PropertyInfo pinfo = PropertyInfo(E->get().type, detail_prop_name, E->get().hint, E->get().hint_string);
 			_adjust_input_index(pinfo);
 			return pinfo;
 		}

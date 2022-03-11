@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -320,7 +320,7 @@ class ThemeTypeEditor : public MarginContainer {
 
 	void _color_item_changed(Color p_value, String p_item_name);
 	void _constant_item_changed(float p_value, String p_item_name);
-	void _edit_resource_item(RES p_resource);
+	void _edit_resource_item(RES p_resource, bool p_edit);
 	void _font_item_changed(Ref<Font> p_value, String p_item_name);
 	void _icon_item_changed(Ref<Texture> p_value, String p_item_name);
 	void _stylebox_item_changed(Ref<StyleBox> p_value, String p_item_name);

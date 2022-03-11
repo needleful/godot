@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -503,7 +503,14 @@ void PathEditorPlugin::_close_curve() {
 	if (c->get_point_count() < 2) {
 		return;
 	}
-	c->add_point(c->get_point_position(0), c->get_point_in(0), c->get_point_out(0));
+	if (c->get_point_position(0) == c->get_point_position(c->get_point_count() - 1)) {
+		return;
+	}
+	UndoRedo *ur = editor->get_undo_redo();
+	ur->create_action(TTR("Close Curve"));
+	ur->add_do_method(c.ptr(), "add_point", c->get_point_position(0), c->get_point_in(0), c->get_point_out(0), -1);
+	ur->add_undo_method(c.ptr(), "remove_point", c->get_point_count());
+	ur->commit_action();
 }
 
 void PathEditorPlugin::_handle_option_pressed(int p_option) {
@@ -599,15 +606,6 @@ PathEditorPlugin::PathEditorPlugin(EditorNode *p_node) {
 	menu->connect("id_pressed", this, "_handle_option_pressed");
 
 	curve_edit->set_pressed(true);
-	/*
-    collision_polygon_editor = memnew( PathEditor(p_node) );
-    editor->get_viewport()->add_child(collision_polygon_editor);
-    collision_polygon_editor->set_margin(MARGIN_LEFT,200);
-    collision_polygon_editor->set_margin(MARGIN_RIGHT,230);
-    collision_polygon_editor->set_margin(MARGIN_TOP,0);
-    collision_polygon_editor->set_margin(MARGIN_BOTTOM,10);
-    collision_polygon_editor->hide();
-    */
 }
 
 PathEditorPlugin::~PathEditorPlugin() {

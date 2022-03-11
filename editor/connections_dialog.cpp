@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -1001,7 +1001,7 @@ void ConnectionsDock::update_tree() {
 					while (F && descr == String()) {
 						for (int i = 0; i < F->get().signals.size(); i++) {
 							if (F->get().signals[i].name == signal_name.operator String()) {
-								descr = F->get().signals[i].description.strip_edges();
+								descr = DTR(F->get().signals[i].description);
 								break;
 							}
 						}

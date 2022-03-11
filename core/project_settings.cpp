@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -43,10 +43,20 @@
 
 #include <zlib.h>
 
+const String ProjectSettings::PROJECT_DATA_DIR_NAME_SUFFIX = "import";
+
 ProjectSettings *ProjectSettings::singleton = nullptr;
 
 ProjectSettings *ProjectSettings::get_singleton() {
 	return singleton;
+}
+
+String ProjectSettings::get_project_data_dir_name() const {
+	return project_data_dir_name;
+}
+
+String ProjectSettings::get_project_data_path() const {
+	return "res://" + get_project_data_dir_name();
 }
 
 String ProjectSettings::get_resource_path() const {
@@ -54,11 +64,7 @@ String ProjectSettings::get_resource_path() const {
 };
 
 String ProjectSettings::localize_path(const String &p_path) const {
-	if (resource_path == "") {
-		return p_path; //not initialized yet
-	}
-
-	if (p_path.begins_with("res://") || p_path.begins_with("user://") ||
+	if (resource_path.empty() || p_path.begins_with("res://") || p_path.begins_with("user://") ||
 			(p_path.is_abs_path() && !p_path.begins_with(resource_path))) {
 		return p_path.simplify_path();
 	}
@@ -119,6 +125,22 @@ void ProjectSettings::set_initial_value(const String &p_name, const Variant &p_v
 void ProjectSettings::set_restart_if_changed(const String &p_name, bool p_restart) {
 	ERR_FAIL_COND_MSG(!props.has(p_name), "Request for nonexistent project setting: " + p_name + ".");
 	props[p_name].restart_if_changed = p_restart;
+}
+
+void ProjectSettings::set_ignore_value_in_docs(const String &p_name, bool p_ignore) {
+	ERR_FAIL_COND_MSG(!props.has(p_name), "Request for nonexistent project setting: " + p_name + ".");
+#ifdef DEBUG_METHODS_ENABLED
+	props[p_name].ignore_value_in_docs = p_ignore;
+#endif
+}
+
+bool ProjectSettings::get_ignore_value_in_docs(const String &p_name) const {
+	ERR_FAIL_COND_V_MSG(!props.has(p_name), false, "Request for nonexistent project setting: " + p_name + ".");
+#ifdef DEBUG_METHODS_ENABLED
+	return props[p_name].ignore_value_in_docs;
+#else
+	return false;
+#endif
 }
 
 String ProjectSettings::globalize_path(const String &p_path) const {
@@ -467,6 +489,11 @@ Error ProjectSettings::setup(const String &p_path, const String &p_main_pack, bo
 			_load_settings_text(custom_settings);
 		}
 	}
+
+	// Updating the default value after the project settings have loaded.
+	bool use_hidden_directory = GLOBAL_GET("application/config/use_hidden_project_data_directory");
+	project_data_dir_name = (use_hidden_directory ? "." : "") + PROJECT_DATA_DIR_NAME_SUFFIX;
+
 	// Using GLOBAL_GET on every block for compressing can be slow, so assigning here.
 	Compression::zstd_long_distance_matching = GLOBAL_GET("compression/formats/zstd/long_distance_matching");
 	Compression::zstd_level = GLOBAL_GET("compression/formats/zstd/compression_level");
@@ -876,7 +903,7 @@ Variant _GLOBAL_DEF_ALIAS(const String &p_var, const String &p_old_name, const V
 	return _GLOBAL_DEF(p_var, p_default, p_restart_if_changed);
 }
 
-Variant _GLOBAL_DEF(const String &p_var, const Variant &p_default, bool p_restart_if_changed) {
+Variant _GLOBAL_DEF(const String &p_var, const Variant &p_default, bool p_restart_if_changed, bool p_ignore_value_in_docs) {
 	Variant ret;
 	if (!ProjectSettings::get_singleton()->has_setting(p_var)) {
 		ProjectSettings::get_singleton()->set(p_var, p_default);
@@ -886,6 +913,7 @@ Variant _GLOBAL_DEF(const String &p_var, const Variant &p_default, bool p_restar
 	ProjectSettings::get_singleton()->set_initial_value(p_var, p_default);
 	ProjectSettings::get_singleton()->set_builtin_order(p_var);
 	ProjectSettings::get_singleton()->set_restart_if_changed(p_var, p_restart_if_changed);
+	ProjectSettings::get_singleton()->set_ignore_value_in_docs(p_var, p_ignore_value_in_docs);
 	return ret;
 }
 
@@ -1013,6 +1041,7 @@ ProjectSettings::ProjectSettings() {
 	custom_prop_info["application/run/main_scene"] = PropertyInfo(Variant::STRING, "application/run/main_scene", PROPERTY_HINT_FILE, "*.tscn,*.scn,*.res");
 	GLOBAL_DEF("application/run/disable_stdout", false);
 	GLOBAL_DEF("application/run/disable_stderr", false);
+	GLOBAL_DEF_RST("application/config/use_hidden_project_data_directory", true);
 	GLOBAL_DEF("application/config/use_custom_user_dir", false);
 	GLOBAL_DEF("application/config/custom_user_dir_name", "");
 	GLOBAL_DEF("application/config/project_settings_override", "");

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -235,6 +235,7 @@ int Compression::decompress_dynamic(PoolVector<uint8_t> *p_dst, int p_max_dst_si
 			switch (ret) {
 				case Z_NEED_DICT:
 					ret = Z_DATA_ERROR;
+					FALLTHROUGH;
 				case Z_DATA_ERROR:
 				case Z_MEM_ERROR:
 				case Z_STREAM_ERROR:

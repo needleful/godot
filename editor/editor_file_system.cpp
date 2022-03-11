@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -986,8 +986,8 @@ void EditorFileSystem::_scan_fs_changes(EditorFileSystemDirectory *p_dir, const 
 	}
 
 	for (int i = 0; i < p_dir->subdirs.size(); i++) {
-		if (updated_dir && !p_dir->subdirs[i]->verified) {
-			//this directory was removed, add action to remove it
+		if ((updated_dir && !p_dir->subdirs[i]->verified) || _should_skip_directory(p_dir->subdirs[i]->get_path())) {
+			//this directory was removed or ignored, add action to remove it
 			ItemAction ia;
 			ia.action = ItemAction::ACTION_DIR_REMOVE;
 			ia.dir = p_dir->subdirs[i];
@@ -1498,6 +1498,10 @@ void EditorFileSystem::update_file(const String &p_file) {
 	_queue_update_script_classes();
 }
 
+Set<String> EditorFileSystem::get_valid_extensions() const {
+	return valid_extensions;
+}
+
 Error EditorFileSystem::_reimport_group(const String &p_group_file, const Vector<String> &p_files) {
 	String importer_name;
 
@@ -1887,18 +1891,35 @@ void EditorFileSystem::_find_group_files(EditorFileSystemDirectory *efd, Map<Str
 	}
 }
 
-void EditorFileSystem::reimport_files(const Vector<String> &p_files) {
-	{ //check that .import folder exists
-		DirAccess *da = DirAccess::open("res://");
-		if (da->change_dir(".import") != OK) {
-			Error err = da->make_dir(".import");
-			if (err) {
-				memdelete(da);
-				ERR_FAIL_MSG("Failed to create 'res://.import' folder.");
-			}
+void EditorFileSystem::_create_project_data_dir_if_necessary() {
+	// Check that the project data directory exists
+	DirAccess *da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
+	String project_data_path = ProjectSettings::get_singleton()->get_project_data_path();
+	if (da->change_dir(project_data_path) != OK) {
+		Error err = da->make_dir(project_data_path);
+		if (err) {
+			memdelete(da);
+			ERR_FAIL_MSG("Failed to create folder " + project_data_path);
 		}
-		memdelete(da);
 	}
+	memdelete(da);
+
+	// Check that the project data directory '.gdignore' file exists
+	String project_data_gdignore_file_path = project_data_path.plus_file(".gdignore");
+	if (!FileAccess::exists(project_data_gdignore_file_path)) {
+		// Add an empty .gdignore file to avoid scan.
+		FileAccessRef f = FileAccess::open(project_data_gdignore_file_path, FileAccess::WRITE);
+		if (f) {
+			f->store_line("");
+			f->close();
+		} else {
+			ERR_FAIL_MSG("Failed to create file " + project_data_gdignore_file_path);
+		}
+	}
+}
+
+void EditorFileSystem::reimport_files(const Vector<String> &p_files) {
+	_create_project_data_dir_if_necessary();
 
 	importing = true;
 	EditorProgress pr("reimport", TTR("(Re)Importing Assets"), p_files.size());
@@ -1973,6 +1994,11 @@ Error EditorFileSystem::_resource_import(const String &p_path) {
 }
 
 bool EditorFileSystem::_should_skip_directory(const String &p_path) {
+	String project_data_path = ProjectSettings::get_singleton()->get_project_data_path();
+	if (p_path == project_data_path || p_path.begins_with(project_data_path + "/")) {
+		return true;
+	}
+
 	if (FileAccess::exists(p_path.plus_file("project.godot"))) { // skip if another project inside this
 		return true;
 	}
@@ -2087,11 +2113,10 @@ EditorFileSystem::EditorFileSystem() {
 	scanning_changes = false;
 	scanning_changes_done = false;
 
-	DirAccess *da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
-	if (da->change_dir("res://.import") != OK) {
-		da->make_dir("res://.import");
-	}
+	_create_project_data_dir_if_necessary();
+
 	// This should probably also work on Unix and use the string it returns for FAT32 or exFAT
+	DirAccess *da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
 	using_fat32_or_exfat = (da->get_filesystem_type() == "FAT32" || da->get_filesystem_type() == "exFAT");
 	memdelete(da);
 

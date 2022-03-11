@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -281,6 +281,16 @@ void GDMonoField::set_value_from_variant(MonoObject *p_object, const Variant &p_
 				break;
 			}
 
+			if (array_type->eklass == CACHED_CLASS_RAW(NodePath)) {
+				SET_FROM_ARRAY(Array);
+				break;
+			}
+
+			if (array_type->eklass == CACHED_CLASS_RAW(RID)) {
+				SET_FROM_ARRAY(Array);
+				break;
+			}
+
 			GDMonoClass *array_type_class = GDMono::get_singleton()->get_class(array_type->eklass);
 			if (CACHED_CLASS(GodotObject)->is_assignable_from(array_type_class)) {
 				MonoArray *managed = GDMonoMarshal::Array_to_mono_array(p_value.operator ::Array(), array_type_class);
@@ -492,6 +502,13 @@ void GDMonoField::set_value_from_variant(MonoObject *p_object, const Variant &p_
 				MonoObject *managed = GDMonoUtils::create_managed_from(p_value.operator Array(), godot_array_class);
 				mono_field_set_value(p_object, mono_field, managed);
 				break;
+			}
+
+			// GodotObject
+			GDMonoClass *type_class = type.type_class;
+			if (CACHED_CLASS(GodotObject)->is_assignable_from(type_class)) {
+				MonoObject *managed = GDMonoUtils::unmanaged_get_managed(p_value.operator Object *());
+				mono_field_set_value(p_object, mono_field, managed);
 			}
 		} break;
 

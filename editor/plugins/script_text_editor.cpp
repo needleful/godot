@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -1452,11 +1452,12 @@ Variant ScriptTextEditor::get_drag_data_fw(const Point2 &p_point, Control *p_fro
 
 bool ScriptTextEditor::can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) const {
 	Dictionary d = p_data;
-	if (d.has("type") && (String(d["type"]) == "resource" ||
-								 String(d["type"]) == "files" ||
-								 String(d["type"]) == "nodes" ||
-								 String(d["type"]) == "obj_property" ||
-								 String(d["type"]) == "files_and_dirs")) {
+	if (d.has("type") &&
+			(String(d["type"]) == "resource" ||
+					String(d["type"]) == "files" ||
+					String(d["type"]) == "nodes" ||
+					String(d["type"]) == "obj_property" ||
+					String(d["type"]) == "files_and_dirs")) {
 		return true;
 	}
 

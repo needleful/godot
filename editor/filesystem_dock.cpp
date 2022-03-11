@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -669,9 +669,11 @@ void FileSystemDock::_sort_file_info_list(List<FileSystemDock::FileInfo> &r_file
 			r_file_list.invert();
 			break;
 		case FILE_SORT_NAME_REVERSE:
+			r_file_list.sort();
 			r_file_list.invert();
 			break;
 		default: // FILE_SORT_NAME
+			r_file_list.sort();
 			break;
 	}
 }
@@ -1334,7 +1336,7 @@ void FileSystemDock::_make_dir_confirm() {
 		EditorNode::get_singleton()->show_warning(TTR("No name provided."));
 		return;
 	} else if (dir_name.find("/") != -1 || dir_name.find("\\") != -1 || dir_name.find(":") != -1 || dir_name.find("*") != -1 ||
-			   dir_name.find("|") != -1 || dir_name.find(">") != -1 || dir_name.ends_with(".") || dir_name.ends_with(" ")) {
+			dir_name.find("|") != -1 || dir_name.find(">") != -1 || dir_name.ends_with(".") || dir_name.ends_with(" ")) {
 		EditorNode::get_singleton()->show_warning(TTR("Provided name contains invalid characters."));
 		return;
 	}
@@ -1434,12 +1436,18 @@ void FileSystemDock::_folder_removed(String p_folder) {
 
 void FileSystemDock::_rename_operation_confirm() {
 	String new_name = rename_dialog_text->get_text().strip_edges();
+	String old_name = tree->get_selected()->get_text(0);
 	if (new_name.length() == 0) {
 		EditorNode::get_singleton()->show_warning(TTR("No name provided."));
 		return;
 	} else if (new_name.find("/") != -1 || new_name.find("\\") != -1 || new_name.find(":") != -1) {
 		EditorNode::get_singleton()->show_warning(TTR("Name contains invalid characters."));
 		return;
+	} else if (to_rename.is_file && old_name.get_extension() != new_name.get_extension()) {
+		if (!EditorFileSystem::get_singleton()->get_valid_extensions().find(new_name.get_extension())) {
+			EditorNode::get_singleton()->show_warning(TTR("This file extension is not recognized by the editor.\nIf you want to rename it anyway, use your operating system's file manager.\nAfter renaming to an unknown extension, the file won't be shown in the editor anymore."));
+			return;
+		}
 	}
 
 	String old_path = to_rename.path.ends_with("/") ? to_rename.path.substr(0, to_rename.path.length() - 1) : to_rename.path;
@@ -2127,6 +2135,14 @@ bool FileSystemDock::can_drop_data_fw(const Point2 &p_point, const Variant &p_da
 		return true;
 	}
 
+	if (drag_data.has("type") && String(drag_data["type"]) == "nodes") {
+		// Save branch as scene.
+		String to_dir;
+		bool favorite;
+		_get_drag_target_folder(to_dir, favorite, p_point, p_from);
+		return !favorite && Array(drag_data["nodes"]).size() == 1;
+	}
+
 	return false;
 }
 
@@ -2264,6 +2280,13 @@ void FileSystemDock::drop_data_fw(const Point2 &p_point, const Variant &p_data, 
 			EditorSettings::get_singleton()->set_favorites(favorites);
 			_update_tree(_compute_uncollapsed_paths());
 		}
+	}
+
+	if (drag_data.has("type") && String(drag_data["type"]) == "nodes") {
+		String to_dir;
+		bool favorite;
+		_get_drag_target_folder(to_dir, favorite, p_point, p_from);
+		EditorNode::get_singleton()->get_scene_tree_dock()->save_branch_to_file(to_dir);
 	}
 }
 
@@ -2741,10 +2764,10 @@ void FileSystemDock::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("_search_changed"), &FileSystemDock::_search_changed);
 
-	ClassDB::bind_method(D_METHOD("get_drag_data_fw"), &FileSystemDock::get_drag_data_fw);
-	ClassDB::bind_method(D_METHOD("can_drop_data_fw"), &FileSystemDock::can_drop_data_fw);
-	ClassDB::bind_method(D_METHOD("drop_data_fw"), &FileSystemDock::drop_data_fw);
-	ClassDB::bind_method(D_METHOD("navigate_to_path"), &FileSystemDock::navigate_to_path);
+	ClassDB::bind_method(D_METHOD("get_drag_data_fw", "point", "from"), &FileSystemDock::get_drag_data_fw);
+	ClassDB::bind_method(D_METHOD("can_drop_data_fw", "point", "data", "from"), &FileSystemDock::can_drop_data_fw);
+	ClassDB::bind_method(D_METHOD("drop_data_fw", "point", "data", "from"), &FileSystemDock::drop_data_fw);
+	ClassDB::bind_method(D_METHOD("navigate_to_path", "path"), &FileSystemDock::navigate_to_path);
 
 	ClassDB::bind_method(D_METHOD("_preview_invalidated"), &FileSystemDock::_preview_invalidated);
 	ClassDB::bind_method(D_METHOD("_file_multi_selected"), &FileSystemDock::_file_multi_selected);

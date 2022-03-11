@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -803,6 +803,22 @@ bool Variant::is_one() const {
 	return false;
 }
 
+ObjectID Variant::get_object_instance_id() const {
+	if (unlikely(type != OBJECT)) {
+		return 0;
+	} else if (likely(_get_obj().rc)) {
+		return _get_obj().rc->instance_id;
+	} else if (likely(!_get_obj().ref.is_null())) {
+		return _REF_OBJ_PTR(*this)->get_instance_id();
+	} else {
+		return 0;
+	}
+}
+
+bool Variant::is_invalid_object() const {
+	return type == OBJECT && _get_obj().rc && !_get_obj().rc->get_ptr();
+}
+
 void Variant::reference(const Variant &p_variant) {
 	switch (type) {
 		case NIL:
@@ -877,11 +893,9 @@ void Variant::reference(const Variant &p_variant) {
 		} break;
 		case OBJECT: {
 			memnew_placement(_data._mem, ObjData(p_variant._get_obj()));
-#ifdef DEBUG_ENABLED
-			if (_get_obj().rc) {
+			if (likely(_get_obj().rc)) {
 				_get_obj().rc->increment();
 			}
-#endif
 		} break;
 		case NODE_PATH: {
 			memnew_placement(_data._mem, NodePath(*reinterpret_cast<const NodePath *>(p_variant._data._mem)));
@@ -999,7 +1013,6 @@ void Variant::clear() {
 			reinterpret_cast<NodePath *>(_data._mem)->~NodePath();
 		} break;
 		case OBJECT: {
-#ifdef DEBUG_ENABLED
 			if (likely(_get_obj().rc)) {
 				if (unlikely(_get_obj().rc->decrement())) {
 					memdelete(_get_obj().rc);
@@ -1007,10 +1020,6 @@ void Variant::clear() {
 			} else {
 				_get_obj().ref.unref();
 			}
-#else
-			_get_obj().obj = NULL;
-			_get_obj().ref.unref();
-#endif
 		} break;
 		case _RID: {
 			// not much need probably
@@ -1314,6 +1323,19 @@ Variant::operator String() const {
 	return stringify(stack);
 }
 
+template <class T>
+String stringify_vector(const T &vec, List<const void *> &stack) {
+	String str("[");
+	for (int i = 0; i < vec.size(); i++) {
+		if (i > 0) {
+			str += ", ";
+		}
+		str = str + Variant(vec[i]).stringify(stack);
+	}
+	str += "]";
+	return str;
+}
+
 String Variant::stringify(List<const void *> &stack) const {
 	switch (type) {
 		case NIL:
@@ -1410,64 +1432,25 @@ String Variant::stringify(List<const void *> &stack) const {
 			return str;
 		} break;
 		case POOL_VECTOR2_ARRAY: {
-			PoolVector<Vector2> vec = operator PoolVector<Vector2>();
-			String str("[");
-			for (int i = 0; i < vec.size(); i++) {
-				if (i > 0) {
-					str += ", ";
-				}
-				str = str + Variant(vec[i]);
-			}
-			str += "]";
-			return str;
+			return stringify_vector(operator PoolVector<Vector2>(), stack);
 		} break;
 		case POOL_VECTOR3_ARRAY: {
-			PoolVector<Vector3> vec = operator PoolVector<Vector3>();
-			String str("[");
-			for (int i = 0; i < vec.size(); i++) {
-				if (i > 0) {
-					str += ", ";
-				}
-				str = str + Variant(vec[i]);
-			}
-			str += "]";
-			return str;
+			return stringify_vector(operator PoolVector<Vector3>(), stack);
+		} break;
+		case POOL_COLOR_ARRAY: {
+			return stringify_vector(operator PoolVector<Color>(), stack);
 		} break;
 		case POOL_STRING_ARRAY: {
-			PoolVector<String> vec = operator PoolVector<String>();
-			String str("[");
-			for (int i = 0; i < vec.size(); i++) {
-				if (i > 0) {
-					str += ", ";
-				}
-				str = str + vec[i];
-			}
-			str += "]";
-			return str;
+			return stringify_vector(operator PoolVector<String>(), stack);
+		} break;
+		case POOL_BYTE_ARRAY: {
+			return stringify_vector(operator PoolVector<uint8_t>(), stack);
 		} break;
 		case POOL_INT_ARRAY: {
-			PoolVector<int> vec = operator PoolVector<int>();
-			String str("[");
-			for (int i = 0; i < vec.size(); i++) {
-				if (i > 0) {
-					str += ", ";
-				}
-				str = str + itos(vec[i]);
-			}
-			str += "]";
-			return str;
+			return stringify_vector(operator PoolVector<int>(), stack);
 		} break;
 		case POOL_REAL_ARRAY: {
-			PoolVector<real_t> vec = operator PoolVector<real_t>();
-			String str("[");
-			for (int i = 0; i < vec.size(); i++) {
-				if (i > 0) {
-					str += ", ";
-				}
-				str = str + rtos(vec[i]);
-			}
-			str += "]";
-			return str;
+			return stringify_vector(operator PoolVector<real_t>(), stack);
 		} break;
 		case ARRAY: {
 			Array arr = operator Array();
@@ -1475,35 +1458,19 @@ String Variant::stringify(List<const void *> &stack) const {
 				return "[...]";
 			}
 			stack.push_back(arr.id());
-
-			String str("[");
-			for (int i = 0; i < arr.size(); i++) {
-				if (i) {
-					str += ", ";
-				}
-
-				str += arr[i].stringify(stack);
-			}
-
-			str += "]";
+			String str = stringify_vector(arr, stack);
 			stack.erase(arr.id());
 			return str;
 
 		} break;
 		case OBJECT: {
 			Object *obj = _OBJ_PTR(*this);
-			if (obj) {
-				if (_get_obj().ref.is_null() && !ObjectDB::get_instance(obj->get_instance_id())) {
-					return "[Deleted Object]";
-				}
-
+			if (likely(obj)) {
 				return obj->to_string();
 			} else {
-#ifdef DEBUG_ENABLED
-				if (ScriptDebugger::get_singleton() && _get_obj().rc && !ObjectDB::get_instance(_get_obj().rc->instance_id)) {
+				if (_get_obj().rc) {
 					return "[Deleted Object]";
 				}
-#endif
 				return "[Object:null]";
 			}
 		} break;
@@ -1659,20 +1626,13 @@ Variant::operator RID() const {
 		if (!_get_obj().ref.is_null()) {
 			return _get_obj().ref.get_rid();
 		} else {
-#ifdef DEBUG_ENABLED
 			Object *obj = likely(_get_obj().rc) ? _get_obj().rc->get_ptr() : nullptr;
 			if (unlikely(!obj)) {
-				if (ScriptDebugger::get_singleton() && _get_obj().rc && !ObjectDB::get_instance(_get_obj().rc->instance_id)) {
+				if (_get_obj().rc) {
 					ERR_PRINT("Attempted get RID on a deleted object.");
 				}
 				return RID();
 			}
-#else
-			Object *obj = _get_obj().obj;
-			if (unlikely(!obj)) {
-				return RID();
-			}
-#endif
 			Variant::CallError ce;
 			Variant ret = obj->call(CoreStringNames::get_singleton()->get_rid, nullptr, 0, ce);
 			if (ce.error == Variant::CallError::CALL_OK && ret.get_type() == Variant::_RID) {
@@ -1695,22 +1655,14 @@ Variant::operator Object *() const {
 }
 Variant::operator Node *() const {
 	if (type == OBJECT) {
-#ifdef DEBUG_ENABLED
 		Object *obj = _get_obj().rc ? _get_obj().rc->get_ptr() : nullptr;
-#else
-		Object *obj = _get_obj().obj;
-#endif
 		return Object::cast_to<Node>(obj);
 	}
 	return nullptr;
 }
 Variant::operator Control *() const {
 	if (type == OBJECT) {
-#ifdef DEBUG_ENABLED
 		Object *obj = _get_obj().rc ? _get_obj().rc->get_ptr() : nullptr;
-#else
-		Object *obj = _get_obj().obj;
-#endif
 		return Object::cast_to<Control>(obj);
 	}
 	return nullptr;
@@ -2163,12 +2115,7 @@ Variant::Variant(const NodePath &p_node_path) {
 Variant::Variant(const RefPtr &p_resource) {
 	type = OBJECT;
 	memnew_placement(_data._mem, ObjData);
-#ifdef DEBUG_ENABLED
 	_get_obj().rc = nullptr;
-#else
-	REF *ref = reinterpret_cast<REF *>(p_resource.get_data());
-	_get_obj().obj = ref->ptr();
-#endif
 	_get_obj().ref = p_resource;
 }
 
@@ -2185,15 +2132,10 @@ Variant::Variant(const Object *p_object) {
 	Reference *ref = Object::cast_to<Reference>(obj);
 	if (unlikely(ref)) {
 		*reinterpret_cast<Ref<Reference> *>(_get_obj().ref.get_data()) = Ref<Reference>(ref);
-#ifdef DEBUG_ENABLED
 		_get_obj().rc = nullptr;
 	} else {
 		_get_obj().rc = likely(obj) ? obj->_use_rc() : nullptr;
-#endif
 	}
-#if !defined(DEBUG_ENABLED)
-	_get_obj().obj = obj;
-#endif
 }
 
 Variant::Variant(const Dictionary &p_dictionary) {
@@ -2471,19 +2413,15 @@ void Variant::operator=(const Variant &p_variant) {
 			*reinterpret_cast<RID *>(_data._mem) = *reinterpret_cast<const RID *>(p_variant._data._mem);
 		} break;
 		case OBJECT: {
-#ifdef DEBUG_ENABLED
 			if (likely(_get_obj().rc)) {
 				if (unlikely(_get_obj().rc->decrement())) {
 					memdelete(_get_obj().rc);
 				}
 			}
-#endif
 			*reinterpret_cast<ObjData *>(_data._mem) = p_variant._get_obj();
-#ifdef DEBUG_ENABLED
 			if (likely(_get_obj().rc)) {
 				_get_obj().rc->increment();
 			}
-#endif
 		} break;
 		case NODE_PATH: {
 			*reinterpret_cast<NodePath *>(_data._mem) = *reinterpret_cast<const NodePath *>(p_variant._data._mem);
@@ -2815,8 +2753,16 @@ bool Variant::hash_compare(const Variant &p_variant) const {
 	}
 
 	switch (type) {
+		case INT: {
+			return _data._int == p_variant._data._int;
+		} break;
+
 		case REAL: {
 			return hash_compare_scalar(_data._real, p_variant._data._real);
+		} break;
+
+		case STRING: {
+			return *reinterpret_cast<const String *>(_data._mem) == *reinterpret_cast<const String *>(p_variant._data._mem);
 		} break;
 
 		case VECTOR2: {
@@ -2831,7 +2777,7 @@ bool Variant::hash_compare(const Variant &p_variant) const {
 			const Rect2 *r = reinterpret_cast<const Rect2 *>(p_variant._data._mem);
 
 			return (hash_compare_vector2(l->position, r->position)) &&
-				   (hash_compare_vector2(l->size, r->size));
+					(hash_compare_vector2(l->size, r->size));
 		} break;
 
 		case TRANSFORM2D: {
@@ -2859,7 +2805,7 @@ bool Variant::hash_compare(const Variant &p_variant) const {
 			const Plane *r = reinterpret_cast<const Plane *>(p_variant._data._mem);
 
 			return (hash_compare_vector3(l->normal, r->normal)) &&
-				   (hash_compare_scalar(l->d, r->d));
+					(hash_compare_scalar(l->d, r->d));
 		} break;
 
 		case AABB: {

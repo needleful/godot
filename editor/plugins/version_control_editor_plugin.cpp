@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -117,7 +117,7 @@ void VersionControlEditorPlugin::_initialize_vcs() {
 	ERR_FAIL_COND_MSG(!addon_script_instance, "Failed to create addon script instance.");
 
 	// The addon is attached as a script to the VCS interface as a proxy end-point
-	vcs_interface->set_script_and_instance(script.get_ref_ptr(), addon_script_instance);
+	vcs_interface->set_script_instance(addon_script_instance);
 
 	EditorVCSInterface::set_singleton(vcs_interface);
 	EditorFileSystem::get_singleton()->connect("filesystem_changed", this, "_refresh_stage_area");
@@ -178,7 +178,7 @@ void VersionControlEditorPlugin::_refresh_stage_area() {
 			commit_status->set_text("New changes detected");
 		}
 	} else {
-		WARN_PRINT("No VCS addon is initialized. Select a Version Control Addon from Project menu.")
+		WARN_PRINT("No VCS addon is initialized. Select a Version Control Addon from Project menu.");
 	}
 }
 

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -31,6 +31,7 @@
 #include "resource_importer.h"
 
 #include "core/os/os.h"
+#include "core/project_settings.h"
 #include "core/variant_parser.h"
 
 bool ResourceFormatImporter::SortImporterByName::operator()(const Ref<ResourceImporter> &p_a, const Ref<ResourceImporter> &p_b) const {
@@ -380,7 +381,7 @@ Ref<ResourceImporter> ResourceFormatImporter::get_importer_by_extension(const St
 }
 
 String ResourceFormatImporter::get_import_base_path(const String &p_for_file) const {
-	return "res://.import/" + p_for_file.get_file() + "-" + p_for_file.md5_text();
+	return ProjectSettings::get_singleton()->get_project_data_path().plus_file(p_for_file.get_file() + "-" + p_for_file.md5_text());
 }
 
 bool ResourceFormatImporter::are_import_settings_valid(const String &p_path) const {

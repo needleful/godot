@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -355,7 +355,7 @@ void RasterizerGLES2::set_boot_image(const Ref<Image> &p_image, const Color &p_c
 	canvas->canvas_begin();
 
 	RID texture = storage->texture_create();
-	storage->texture_allocate(texture, p_image->get_width(), p_image->get_height(), 0, p_image->get_format(), VS::TEXTURE_TYPE_2D, p_use_filter ? VS::TEXTURE_FLAG_FILTER : 0);
+	storage->texture_allocate(texture, p_image->get_width(), p_image->get_height(), 0, p_image->get_format(), VS::TEXTURE_TYPE_2D, p_use_filter ? (uint32_t)VS::TEXTURE_FLAG_FILTER : 0);
 	storage->texture_set_data(texture, p_image);
 
 	Rect2 imgrect(0, 0, p_image->get_width(), p_image->get_height());
@@ -403,6 +403,7 @@ void RasterizerGLES2::blit_render_target_to_screen(RID p_render_target, const Re
 	canvas->_set_texture_rect_mode(true);
 
 	canvas->state.canvas_shader.set_custom_shader(0);
+	canvas->state.canvas_shader.set_conditional(CanvasShaderGLES2::LINEAR_TO_SRGB, rt->flags[RasterizerStorage::RENDER_TARGET_KEEP_3D_LINEAR]);
 	canvas->state.canvas_shader.bind();
 
 	canvas->canvas_begin();
@@ -421,6 +422,8 @@ void RasterizerGLES2::blit_render_target_to_screen(RID p_render_target, const Re
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 	canvas->canvas_end();
+
+	canvas->state.canvas_shader.set_conditional(CanvasShaderGLES2::LINEAR_TO_SRGB, false);
 }
 
 void RasterizerGLES2::output_lens_distorted_to_screen(RID p_render_target, const Rect2 &p_screen_rect, float p_k1, float p_k2, const Vector2 &p_eye_center, float p_oversample) {
@@ -532,6 +535,10 @@ RasterizerGLES2::RasterizerGLES2() {
 }
 
 RasterizerGLES2::~RasterizerGLES2() {
-	memdelete(storage);
+	memdelete(scene);
 	memdelete(canvas);
+
+	// Storage needs to be deleted after canvas as canvas destructor frees RIDs
+	// stored in storage RID owners.
+	memdelete(storage);
 }

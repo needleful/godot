@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -188,7 +188,7 @@ Vector<RID> Physics2DShapeQueryParameters::get_exclude() const {
 	ret.resize(exclude.size());
 	int idx = 0;
 	for (Set<RID>::Element *E = exclude.front(); E; E = E->next()) {
-		ret.write[idx] = E->get();
+		ret.write[idx++] = E->get();
 	}
 	return ret;
 }
@@ -657,7 +657,6 @@ void Physics2DServer::_bind_methods() {
 	BIND_ENUM_CONSTANT(SPACE_PARAM_BODY_ANGULAR_VELOCITY_SLEEP_THRESHOLD);
 	BIND_ENUM_CONSTANT(SPACE_PARAM_BODY_TIME_TO_SLEEP);
 	BIND_ENUM_CONSTANT(SPACE_PARAM_CONSTRAINT_DEFAULT_BIAS);
-	BIND_ENUM_CONSTANT(SPACE_PARAM_TEST_MOTION_MIN_CONTACT_DEPTH);
 
 	BIND_ENUM_CONSTANT(SHAPE_LINE);
 	BIND_ENUM_CONSTANT(SHAPE_RAY);

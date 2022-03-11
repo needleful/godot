@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -51,6 +51,8 @@ Error HTTPClient::connect_to_host(const String &p_host, int p_port, bool p_ssl, 
 
 	conn_port = p_port;
 	conn_host = p_host;
+
+	ip_candidates.clear();
 
 	ssl = p_ssl;
 	ssl_verify_host = p_verify_host;
@@ -306,6 +308,7 @@ void HTTPClient::close() {
 		resolving = IP::RESOLVER_INVALID_ID;
 	}
 
+	ip_candidates.clear();
 	response_headers.clear();
 	response_str.clear();
 	body_size = -1;
@@ -328,10 +331,17 @@ Error HTTPClient::poll() {
 					return OK; // Still resolving
 
 				case IP::RESOLVER_STATUS_DONE: {
-					IP_Address host = IP::get_singleton()->get_resolve_item_address(resolving);
-					Error err = tcp_connection->connect_to_host(host, conn_port);
+					ip_candidates = IP::get_singleton()->get_resolve_item_addresses(resolving);
 					IP::get_singleton()->erase_resolve_item(resolving);
 					resolving = IP::RESOLVER_INVALID_ID;
+
+					Error err = ERR_BUG; // Should be at least one entry.
+					while (ip_candidates.size() > 0) {
+						err = tcp_connection->connect_to_host(ip_candidates.pop_front(), conn_port);
+						if (err == OK) {
+							break;
+						}
+					}
 					if (err) {
 						status = STATUS_CANT_CONNECT;
 						return err;
@@ -385,6 +395,7 @@ Error HTTPClient::poll() {
 						if (ssl->get_status() == StreamPeerSSL::STATUS_CONNECTED) {
 							// Handshake has been successful
 							handshaking = false;
+							ip_candidates.clear();
 							status = STATUS_CONNECTED;
 							return OK;
 						} else if (ssl->get_status() != StreamPeerSSL::STATUS_HANDSHAKING) {
@@ -395,15 +406,24 @@ Error HTTPClient::poll() {
 						}
 						// ... we will need to poll more for handshake to finish
 					} else {
+						ip_candidates.clear();
 						status = STATUS_CONNECTED;
 					}
 					return OK;
 				} break;
 				case StreamPeerTCP::STATUS_ERROR:
 				case StreamPeerTCP::STATUS_NONE: {
+					Error err = ERR_CANT_CONNECT;
+					while (ip_candidates.size() > 0) {
+						tcp_connection->disconnect_from_host();
+						err = tcp_connection->connect_to_host(ip_candidates.pop_front(), conn_port);
+						if (err == OK) {
+							return OK;
+						}
+					}
 					close();
 					status = STATUS_CANT_CONNECT;
-					return ERR_CANT_CONNECT;
+					return err;
 				} break;
 			}
 		} break;
@@ -471,7 +491,7 @@ Error HTTPClient::poll() {
 							continue;
 						}
 						if (s.begins_with("content-length:")) {
-							body_size = s.substr(s.find(":") + 1, s.length()).strip_edges().to_int();
+							body_size = s.substr(s.find(":") + 1, s.length()).strip_edges().to_int64();
 							body_left = body_size;
 
 						} else if (s.begins_with("transfer-encoding:")) {

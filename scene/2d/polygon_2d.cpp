@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -523,7 +523,9 @@ void Polygon2D::set_bone_path(int p_index, const NodePath &p_path) {
 Array Polygon2D::_get_bones() const {
 	Array bones;
 	for (int i = 0; i < get_bone_count(); i++) {
-		bones.push_back(get_bone_path(i));
+		// Convert path property to String to avoid errors due to invalid node path in editor,
+		// because it's relative to the Skeleton2D node and not Polygon2D.
+		bones.push_back(String(get_bone_path(i)));
 		bones.push_back(get_bone_weights(i));
 	}
 	return bones;
@@ -532,7 +534,8 @@ void Polygon2D::_set_bones(const Array &p_bones) {
 	ERR_FAIL_COND(p_bones.size() & 1);
 	clear_bones();
 	for (int i = 0; i < p_bones.size(); i += 2) {
-		add_bone(p_bones[i], p_bones[i + 1]);
+		// Convert back from String to NodePath.
+		add_bone(NodePath(p_bones[i].operator String()), p_bones[i + 1]);
 	}
 }
 
@@ -633,7 +636,7 @@ void Polygon2D::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::POOL_VECTOR2_ARRAY, "uv"), "set_uv", "get_uv");
 	ADD_PROPERTY(PropertyInfo(Variant::POOL_COLOR_ARRAY, "vertex_colors"), "set_vertex_colors", "get_vertex_colors");
 	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "polygons"), "set_polygons", "get_polygons");
-	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "bones", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR), "_set_bones", "_get_bones");
+	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "bones", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR), "_set_bones", "_get_bones");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "internal_vertex_count", PROPERTY_HINT_RANGE, "0,1000"), "set_internal_vertex_count", "get_internal_vertex_count");
 }
 

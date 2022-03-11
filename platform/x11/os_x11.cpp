@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -351,6 +351,7 @@ Error OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 	if (gl_initialization_error) {
 		OS::get_singleton()->alert("Your video card driver does not support any of the supported OpenGL versions.\n"
 								   "Please update your drivers or if you have a very old or integrated GPU, upgrade it.\n"
+								   "If you have updated your graphics drivers recently, try rebooting.\n"
 								   "Alternatively, you can force software rendering by running Godot with the `LIBGL_ALWAYS_SOFTWARE=1`\n"
 								   "environment variable set, but this will be very slow.",
 				"Unable to initialize Video driver");
@@ -425,18 +426,18 @@ Error OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 	XSetWindowAttributes new_attr;
 
 	new_attr.event_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask |
-						  ButtonReleaseMask | EnterWindowMask |
-						  LeaveWindowMask | PointerMotionMask |
-						  Button1MotionMask |
-						  Button2MotionMask | Button3MotionMask |
-						  Button4MotionMask | Button5MotionMask |
-						  ButtonMotionMask | KeymapStateMask |
-						  ExposureMask | VisibilityChangeMask |
-						  StructureNotifyMask |
-						  SubstructureNotifyMask | SubstructureRedirectMask |
-						  FocusChangeMask | PropertyChangeMask |
-						  ColormapChangeMask | OwnerGrabButtonMask |
-						  im_event_mask;
+			ButtonReleaseMask | EnterWindowMask |
+			LeaveWindowMask | PointerMotionMask |
+			Button1MotionMask |
+			Button2MotionMask | Button3MotionMask |
+			Button4MotionMask | Button5MotionMask |
+			ButtonMotionMask | KeymapStateMask |
+			ExposureMask | VisibilityChangeMask |
+			StructureNotifyMask |
+			SubstructureNotifyMask | SubstructureRedirectMask |
+			FocusChangeMask | PropertyChangeMask |
+			ColormapChangeMask | OwnerGrabButtonMask |
+			im_event_mask;
 
 	XChangeWindowAttributes(x11_display, x11_window, CWEventMask, &new_attr);
 
@@ -466,15 +467,6 @@ Error OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 
 	XISelectEvents(x11_display, x11_window, &xi.all_event_mask, 1);
 	XISelectEvents(x11_display, DefaultRootWindow(x11_display), &xi.all_master_event_mask, 1);
-
-	// Disabled by now since grabbing also blocks mouse events
-	// (they are received as extended events instead of standard events)
-	/*XIClearMask(xi.touch_event_mask.mask, XI_TouchOwnership);
-
-	// Grab touch devices to avoid OS gesture interference
-	for (int i = 0; i < xi.touch_devices.size(); ++i) {
-		XIGrabDevice(x11_display, xi.touch_devices[i], x11_window, CurrentTime, None, XIGrabModeAsync, XIGrabModeAsync, False, &xi.touch_event_mask);
-	}*/
 
 	/* set the titlebar name */
 	XStoreName(x11_display, x11_window, "Godot");
@@ -691,7 +683,7 @@ bool OS_X11::refresh_device_info() {
 				if (class_info->number == VALUATOR_ABSX && class_info->mode == XIModeAbsolute) {
 					resolution_x = class_info->resolution;
 					abs_x_min = class_info->min;
-					abs_y_max = class_info->max;
+					abs_x_max = class_info->max;
 					absolute_mode = true;
 				} else if (class_info->number == VALUATOR_ABSY && class_info->mode == XIModeAbsolute) {
 					resolution_y = class_info->resolution;
@@ -705,8 +697,8 @@ bool OS_X11::refresh_device_info() {
 					tilt_x_min = class_info->min;
 					tilt_x_max = class_info->max;
 				} else if (class_info->number == VALUATOR_TILTY && class_info->mode == XIModeAbsolute) {
-					tilt_x_min = class_info->min;
-					tilt_x_max = class_info->max;
+					tilt_y_min = class_info->min;
+					tilt_y_max = class_info->max;
 				}
 			}
 		}
@@ -2114,11 +2106,11 @@ Atom OS_X11::_process_selection_request_target(Atom p_target, Window p_requestor
 				0);
 		return p_property;
 	} else if (p_target == XInternAtom(x11_display, "UTF8_STRING", 0) ||
-			   p_target == XInternAtom(x11_display, "COMPOUND_TEXT", 0) ||
-			   p_target == XInternAtom(x11_display, "TEXT", 0) ||
-			   p_target == XA_STRING ||
-			   p_target == XInternAtom(x11_display, "text/plain;charset=utf-8", 0) ||
-			   p_target == XInternAtom(x11_display, "text/plain", 0)) {
+			p_target == XInternAtom(x11_display, "COMPOUND_TEXT", 0) ||
+			p_target == XInternAtom(x11_display, "TEXT", 0) ||
+			p_target == XA_STRING ||
+			p_target == XInternAtom(x11_display, "text/plain;charset=utf-8", 0) ||
+			p_target == XInternAtom(x11_display, "text/plain", 0)) {
 		// Directly using internal clipboard because we know our window
 		// is the owner during a selection request.
 		CharString clip = OS::get_clipboard().utf8();
@@ -2318,27 +2310,34 @@ void OS_X11::_poll_events() {
 		{
 			MutexLock mutex_lock(events_mutex);
 
-			// Non-blocking wait for next event and remove it from the queue.
-			XEvent ev;
-			while (XCheckIfEvent(x11_display, &ev, _predicate_all_events, nullptr)) {
-				// Check if the input manager wants to process the event.
-				if (XFilterEvent(&ev, None)) {
-					// Event has been filtered by the Input Manager,
-					// it has to be ignored and a new one will be received.
-					continue;
-				}
-
-				// Handle selection request events directly in the event thread, because
-				// communication through the x server takes several events sent back and forth
-				// and we don't want to block other programs while processing only one each frame.
-				if (ev.type == SelectionRequest) {
-					_handle_selection_request_event(&(ev.xselectionrequest));
-					continue;
-				}
-
-				polled_events.push_back(ev);
-			}
+			_check_pending_events(polled_events);
 		}
+	}
+}
+
+void OS_X11::_check_pending_events(LocalVector<XEvent> &r_events) {
+	// Flush to make sure to gather all pending events.
+	XFlush(x11_display);
+
+	// Non-blocking wait for next event and remove it from the queue.
+	XEvent ev;
+	while (XCheckIfEvent(x11_display, &ev, _predicate_all_events, nullptr)) {
+		// Check if the input manager wants to process the event.
+		if (XFilterEvent(&ev, None)) {
+			// Event has been filtered by the Input Manager,
+			// it has to be ignored and a new one will be received.
+			continue;
+		}
+
+		// Handle selection request events directly in the event thread, because
+		// communication through the x server takes several events sent back and forth
+		// and we don't want to block other programs while processing only one each frame.
+		if (ev.type == SelectionRequest) {
+			_handle_selection_request_event(&(ev.xselectionrequest));
+			continue;
+		}
+
+		r_events.push_back(ev);
 	}
 }
 
@@ -2360,6 +2359,9 @@ void OS_X11::process_xevents() {
 		MutexLock mutex_lock(events_mutex);
 		events = polled_events;
 		polled_events.clear();
+
+		// Check for more pending events to avoid an extra frame delay.
+		_check_pending_events(events);
 	}
 
 	for (uint32_t event_index = 0; event_index < events.size(); ++event_index) {
@@ -2409,7 +2411,7 @@ void OS_X11::process_xevents() {
 								if (pen_pressure_range != Vector2()) {
 									xi.pressure_supported = true;
 									xi.pressure = (*values - pen_pressure_range[0]) /
-												  (pen_pressure_range[1] - pen_pressure_range[0]);
+											(pen_pressure_range[1] - pen_pressure_range[0]);
 								}
 							}
 
@@ -2420,8 +2422,10 @@ void OS_X11::process_xevents() {
 							Map<int, Vector2>::Element *pen_tilt_x = xi.pen_tilt_x_range.find(device_id);
 							if (pen_tilt_x) {
 								Vector2 pen_tilt_x_range = pen_tilt_x->value();
-								if (pen_tilt_x_range != Vector2()) {
-									xi.tilt.x = ((*values - pen_tilt_x_range[0]) / (pen_tilt_x_range[1] - pen_tilt_x_range[0])) * 2 - 1;
+								if (pen_tilt_x_range[0] != 0 && *values < 0) {
+									xi.tilt.x = *values / -pen_tilt_x_range[0];
+								} else if (pen_tilt_x_range[1] != 0) {
+									xi.tilt.x = *values / pen_tilt_x_range[1];
 								}
 							}
 
@@ -2432,8 +2436,10 @@ void OS_X11::process_xevents() {
 							Map<int, Vector2>::Element *pen_tilt_y = xi.pen_tilt_y_range.find(device_id);
 							if (pen_tilt_y) {
 								Vector2 pen_tilt_y_range = pen_tilt_y->value();
-								if (pen_tilt_y_range != Vector2()) {
-									xi.tilt.y = ((*values - pen_tilt_y_range[0]) / (pen_tilt_y_range[1] - pen_tilt_y_range[0])) * 2 - 1;
+								if (pen_tilt_y_range[0] != 0 && *values < 0) {
+									xi.tilt.y = *values / -pen_tilt_y_range[0];
+								} else if (pen_tilt_y_range[1] != 0) {
+									xi.tilt.y = *values / pen_tilt_y_range[1];
 								}
 							}
 
@@ -2468,10 +2474,7 @@ void OS_X11::process_xevents() {
 						xi.last_relative_time = raw_event->time;
 					} break;
 #ifdef TOUCH_ENABLED
-					case XI_TouchBegin: // Fall-through
-							// Disabled hand-in-hand with the grabbing
-							//XIAllowTouchEvents(x11_display, event_data->deviceid, event_data->detail, x11_window, XIAcceptTouch);
-
+					case XI_TouchBegin:
 					case XI_TouchEnd: {
 						bool is_begin = event_data->evtype == XI_TouchBegin;
 
@@ -3114,7 +3117,7 @@ String OS_X11::get_clipboard() const {
 Bool OS_X11::_predicate_clipboard_save_targets(Display *display, XEvent *event, XPointer arg) {
 	if (event->xany.window == *(Window *)arg) {
 		return (event->type == SelectionRequest) ||
-			   (event->type == SelectionNotify);
+				(event->type == SelectionNotify);
 	} else {
 		return False;
 	}
@@ -3802,7 +3805,7 @@ Error OS_X11::move_to_trash(const String &p_path) {
 	if (trash_path == "") {
 		char *dhome = getenv("XDG_DATA_HOME");
 		if (dhome) {
-			trash_path = String(dhome) + "/Trash";
+			trash_path = String::utf8(dhome) + "/Trash";
 		}
 	}
 
@@ -3810,7 +3813,7 @@ Error OS_X11::move_to_trash(const String &p_path) {
 	if (trash_path == "") {
 		char *home = getenv("HOME");
 		if (home) {
-			trash_path = String(home) + "/.local/share/Trash";
+			trash_path = String::utf8(home) + "/.local/share/Trash";
 		}
 	}
 
@@ -3819,7 +3822,7 @@ Error OS_X11::move_to_trash(const String &p_path) {
 
 	// Create needed directories for decided trash can location.
 	{
-		DirAccess *dir_access = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
+		DirAccessRef dir_access = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
 		Error err = dir_access->make_dir_recursive(trash_path);
 
 		// Issue an error if trash can is not created proprely.
@@ -3828,13 +3831,15 @@ Error OS_X11::move_to_trash(const String &p_path) {
 		ERR_FAIL_COND_V_MSG(err != OK, err, "Could not create the trash path \"" + trash_path + "\"/files");
 		err = dir_access->make_dir_recursive(trash_path + "/info");
 		ERR_FAIL_COND_V_MSG(err != OK, err, "Could not create the trash path \"" + trash_path + "\"/info");
-		memdelete(dir_access);
 	}
 
 	// The trash can is successfully created, now we check that we don't exceed our file name length limit.
 	// If the file name is too long trim it so we can add the identifying number and ".trashinfo".
 	// Assumes that the file name length limit is 255 characters.
-	String file_name = basename(p_path.utf8().get_data());
+	String file_name = p_path.get_file();
+	if (file_name.length() == 0) {
+		file_name = p_path.get_base_dir().get_file();
+	}
 	if (file_name.length() > 240) {
 		file_name = file_name.substr(0, file_name.length() - 15);
 	}
@@ -3865,16 +3870,15 @@ Error OS_X11::move_to_trash(const String &p_path) {
 	String trash_info = "[Trash Info]\nPath=" + p_path.http_escape() + "\nDeletionDate=" + timestamp + "\n";
 	{
 		Error err;
-		FileAccess *file = FileAccess::open(trash_path + "/info/" + file_name + ".trashinfo", FileAccess::WRITE, &err);
+		FileAccessRef file = FileAccess::open(trash_path + "/info/" + file_name + ".trashinfo", FileAccess::WRITE, &err);
 		ERR_FAIL_COND_V_MSG(err != OK, err, "Can't create trashinfo file:" + trash_path + "/info/" + file_name + ".trashinfo");
 		file->store_string(trash_info);
 		file->close();
 
 		// Rename our resource before moving it to the trash can.
-		DirAccess *dir_access = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
+		DirAccessRef dir_access = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
 		err = dir_access->rename(p_path, p_path.get_base_dir() + "/" + file_name);
 		ERR_FAIL_COND_V_MSG(err != OK, err, "Can't rename file \"" + p_path + "\"");
-		memdelete(dir_access);
 	}
 
 	// Move the given resource to the trash can.

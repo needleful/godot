@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -45,6 +45,11 @@
 #include "gltf_skeleton.h"
 #include "gltf_skin.h"
 #include "gltf_texture.h"
+
+#include "core/map.h"
+#include "core/pair.h"
+#include "core/resource.h"
+#include "core/vector.h"
 #include "scene/animation/animation_player.h"
 #include "scene/resources/texture.h"
 
@@ -61,6 +66,7 @@ class GLTFState : public Resource {
 
 	bool use_named_skin_binds = false;
 	bool use_legacy_names = false;
+	uint32_t compress_flags = 0;
 
 	Vector<Ref<GLTFNode>> nodes;
 	Vector<Vector<uint8_t>> buffers;
@@ -88,6 +94,9 @@ class GLTFState : public Resource {
 	Map<GLTFSkeletonIndex, GLTFNodeIndex> skeleton_to_node;
 	Vector<Ref<GLTFAnimation>> animations;
 	Map<GLTFNodeIndex, Node *> scene_nodes;
+
+	Map<ObjectID, GLTFSkeletonIndex> skeleton3d_to_gltf_skeleton;
+	Map<ObjectID, Map<ObjectID, GLTFSkinIndex>> skin_and_skeleton3d_to_gltf_skin;
 
 protected:
 	static void _bind_methods();

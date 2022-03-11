@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -48,6 +48,8 @@
 #include "scene/main/viewport.h"
 #include "scene/resources/packed_scene.h"
 
+#include "modules/modules_enabled.gen.h" // For regex.
+
 void SceneTreeDock::_nodes_drag_begin() {
 	if (restore_script_editor_on_drag) {
 		EditorNode::get_singleton()->set_visible_editor(EditorNode::EDITOR_SCRIPT);
@@ -82,10 +84,12 @@ void SceneTreeDock::_unhandled_key_input(Ref<InputEvent> p_event) {
 		return;
 	}
 
-	if (ED_IS_SHORTCUT("scene_tree/batch_rename", p_event)) {
-		_tool_selected(TOOL_BATCH_RENAME);
-	} else if (ED_IS_SHORTCUT("scene_tree/rename", p_event)) {
+	if (ED_IS_SHORTCUT("scene_tree/rename", p_event)) {
 		_tool_selected(TOOL_RENAME);
+#ifdef MODULE_REGEX_ENABLED
+	} else if (ED_IS_SHORTCUT("scene_tree/batch_rename", p_event)) {
+		_tool_selected(TOOL_BATCH_RENAME);
+#endif // MODULE_REGEX_ENABLED
 	} else if (ED_IS_SHORTCUT("scene_tree/add_child_node", p_event)) {
 		_tool_selected(TOOL_NEW);
 	} else if (ED_IS_SHORTCUT("scene_tree/instance_scene", p_event)) {
@@ -332,6 +336,7 @@ void SceneTreeDock::_tool_selected(int p_tool, bool p_confirm_override) {
 	current_option = p_tool;
 
 	switch (p_tool) {
+#ifdef MODULE_REGEX_ENABLED
 		case TOOL_BATCH_RENAME: {
 			if (!profile_allow_editing) {
 				break;
@@ -340,6 +345,7 @@ void SceneTreeDock::_tool_selected(int p_tool, bool p_confirm_override) {
 				rename_dialog->popup_centered();
 			}
 		} break;
+#endif // MODULE_REGEX_ENABLED
 		case TOOL_RENAME: {
 			if (!profile_allow_editing) {
 				break;
@@ -843,7 +849,7 @@ void SceneTreeDock::_tool_selected(int p_tool, bool p_confirm_override) {
 				break;
 			}
 			Ref<MultiNodeEdit> mne = memnew(MultiNodeEdit);
-			for (const Map<Node *, Object *>::Element *E = EditorNode::get_singleton()->get_editor_selection()->get_selection().front(); E; E = E->next()) {
+			for (const Map<Node *, Object *>::Element *E = editor_selection->get_selection().front(); E; E = E->next()) {
 				mne->add_node(root->get_path_to(E->key()));
 			}
 
@@ -939,6 +945,18 @@ void SceneTreeDock::_tool_selected(int p_tool, bool p_confirm_override) {
 			if (tocopy != editor_data->get_edited_scene_root() && tocopy->get_filename() != "") {
 				accept->set_text(TTR("Can't save the branch of an already instanced scene.\nTo create a variation of a scene, you can make an inherited scene based on the instanced scene using Scene > New Inherited Scene... instead."));
 				accept->popup_centered_minsize();
+				break;
+			}
+
+			if (tocopy->get_owner() != scene) {
+				accept->set_text(TTR("Can't save a branch which is a child of an already instantiated scene.\nTo save this branch into its own scene, open the original scene, right click on this branch, and select \"Save Branch as Scene\"."));
+				accept->popup_centered();
+				break;
+			}
+
+			if (scene->get_scene_inherited_state().is_valid() && scene->get_scene_inherited_state()->find_node_by_path(scene->get_path_to(tocopy)) >= 0) {
+				accept->set_text(TTR("Can't save a branch which is part of an inherited scene.\nTo save this branch into its own scene, open the original scene, right click on this branch, and select \"Save Branch as Scene\"."));
+				accept->popup_centered();
 				break;
 			}
 
@@ -2079,11 +2097,11 @@ void SceneTreeDock::_update_script_button() {
 	if (!profile_allow_script_editing) {
 		button_create_script->hide();
 		button_detach_script->hide();
-	} else if (EditorNode::get_singleton()->get_editor_selection()->get_selection().size() == 0) {
+	} else if (editor_selection->get_selection().size() == 0) {
 		button_create_script->hide();
 		button_detach_script->hide();
-	} else if (EditorNode::get_singleton()->get_editor_selection()->get_selection().size() == 1) {
-		Node *n = EditorNode::get_singleton()->get_editor_selection()->get_selected_node_list()[0];
+	} else if (editor_selection->get_selection().size() == 1) {
+		Node *n = editor_selection->get_selected_node_list()[0];
 		if (n->get_script().is_null()) {
 			button_create_script->show();
 			button_detach_script->hide();
@@ -2106,10 +2124,12 @@ void SceneTreeDock::_update_script_button() {
 }
 
 void SceneTreeDock::_selection_changed() {
-	int selection_size = EditorNode::get_singleton()->get_editor_selection()->get_selection().size();
+	int selection_size = editor_selection->get_selection().size();
 	if (selection_size > 1) {
 		//automatically turn on multi-edit
 		_tool_selected(TOOL_MULTI_EDIT);
+	} else if (selection_size == 1) {
+		editor->push_item(editor_selection->get_selection().front()->key());
 	} else if (selection_size == 0) {
 		editor->push_item(nullptr);
 	}
@@ -2811,11 +2831,13 @@ void SceneTreeDock::_tree_rmb(const Vector2 &p_menu_pos) {
 		}
 	}
 
+#ifdef MODULE_REGEX_ENABLED
 	if (profile_allow_editing && selection.size() > 1) {
 		//this is not a commonly used action, it makes no sense for it to be where it was nor always present.
 		menu->add_separator();
 		menu->add_icon_shortcut(get_icon("Rename", "EditorIcons"), ED_GET_SHORTCUT("scene_tree/batch_rename"), TOOL_BATCH_RENAME);
 	}
+#endif // MODULE_REGEX_ENABLED
 	menu->add_separator();
 	menu->add_icon_item(get_icon("Help", "EditorIcons"), TTR("Open Documentation"), TOOL_OPEN_DOCUMENTATION);
 
@@ -2839,6 +2861,11 @@ String SceneTreeDock::get_filter() {
 void SceneTreeDock::set_filter(const String &p_filter) {
 	filter->set_text(p_filter);
 	scene_tree->set_filter(p_filter);
+}
+
+void SceneTreeDock::save_branch_to_file(String p_directory) {
+	new_scene_from_dialog->set_current_dir(p_directory);
+	_tool_selected(TOOL_NEW_SCENE_FROM);
 }
 
 void SceneTreeDock::_focus_node() {
@@ -3297,8 +3324,10 @@ SceneTreeDock::SceneTreeDock(EditorNode *p_editor, Node *p_scene_root, EditorSel
 	create_dialog->connect("create", this, "_create");
 	create_dialog->connect("favorites_updated", this, "_update_create_root_dialog");
 
+#ifdef MODULE_REGEX_ENABLED
 	rename_dialog = memnew(RenameDialog(scene_tree, &editor_data->get_undo_redo()));
 	add_child(rename_dialog);
+#endif // MODULE_REGEX_ENABLED
 
 	script_create_dialog = memnew(ScriptCreateDialog);
 	script_create_dialog->set_inheritance_base_type("Node");

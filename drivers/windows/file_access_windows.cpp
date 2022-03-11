@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -37,6 +37,7 @@
 
 #include <share.h> // _SH_DENYNO
 #include <shlwapi.h>
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 #include <errno.h>
@@ -322,7 +323,8 @@ uint64_t FileAccessWindows::_get_modified_time(const String &p_file) {
 	if (rv == 0) {
 		return st.st_mtime;
 	} else {
-		ERR_FAIL_V_MSG(0, "Failed to get modified time for: " + file + ".");
+		print_verbose("Failed to get modified time for: " + p_file + "");
+		return 0;
 	}
 }
 

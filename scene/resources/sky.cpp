@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -390,6 +390,8 @@ void ProceduralSky::_queue_update() {
 }
 
 void ProceduralSky::_thread_done(const Ref<Image> &p_image) {
+	ERR_FAIL_COND(p_image.is_null());
+
 	panorama = p_image;
 	VS::get_singleton()->texture_allocate(texture, panorama->get_width(), panorama->get_height(), 0, Image::FORMAT_RGBE9995, VS::TEXTURE_TYPE_2D, VS::TEXTURE_FLAG_FILTER | VS::TEXTURE_FLAG_REPEAT);
 	VS::get_singleton()->texture_set_data(texture, panorama);

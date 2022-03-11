@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -66,18 +66,12 @@ String OS::get_iso_date_time(bool local) const {
 		timezone = "Z";
 	}
 
-	return itos(date.year).pad_zeros(2) +
-		   "-" +
-		   itos(date.month).pad_zeros(2) +
-		   "-" +
-		   itos(date.day).pad_zeros(2) +
-		   "T" +
-		   itos(time.hour).pad_zeros(2) +
-		   ":" +
-		   itos(time.min).pad_zeros(2) +
-		   ":" +
-		   itos(time.sec).pad_zeros(2) +
-		   timezone;
+	return itos(date.year).pad_zeros(2) + "-" +
+			itos(date.month).pad_zeros(2) + "-" +
+			itos(date.day).pad_zeros(2) + "T" +
+			itos(time.hour).pad_zeros(2) + ":" +
+			itos(time.min).pad_zeros(2) + ":" +
+			itos(time.sec).pad_zeros(2) + timezone;
 }
 
 uint64_t OS::get_splash_tick_msec() const {
@@ -284,6 +278,12 @@ String OS::get_locale() const {
 	return "en";
 }
 
+// Non-virtual helper to extract the 2 or 3-letter language code from
+// `get_locale()` in a way that's consistent for all platforms.
+String OS::get_locale_language() const {
+	return get_locale().left(3).replace("_", "");
+}
+
 // Helper function to ensure that a dir name/path will be valid on the OS
 String OS::get_safe_dir_name(const String &p_dir_name, bool p_allow_dir_separator) const {
 	Vector<String> invalid_chars = String(": * ? \" < > |").split(" ");
@@ -328,6 +328,11 @@ String OS::get_cache_path() const {
 String OS::get_bundle_resource_dir() const {
 	return ".";
 };
+
+// Path to macOS .app bundle embedded icon
+String OS::get_bundle_icon_path() const {
+	return String();
+}
 
 // OS specific path for user://
 String OS::get_user_data_dir() const {
@@ -473,7 +478,7 @@ String OS::get_model_name() const {
 }
 
 void OS::set_cmdline(const char *p_execpath, const List<String> &p_args) {
-	_execpath = p_execpath;
+	_execpath = String::utf8(p_execpath);
 	_cmdline = p_args;
 };
 
@@ -657,6 +662,15 @@ bool OS::has_feature(const String &p_feature) {
 	}
 #endif
 	if (p_feature == "arm") {
+		return true;
+	}
+#elif defined(__riscv)
+#if __riscv_xlen == 8
+	if (p_feature == "rv64") {
+		return true;
+	}
+#endif
+	if (p_feature == "riscv") {
 		return true;
 	}
 #endif

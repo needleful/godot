@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -170,9 +170,9 @@ static NSCursor *cursorFromSelector(SEL selector, SEL fallback = nil) {
 @implementation GodotApplicationDelegate
 
 - (void)forceUnbundledWindowActivationHackStep1 {
-	// Step1: Switch focus to macOS Dock.
+	// Step 1: Switch focus to macOS SystemUIServer process.
 	// Required to perform step 2, TransformProcessType will fail if app is already the in focus.
-	for (NSRunningApplication *app in [NSRunningApplication runningApplicationsWithBundleIdentifier:@"com.apple.dock"]) {
+	for (NSRunningApplication *app in [NSRunningApplication runningApplicationsWithBundleIdentifier:@"com.apple.systemuiserver"]) {
 		[app activateWithOptions:NSApplicationActivateIgnoringOtherApps];
 		break;
 	}
@@ -194,8 +194,8 @@ static NSCursor *cursorFromSelector(SEL selector, SEL fallback = nil) {
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notice {
 	NSString *nsappname = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleName"];
-	if (nsappname == nil) {
-		// If executable is not a bundled, macOS WindowServer won't register and activate app window correctly (menu and title bar are grayed out and input ignored).
+	if (nsappname == nil || isatty(STDOUT_FILENO) || isatty(STDIN_FILENO) || isatty(STDERR_FILENO)) {
+		// If the executable is started from terminal or is not bundled, macOS WindowServer won't register and activate app window correctly (menu and title bar are grayed out and input ignored).
 		[self performSelector:@selector(forceUnbundledWindowActivationHackStep1) withObject:nil afterDelay:0.02];
 	}
 }
@@ -306,6 +306,8 @@ static NSCursor *cursorFromSelector(SEL selector, SEL fallback = nil) {
 
 	[OS_OSX::singleton->window_object setContentMinSize:NSMakeSize(0, 0)];
 	[OS_OSX::singleton->window_object setContentMaxSize:NSMakeSize(FLT_MAX, FLT_MAX)];
+	// Force window resize event.
+	[self windowDidResize:notification];
 }
 
 - (void)windowDidExitFullScreen:(NSNotification *)notification {
@@ -325,6 +327,9 @@ static NSCursor *cursorFromSelector(SEL selector, SEL fallback = nil) {
 
 	if (OS_OSX::singleton->on_top)
 		[OS_OSX::singleton->window_object setLevel:NSFloatingWindowLevel];
+
+	// Force window resize event.
+	[self windowDidResize:notification];
 }
 
 - (void)windowDidChangeBackingProperties:(NSNotification *)notification {
@@ -384,7 +389,8 @@ static NSCursor *cursorFromSelector(SEL selector, SEL fallback = nil) {
 		CGLEnable((CGLContextObj)[OS_OSX::singleton->context CGLContextObj], kCGLCESurfaceBackingSize);
 	}
 
-	if (OS_OSX::singleton->main_loop) {
+	// Do not redraw when rendering is done from the separate thread, it will conflict with the OpenGL context updates triggered by window view resize.
+	if (OS_OSX::singleton->main_loop && (OS_OSX::singleton->get_render_thread_mode() != OS::RENDER_SEPARATE_THREAD)) {
 		Main::force_redraw();
 		//Event retrieval blocks until resize is over. Call Main::iteration() directly.
 		if (!Main::is_iterating()) { //avoid cyclic loop
@@ -2270,7 +2276,7 @@ String OS_OSX::get_cache_path() const {
 		if (get_environment("XDG_CACHE_HOME").is_abs_path()) {
 			return get_environment("XDG_CACHE_HOME");
 		} else {
-			WARN_PRINT_ONCE("`XDG_CACHE_HOME` is a relative path. Ignoring its value and falling back to `$HOME/Libary/Caches` or `get_config_path()` per the XDG Base Directory specification.");
+			WARN_PRINT_ONCE("`XDG_CACHE_HOME` is a relative path. Ignoring its value and falling back to `$HOME/Library/Caches` or `get_config_path()` per the XDG Base Directory specification.");
 		}
 	}
 	if (has_environment("HOME")) {
@@ -2280,14 +2286,26 @@ String OS_OSX::get_cache_path() const {
 }
 
 String OS_OSX::get_bundle_resource_dir() const {
-	NSBundle *main = [NSBundle mainBundle];
-	NSString *resourcePath = [main resourcePath];
-
-	char *utfs = strdup([resourcePath UTF8String]);
 	String ret;
-	ret.parse_utf8(utfs);
-	free(utfs);
 
+	NSBundle *main = [NSBundle mainBundle];
+	if (main) {
+		NSString *resourcePath = [main resourcePath];
+		ret.parse_utf8([resourcePath UTF8String]);
+	}
+	return ret;
+}
+
+String OS_OSX::get_bundle_icon_path() const {
+	String ret;
+
+	NSBundle *main = [NSBundle mainBundle];
+	if (main) {
+		NSString *iconPath = [[main infoDictionary] objectForKey:@"CFBundleIconFile"];
+		if (iconPath) {
+			ret.parse_utf8([iconPath UTF8String]);
+		}
+	}
 	return ret;
 }
 
@@ -2393,7 +2411,7 @@ Error OS_OSX::shell_open(String p_uri) {
 
 String OS_OSX::get_locale() const {
 	NSString *locale_code = [[NSLocale preferredLanguages] objectAtIndex:0];
-	return [locale_code UTF8String];
+	return String([locale_code UTF8String]).replace("-", "_");
 }
 
 void OS_OSX::swap_buffers() {
@@ -2881,11 +2899,12 @@ void OS_OSX::set_window_per_pixel_transparency_enabled(bool p_enabled) {
 			layered_window = false;
 		}
 		[context update];
-		NSRect frame = [window_object frame];
 
 		if (!is_no_window_mode_enabled()) {
-			[window_object setFrame:NSMakeRect(frame.origin.x, frame.origin.y, 1, 1) display:YES];
-			[window_object setFrame:frame display:YES];
+			// Force resize window frame to update OpenGL context.
+			NSRect frameRect = [window_object frame];
+			[window_object setFrame:NSMakeRect(frameRect.origin.x, frameRect.origin.y, frameRect.size.width + 1, frameRect.size.height) display:NO];
+			[window_object setFrame:frameRect display:YES];
 		}
 	}
 }
@@ -2935,6 +2954,60 @@ String OS_OSX::get_executable_path() const {
 		path.parse_utf8(pathbuf);
 
 		return path;
+	}
+}
+
+Error OS_OSX::execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id, String *r_pipe, int *r_exitcode, bool read_stderr, Mutex *p_pipe_mutex) {
+	if (@available(macOS 10.15, *)) {
+		NSString *nsappname = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleName"];
+		// If executable is bundled, always execute editor instances using NSWorkspace to ensure app window is registered and activated correctly.
+		if (p_path == get_executable_path() && nsappname != nil) {
+			if (p_blocking && r_pipe) {
+				ERR_FAIL_V_MSG(ERR_CANT_OPEN, "Cannot pipe stream from process running as app bundle.");
+			}
+			NSMutableArray *arguments = [[NSMutableArray alloc] init];
+			for (const List<String>::Element *E = p_arguments.front(); E; E = E->next()) {
+				[arguments addObject:[NSString stringWithUTF8String:E->get().utf8().get_data()]];
+			}
+			NSWorkspaceOpenConfiguration *configuration = [[NSWorkspaceOpenConfiguration alloc] init];
+			[configuration setArguments:arguments];
+			[configuration setCreatesNewApplicationInstance:YES];
+			__block dispatch_semaphore_t lock = dispatch_semaphore_create(0);
+			__block Error err = ERR_TIMEOUT;
+			__block pid_t pid = 0;
+			[[NSWorkspace sharedWorkspace] openApplicationAtURL:[[NSBundle mainBundle] bundleURL]
+												  configuration:configuration
+											  completionHandler:^(NSRunningApplication *app, NSError *error) {
+												  if (error) {
+													  err = ERR_CANT_FORK;
+													  NSLog(@"Failed to execute: %@", error.localizedDescription);
+												  } else {
+													  pid = [app processIdentifier];
+													  err = OK;
+												  }
+												  dispatch_semaphore_signal(lock);
+											  }];
+			dispatch_semaphore_wait(lock, dispatch_time(DISPATCH_TIME_NOW, 20000000000)); // 20 sec timeout, wait for app to launch.
+			dispatch_release(lock);
+
+			if (err == OK) {
+				if (p_blocking) {
+					int status;
+					waitpid(pid, &status, 0);
+					if (r_exitcode) {
+						*r_exitcode = WIFEXITED(status) ? WEXITSTATUS(status) : status;
+					}
+				} else if (r_child_id) {
+					*r_child_id = (ProcessID)pid;
+				}
+			}
+
+			return err;
+		} else {
+			return OS_Unix::execute(p_path, p_arguments, p_blocking, r_child_id, r_pipe, r_exitcode, read_stderr, p_pipe_mutex);
+		}
+	} else {
+		return OS_Unix::execute(p_path, p_arguments, p_blocking, r_child_id, r_pipe, r_exitcode, read_stderr, p_pipe_mutex);
 	}
 }
 
@@ -3253,7 +3326,7 @@ void OS_OSX::run() {
 				quit = true;
 			}
 		} @catch (NSException *exception) {
-			ERR_PRINT("NSException: " + String([exception reason].UTF8String));
+			ERR_PRINT("NSException: " + String::utf8([exception reason].UTF8String));
 		}
 	};
 
@@ -3329,7 +3402,7 @@ Error OS_OSX::move_to_trash(const String &p_path) {
 	NSError *err;
 
 	if (![fm trashItemAtURL:url resultingItemURL:nil error:&err]) {
-		ERR_PRINT("trashItemAtURL error: " + String(err.localizedDescription.UTF8String));
+		ERR_PRINT("trashItemAtURL error: " + String::utf8(err.localizedDescription.UTF8String));
 		return FAILED;
 	}
 

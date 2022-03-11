@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -99,8 +99,9 @@ Node *SceneState::instance(GenEditState p_edit_state) const {
 #endif
 			parent = nparent;
 		} else {
-			// i == 0 is root node. Confirm that it doesn't have a parent defined.
+			// i == 0 is root node.
 			ERR_FAIL_COND_V_MSG(n.parent != -1, nullptr, vformat("Invalid scene: root node %s cannot specify a parent node.", snames[n.name]));
+			ERR_FAIL_COND_V_MSG(n.type == TYPE_INSTANCED && base_scene_idx < 0, nullptr, vformat("Invalid scene: root node %s in an instance, but there's no base scene.", snames[n.name]));
 		}
 
 		Node *node = nullptr;
@@ -377,10 +378,17 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Map
 		return OK;
 	}
 
-	// save the child instanced scenes that are chosen as editable, so they can be restored
+	bool is_editable_instance = false;
+
+	// save the child instantiated scenes that are chosen as editable, so they can be restored
 	// upon load back
 	if (p_node != p_owner && p_node->get_filename() != String() && p_owner->is_editable_instance(p_node)) {
 		editable_instances.push_back(p_owner->get_path_to(p_node));
+		// Node is the root of an editable instance.
+		is_editable_instance = true;
+	} else if (p_node->get_owner() && p_owner->is_a_parent_of(p_node->get_owner()) && p_owner->is_editable_instance(p_node->get_owner())) {
+		// Node is part of an editable instance.
+		is_editable_instance = true;
 	}
 
 	NodeData nd;
@@ -610,7 +618,7 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Map
 
 	// Save the right type. If this node was created by an instance
 	// then flag that the node should not be created but reused
-	if (pack_state_stack.empty()) {
+	if (pack_state_stack.empty() && !is_editable_instance) {
 		//this node is not part of an instancing process, so save the type
 		nd.type = _nm_get_string(p_node->get_class(), name_map);
 	} else {

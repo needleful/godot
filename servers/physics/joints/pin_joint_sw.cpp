@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -60,16 +60,18 @@ bool PinJointSW::setup(real_t p_step) {
 
 	for (int i = 0; i < 3; i++) {
 		normal[i] = 1;
-		memnew_placement(&m_jac[i], JacobianEntrySW(
-											A->get_principal_inertia_axes().transposed(),
-											B->get_principal_inertia_axes().transposed(),
-											A->get_transform().xform(m_pivotInA) - A->get_transform().origin - A->get_center_of_mass(),
-											B->get_transform().xform(m_pivotInB) - B->get_transform().origin - B->get_center_of_mass(),
-											normal,
-											A->get_inv_inertia(),
-											A->get_inv_mass(),
-											B->get_inv_inertia(),
-											B->get_inv_mass()));
+		memnew_placement(
+				&m_jac[i],
+				JacobianEntrySW(
+						A->get_principal_inertia_axes().transposed(),
+						B->get_principal_inertia_axes().transposed(),
+						A->get_transform().xform(m_pivotInA) - A->get_transform().origin - A->get_center_of_mass(),
+						B->get_transform().xform(m_pivotInB) - B->get_transform().origin - B->get_center_of_mass(),
+						normal,
+						A->get_inv_inertia(),
+						A->get_inv_mass(),
+						B->get_inv_inertia(),
+						B->get_inv_mass()));
 		normal[i] = 0;
 	}
 
@@ -81,9 +83,6 @@ void PinJointSW::solve(real_t p_step) {
 	Vector3 pivotBInW = B->get_transform().xform(m_pivotInB);
 
 	Vector3 normal(0, 0, 0);
-
-	//Vector3 angvelA = A->get_transform().origin.getBasis().transpose() * A->getAngularVelocity();
-	//Vector3 angvelB = B->get_transform().origin.getBasis().transpose() * B->getAngularVelocity();
 
 	for (int i = 0; i < 3; i++) {
 		normal[i] = 1;
@@ -99,12 +98,6 @@ void PinJointSW::solve(real_t p_step) {
 
 		real_t rel_vel;
 		rel_vel = normal.dot(vel);
-
-		/*
-		//velocity error (first order error)
-		real_t rel_vel = m_jac[i].getRelativeVelocity(A->getLinearVelocity(),angvelA,
-														B->getLinearVelocity(),angvelB);
-	*/
 
 		//positional error (zeroth order error)
 		real_t depth = -(pivotAInW - pivotBInW).dot(normal); //this is the error projected on the normal

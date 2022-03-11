@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -74,6 +74,7 @@ class CSharpScript : public Script {
 
 	bool tool;
 	bool valid;
+	bool reload_invalidated;
 
 	bool builtin;
 
@@ -128,7 +129,7 @@ class CSharpScript : public Script {
 	Set<StringName> exported_members_names;
 #endif
 
-	Map<StringName, PropertyInfo> member_info;
+	OrderedHashMap<StringName, PropertyInfo> member_info;
 
 	void _clear();
 
@@ -255,7 +256,7 @@ public:
 	virtual void get_property_list(List<PropertyInfo> *p_properties) const;
 	virtual Variant::Type get_property_type(const StringName &p_name, bool *r_is_valid) const;
 
-	/* TODO */ virtual void get_method_list(List<MethodInfo> *p_list) const {}
+	virtual void get_method_list(List<MethodInfo> *p_list) const;
 	virtual bool has_method(const StringName &p_method) const;
 	virtual Variant call(const StringName &p_method, const Variant **p_args, int p_argcount, Variant::CallError &r_error);
 	virtual void call_multilevel(const StringName &p_method, const Variant **p_args, int p_argcount);

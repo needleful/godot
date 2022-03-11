@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -398,15 +398,15 @@ static void get_modulation_value(int x, int y, const int p_2bit, const int p_mod
 							  rep_vals0[p_modulation[y + 1][x]] +
 							  rep_vals0[p_modulation[y][x - 1]] +
 							  rep_vals0[p_modulation[y][x + 1]] + 2) /
-					  4;
+					4;
 		} else if (p_modulation_modes[y][x] == 2) {
 			mod_val = (rep_vals0[p_modulation[y][x - 1]] +
 							  rep_vals0[p_modulation[y][x + 1]] + 1) /
-					  2;
+					2;
 		} else {
 			mod_val = (rep_vals0[p_modulation[y - 1][x]] +
 							  rep_vals0[p_modulation[y + 1][x]] + 1) /
-					  2;
+					2;
 		}
 	} else {
 		mod_val = rep_vals1[p_modulation[y][x]];

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -1526,10 +1526,11 @@ Variant Animation::_cubic_interpolate(const Variant &p_pre_a, const Variant &p_a
 		float t2 = t * t;
 		float t3 = t2 * t;
 
-		return 0.5f * ((p1 * 2.0f) +
-							  (-p0 + p2) * t +
-							  (2.0f * p0 - 5.0f * p1 + 4 * p2 - p3) * t2 +
-							  (-p0 + 3.0f * p1 - 3.0f * p2 + p3) * t3);
+		return 0.5f *
+				((p1 * 2.0f) +
+						(-p0 + p2) * t +
+						(2.0f * p0 - 5.0f * p1 + 4 * p2 - p3) * t2 +
+						(-p0 + 3.0f * p1 - 3.0f * p2 + p3) * t3);
 
 	} else if ((vformat & (vformat - 1))) {
 		return p_a; //can't interpolate, mix of types
@@ -1717,11 +1718,19 @@ T Animation::_interpolate(const Vector<TKey<T>> &p_keys, float p_time, Interpola
 		case INTERPOLATION_CUBIC: {
 			int pre = idx - 1;
 			if (pre < 0) {
-				pre = 0;
+				if (loop && p_loop_wrap) {
+					pre = len - 1;
+				} else {
+					pre = 0;
+				}
 			}
 			int post = next + 1;
 			if (post >= len) {
-				post = next;
+				if (loop && p_loop_wrap) {
+					post = 0;
+				} else {
+					post = next;
+				}
 			}
 
 			return _cubic_interpolate(p_keys[pre].value, p_keys[idx].value, p_keys[next].value, p_keys[post].value, c);
@@ -1869,6 +1878,7 @@ void Animation::value_track_set_update_mode(int p_track, UpdateMode p_mode) {
 
 	ValueTrack *vt = static_cast<ValueTrack *>(t);
 	vt->update_mode = p_mode;
+	emit_changed();
 }
 
 Animation::UpdateMode Animation::value_track_get_update_mode(int p_track) const {

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -83,7 +83,7 @@ uint32_t EditorSceneImporterFBX::get_import_flags() const {
 	return IMPORT_SCENE;
 }
 
-Node *EditorSceneImporterFBX::import_scene(const String &p_path, uint32_t p_flags, int p_bake_fps,
+Node *EditorSceneImporterFBX::import_scene(const String &p_path, uint32_t p_flags, int p_bake_fps, uint32_t p_compress_flags,
 		List<String> *r_missing_deps, Error *r_err) {
 	// done for performance when re-importing lots of files when testing importer in verbose only!
 	if (OS::get_singleton()->is_stdout_verbose()) {
@@ -188,7 +188,7 @@ Node *EditorSceneImporterFBX::import_scene(const String &p_path, uint32_t p_flag
 						   "For minimal breakage, please export FBX from Blender with -Z forward, and Y up.");
 			}
 
-			Spatial *spatial = _generate_scene(p_path, &doc, p_flags, p_bake_fps, 8, is_blender_fbx);
+			Spatial *spatial = _generate_scene(p_path, &doc, p_flags, p_bake_fps, p_compress_flags, 8, is_blender_fbx);
 			// todo: move to document shutdown (will need to be validated after moving; this code has been validated already)
 			for (FBXDocParser::TokenPtr token : tokens) {
 				if (token) {
@@ -217,8 +217,7 @@ struct EditorSceneImporterAssetImportInterpolate {
 		float t2 = t * t;
 		float t3 = t2 * t;
 
-		return 0.5f * ((2.0f * p1) + (-p0 + p2) * t + (2.0f * p0 - 5.0f * p1 + 4 * p2 - p3) * t2 +
-							  (-p0 + 3.0f * p1 - 3.0f * p2 + p3) * t3);
+		return 0.5f * ((2.0f * p1) + (-p0 + p2) * t + (2.0f * p0 - 5.0f * p1 + 4 * p2 - p3) * t2 + (-p0 + 3.0f * p1 - 3.0f * p2 + p3) * t3);
 	}
 
 	T bezier(T start, T control_1, T control_2, T end, float t) {
@@ -365,6 +364,7 @@ Spatial *EditorSceneImporterFBX::_generate_scene(
 		const FBXDocParser::Document *p_document,
 		const uint32_t p_flags,
 		int p_bake_fps,
+		const uint32_t p_compress_flags,
 		const int32_t p_max_bone_weights,
 		bool p_is_blender_fbx) {
 	ImportState state;
@@ -665,7 +665,7 @@ Spatial *EditorSceneImporterFBX::_generate_scene(
 						mesh_data_precached->mesh_node = fbx_node;
 
 						// mesh node, mesh id
-						mesh_node = mesh_data_precached->create_fbx_mesh(state, mesh_geometry, fbx_node->fbx_model, (p_flags & IMPORT_USE_COMPRESSION) != 0);
+						mesh_node = mesh_data_precached->create_fbx_mesh(state, mesh_geometry, fbx_node->fbx_model, p_compress_flags);
 						if (!state.MeshNodes.has(mesh_id)) {
 							state.MeshNodes.insert(mesh_id, fbx_node);
 						}

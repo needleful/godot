@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -142,9 +142,15 @@ protected:
 	}
 
 	void _get_property_list(List<PropertyInfo> *p_list) const {
-		p_list->clear(); //sorry, no want category
+		p_list->clear(); // Sorry, no want category.
 		for (const List<PropertyInfo>::Element *E = prop_list.front(); E; E = E->next()) {
-			p_list->push_back(E->get());
+			const PropertyInfo &prop = E->get();
+			if (prop.name == "script") {
+				// Skip the script property, it's always added by the non-virtual method.
+				continue;
+			}
+
+			p_list->push_back(prop);
 		}
 	}
 
@@ -915,6 +921,10 @@ void ScriptEditorDebugger::_parse_message(const String &p_msg, const Array &p_da
 		error->set_icon(0, get_icon(is_warning ? "Warning" : "Error", "EditorIcons"));
 		error->set_text(0, time);
 		error->set_text_align(0, TreeItem::ALIGN_LEFT);
+
+		const Color color = get_color(is_warning ? "warning_color" : "error_color", "Editor");
+		error->set_custom_color(0, color);
+		error->set_custom_color(1, color);
 
 		String error_title;
 		// Include method name, when given, in error title.

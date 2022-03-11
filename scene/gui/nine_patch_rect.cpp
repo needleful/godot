@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -156,6 +156,7 @@ bool NinePatchRect::is_draw_center_enabled() const {
 
 void NinePatchRect::set_h_axis_stretch_mode(AxisStretchMode p_mode) {
 	axis_h = p_mode;
+	update_configuration_warning();
 	update();
 }
 
@@ -165,11 +166,27 @@ NinePatchRect::AxisStretchMode NinePatchRect::get_h_axis_stretch_mode() const {
 
 void NinePatchRect::set_v_axis_stretch_mode(AxisStretchMode p_mode) {
 	axis_v = p_mode;
+	update_configuration_warning();
 	update();
 }
 
 NinePatchRect::AxisStretchMode NinePatchRect::get_v_axis_stretch_mode() const {
 	return axis_v;
+}
+
+String NinePatchRect::get_configuration_warning() const {
+	String warning = Control::get_configuration_warning();
+
+	if (String(GLOBAL_GET("rendering/quality/driver/driver_name")) == "GLES2") {
+		if (axis_v > AXIS_STRETCH_MODE_STRETCH || axis_h > AXIS_STRETCH_MODE_STRETCH) {
+			if (!warning.empty()) {
+				warning += "\n\n";
+			}
+			warning += TTR("The Tile and Tile Fit options for Axis Stretch properties are only effective when using the GLES3 rendering backend.\nThe GLES2 backend is currently in use, so these modes will act like Stretch instead.");
+		}
+	}
+
+	return warning;
 }
 
 NinePatchRect::NinePatchRect() {

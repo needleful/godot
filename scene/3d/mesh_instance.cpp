@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -390,6 +390,9 @@ void MeshInstance::_update_skinning() {
 	RID skeleton = skin_ref->get_skeleton();
 	ERR_FAIL_COND(!skeleton.is_valid());
 
+	Vector3 aabb_min = Vector3(FLT_MAX, FLT_MAX, FLT_MAX);
+	Vector3 aabb_max = Vector3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+
 	VisualServer *visual_server = VisualServer::get_singleton();
 
 	// Prepare bone transforms.
@@ -416,7 +419,7 @@ void MeshInstance::_update_skinning() {
 		uint32_t array_offsets_write[Mesh::ARRAY_MAX];
 		uint32_t array_strides_write[Mesh::ARRAY_MAX];
 		visual_server->mesh_surface_make_offsets_from_format(format_write, vertex_count_write, index_count_write, array_offsets_write, array_strides_write);
-		ERR_FAIL_COND(array_strides_write[Mesh::ARRAY_VERTEX] != array_strides_write[Mesh::ARRAY_NORMAL])
+		ERR_FAIL_COND(array_strides_write[Mesh::ARRAY_VERTEX] != array_strides_write[Mesh::ARRAY_NORMAL]);
 		const uint32_t stride_write = array_strides_write[Mesh::ARRAY_VERTEX];
 		const uint32_t offset_vertices_write = array_offsets_write[Mesh::ARRAY_VERTEX];
 		const uint32_t offset_normals_write = array_offsets_write[Mesh::ARRAY_NORMAL];
@@ -438,7 +441,7 @@ void MeshInstance::_update_skinning() {
 		uint32_t array_offsets[Mesh::ARRAY_MAX];
 		uint32_t array_strides[Mesh::ARRAY_MAX];
 		visual_server->mesh_surface_make_offsets_from_format(format_read, vertex_count, index_count, array_offsets, array_strides);
-		ERR_FAIL_COND(array_strides[Mesh::ARRAY_VERTEX] != array_strides[Mesh::ARRAY_NORMAL])
+		ERR_FAIL_COND(array_strides[Mesh::ARRAY_VERTEX] != array_strides[Mesh::ARRAY_NORMAL]);
 		const uint32_t stride = array_strides[Mesh::ARRAY_VERTEX];
 		const uint32_t offset_vertices = array_offsets[Mesh::ARRAY_VERTEX];
 		const uint32_t offset_normals = array_offsets[Mesh::ARRAY_NORMAL];
@@ -499,10 +502,19 @@ void MeshInstance::_update_skinning() {
 					tangent = transform.basis.xform(tangent_read);
 				}
 			}
+
+			aabb_min.x = MIN(aabb_min.x, vertex.x);
+			aabb_min.y = MIN(aabb_min.y, vertex.y);
+			aabb_min.z = MIN(aabb_min.z, vertex.z);
+			aabb_max.x = MAX(aabb_max.x, vertex.x);
+			aabb_max.y = MAX(aabb_max.y, vertex.y);
+			aabb_max.z = MAX(aabb_max.z, vertex.z);
 		}
 
 		visual_server->mesh_surface_update_region(mesh_rid, surface_index, 0, buffer);
 	}
+
+	visual_server->mesh_set_custom_aabb(mesh_rid, AABB(aabb_min, aabb_max - aabb_min));
 
 	software_skinning_flags |= SoftwareSkinning::FLAG_BONES_READY;
 }

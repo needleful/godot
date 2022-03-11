@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -58,8 +58,8 @@ void Basis::invert() {
 		cofac(1, 1, 2, 2), cofac(1, 2, 2, 0), cofac(1, 0, 2, 1)
 	};
 	real_t det = elements[0][0] * co[0] +
-				 elements[0][1] * co[1] +
-				 elements[0][2] * co[2];
+			elements[0][1] * co[1] +
+			elements[0][2] * co[2];
 #ifdef MATH_CHECKS
 	ERR_FAIL_COND(det == 0);
 #endif
@@ -272,10 +272,7 @@ Vector3 Basis::get_scale() const {
 	//
 	// The rotation part of this decomposition is returned by get_rotation* functions.
 	real_t det_sign = SGN(determinant());
-	return det_sign * Vector3(
-							  Vector3(elements[0][0], elements[1][0], elements[2][0]).length(),
-							  Vector3(elements[0][1], elements[1][1], elements[2][1]).length(),
-							  Vector3(elements[0][2], elements[1][2], elements[2][2]).length());
+	return det_sign * get_scale_abs();
 }
 
 // Decomposes a Basis into a rotation-reflection matrix (an element of the group O(3)) and a positive scaling matrix as B = O.S.
@@ -768,7 +765,7 @@ Basis::operator String() const {
 
 Quat Basis::get_quat() const {
 #ifdef MATH_CHECKS
-	ERR_FAIL_COND_V_MSG(!is_rotation(), Quat(), "Basis must be normalized in order to be casted to a Quaternion. Use get_rotation_quat() or call orthonormalized() instead.");
+	ERR_FAIL_COND_V_MSG(!is_rotation(), Quat(), "Basis must be normalized in order to be casted to a Quaternion. Use get_rotation_quat() or call orthonormalized() if the Basis contains linearly independent vectors.");
 #endif
 	/* Allow getting a quaternion from an unnormalized transform */
 	Basis m = *this;
@@ -784,9 +781,9 @@ Quat Basis::get_quat() const {
 		temp[1] = ((m.elements[0][2] - m.elements[2][0]) * s);
 		temp[2] = ((m.elements[1][0] - m.elements[0][1]) * s);
 	} else {
-		int i = m.elements[0][0] < m.elements[1][1] ?
-						  (m.elements[1][1] < m.elements[2][2] ? 2 : 1) :
-						  (m.elements[0][0] < m.elements[2][2] ? 2 : 0);
+		int i = m.elements[0][0] < m.elements[1][1]
+				? (m.elements[1][1] < m.elements[2][2] ? 2 : 1)
+				: (m.elements[0][0] < m.elements[2][2] ? 2 : 0);
 		int j = (i + 1) % 3;
 		int k = (i + 2) % 3;
 

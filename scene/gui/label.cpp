@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -401,13 +401,13 @@ void Label::regenerate_word_cache() {
 		// if your language is not well supported, consider helping improve
 		// the unicode support in Godot.
 		bool separatable = (current >= 0x2E08 && current <= 0x9FFF) || // CJK scripts and symbols.
-						   (current >= 0xAC00 && current <= 0xD7FF) || // Hangul Syllables and Hangul Jamo Extended-B.
-						   (current >= 0xF900 && current <= 0xFAFF) || // CJK Compatibility Ideographs.
-						   (current >= 0xFE30 && current <= 0xFE4F) || // CJK Compatibility Forms.
-						   (current >= 0xFF65 && current <= 0xFF9F) || // Halfwidth forms of katakana
-						   (current >= 0xFFA0 && current <= 0xFFDC) || // Halfwidth forms of compatibility jamo characters for Hangul
-						   (current >= 0x20000 && current <= 0x2FA1F) || // CJK Unified Ideographs Extension B ~ F and CJK Compatibility Ideographs Supplement.
-						   (current >= 0x30000 && current <= 0x3134F); // CJK Unified Ideographs Extension G.
+				(current >= 0xAC00 && current <= 0xD7FF) || // Hangul Syllables and Hangul Jamo Extended-B.
+				(current >= 0xF900 && current <= 0xFAFF) || // CJK Compatibility Ideographs.
+				(current >= 0xFE30 && current <= 0xFE4F) || // CJK Compatibility Forms.
+				(current >= 0xFF65 && current <= 0xFF9F) || // Halfwidth forms of katakana
+				(current >= 0xFFA0 && current <= 0xFFDC) || // Halfwidth forms of compatibility jamo characters for Hangul
+				(current >= 0x20000 && current <= 0x2FA1F) || // CJK Unified Ideographs Extension B ~ F and CJK Compatibility Ideographs Supplement.
+				(current >= 0x30000 && current <= 0x3134F); // CJK Unified Ideographs Extension G.
 		bool insert_newline = false;
 		real_t char_width = 0;
 

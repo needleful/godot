@@ -29,7 +29,7 @@
 		    some_key = 42,
 		}
 		[/codeblock]
-		You can access a dictionary's values by referencing the appropriate key. In the above example, [code]points_dir["White"][/code] will return [code]50[/code]. You can also write [code]points_dir.White[/code], which is equivalent. However, you'll have to use the bracket syntax if the key you're accessing the dictionary with isn't a fixed string (such as a number or variable).
+		You can access a dictionary's values by referencing the appropriate key. In the above example, [code]points_dict["White"][/code] will return [code]50[/code]. You can also write [code]points_dict.White[/code], which is equivalent. However, you'll have to use the bracket syntax if the key you're accessing the dictionary with isn't a fixed string (such as a number or variable).
 		[codeblock]
 		export(string, "White", "Yellow", "Orange") var my_color
 		var points_dict = {"White": 50, "Yellow": 75, "Orange": 100}
@@ -50,7 +50,7 @@
 		Finally, dictionaries can contain different types of keys and values in the same dictionary:
 		[codeblock]
 		# This is a valid dictionary.
-		# To access the string "Nested value" below, use `my_dir.sub_dir.sub_key` or `my_dir["sub_dir"]["sub_key"]`.
+		# To access the string "Nested value" below, use `my_dict.sub_dict.sub_key` or `my_dict["sub_dict"]["sub_key"]`.
 		# Indexing styles can be mixed and matched depending on your needs.
 		var my_dict = {
 		    "String Key": 5,
@@ -84,7 +84,7 @@
 		[b]Note:[/b] When declaring a dictionary with [code]const[/code], the dictionary itself can still be mutated by defining the values of individual keys. Using [code]const[/code] will only prevent assigning the constant with another value after it was initialized.
 	</description>
 	<tutorials>
-		<link title="GDScript basics: Dictionary">https://docs.godotengine.org/en/3.4/getting_started/scripting/gdscript/gdscript_basics.html#dictionary</link>
+		<link title="GDScript basics: Dictionary">https://docs.godotengine.org/en/3.4/tutorials/scripting/gdscript/gdscript_basics.html#dictionary</link>
 		<link title="3D Voxel Demo">https://godotengine.org/asset-library/asset/676</link>
 		<link title="OS Test Demo">https://godotengine.org/asset-library/asset/677</link>
 	</tutorials>
@@ -111,7 +111,8 @@
 			<return type="bool" />
 			<argument index="0" name="key" type="Variant" />
 			<description>
-				Erase a dictionary key/value pair by key. Returns [code]true[/code] if the given key was present in the dictionary, [code]false[/code] otherwise. Does not erase elements while iterating over the dictionary.
+				Erase a dictionary key/value pair by key. Returns [code]true[/code] if the given key was present in the dictionary, [code]false[/code] otherwise.
+				[b]Note:[/b] Don't erase elements while iterating over the dictionary. You can iterate over the [method keys] array instead.
 			</description>
 		</method>
 		<method name="get">
@@ -146,7 +147,7 @@
 		<method name="hash">
 			<return type="int" />
 			<description>
-				Returns a hashed integer value representing the dictionary contents. This can be used to compare dictionaries by value:
+				Returns a hashed 32-bit integer value representing the dictionary contents. This can be used to compare dictionaries by value:
 				[codeblock]
 				var dict1 = {0: 10}
 				var dict2 = {0: 10}
@@ -154,6 +155,7 @@
 				print(dict1.hash() == dict2.hash())
 				[/codeblock]
 				[b]Note:[/b] Dictionaries with the same keys/values but in a different order will have a different hash.
+				[b]Note:[/b] Dictionaries with equal content will always produce identical hash values. However, the reverse is not true. Returning identical hash values does [i]not[/i] imply the dictionaries are equal, because different dictionaries can have identical hash values due to hash collisions.
 			</description>
 		</method>
 		<method name="keys">

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -91,7 +91,7 @@ RID RasterizerCanvasBaseGLES3::light_internal_create() {
 
 	glGenBuffers(1, &li->ubo);
 	glBindBuffer(GL_UNIFORM_BUFFER, li->ubo);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(LightInternal::UBOData), &state.canvas_item_ubo_data, GL_DYNAMIC_DRAW);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(LightInternal::UBOData), nullptr, GL_DYNAMIC_DRAW);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 	return light_internal_owner.make_rid(li);
@@ -554,7 +554,7 @@ void RasterizerCanvasBaseGLES3::_draw_gui_primitive(int p_points, const Vector2 
 		stride += 1;
 	}
 
-	RAST_DEV_DEBUG_ASSERT(p_points <= 4);
+	DEV_ASSERT(p_points <= 4);
 	float b[(2 + 2 + 4 + 1) * 4];
 
 	for (int i = 0; i < p_points; i++) {
@@ -717,7 +717,7 @@ void RasterizerCanvasBaseGLES3::render_rect_nvidia_workaround(const Item::Comman
 }
 
 void RasterizerCanvasBaseGLES3::_copy_texscreen(const Rect2 &p_rect) {
-	ERR_FAIL_COND_MSG(storage->frame.current_rt->effects.mip_maps[0].sizes.size() == 0, "Can't use screen texture copying in a render target configured without copy buffers.");
+	ERR_FAIL_COND_MSG(storage->frame.current_rt->effects.mip_maps[0].sizes.size() == 0, "Can't use screen texture copying in a render target configured without copy buffers. To resolve this, change the viewport's Usage property to \"2D\" or \"3D\" instead of \"2D Without Sampling\" or \"3D Without Effects\" respectively.");
 
 	glDisable(GL_BLEND);
 
@@ -897,10 +897,9 @@ void RasterizerCanvasBaseGLES3::canvas_light_shadow_buffer_update(RID p_buffer, 
 
 			if (transformed_cull_cache != VS::CANVAS_OCCLUDER_POLYGON_CULL_DISABLED &&
 					(p_light_xform.basis_determinant() * instance->xform_cache.basis_determinant()) < 0) {
-				transformed_cull_cache =
-						transformed_cull_cache == VS::CANVAS_OCCLUDER_POLYGON_CULL_CLOCKWISE ?
-								  VS::CANVAS_OCCLUDER_POLYGON_CULL_COUNTER_CLOCKWISE :
-								  VS::CANVAS_OCCLUDER_POLYGON_CULL_CLOCKWISE;
+				transformed_cull_cache = (transformed_cull_cache == VS::CANVAS_OCCLUDER_POLYGON_CULL_CLOCKWISE)
+						? VS::CANVAS_OCCLUDER_POLYGON_CULL_COUNTER_CLOCKWISE
+						: VS::CANVAS_OCCLUDER_POLYGON_CULL_CLOCKWISE;
 			}
 
 			if (cull != transformed_cull_cache) {

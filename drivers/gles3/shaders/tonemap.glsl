@@ -123,7 +123,7 @@ vec4 texture2D_bicubic(sampler2D tex, vec2 uv, int p_lod) {
 	vec2 p3 = (vec2(iuv.x + h1x, iuv.y + h1y) - vec2(0.5f)) * texel_size;
 
 	return (g0(fuv.y) * (g0x * textureLod(tex, p0, lod) + g1x * textureLod(tex, p1, lod))) +
-		   (g1(fuv.y) * (g0x * textureLod(tex, p2, lod) + g1x * textureLod(tex, p3, lod)));
+			(g1(fuv.y) * (g0x * textureLod(tex, p2, lod) + g1x * textureLod(tex, p3, lod)));
 }
 
 #define GLOW_TEXTURE_SAMPLE(m_tex, m_uv, m_lod) texture2D_bicubic(m_tex, m_uv, m_lod)
@@ -163,6 +163,37 @@ vec3 tonemap_aces(vec3 color, float white) {
 	return clamp(color_tonemapped / white_tonemapped, vec3(0.0f), vec3(1.0f));
 }
 
+// Adapted from https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
+// (MIT License).
+vec3 tonemap_aces_fitted(vec3 color, float white) {
+	const float exposure_bias = 1.8f;
+	const float A = 0.0245786f;
+	const float B = 0.000090537f;
+	const float C = 0.983729f;
+	const float D = 0.432951f;
+	const float E = 0.238081f;
+
+	// Exposure bias baked into transform to save shader instructions. Equivalent to `color *= exposure_bias`
+	const mat3 rgb_to_rrt = mat3(
+			vec3(0.59719f * exposure_bias, 0.35458f * exposure_bias, 0.04823f * exposure_bias),
+			vec3(0.07600f * exposure_bias, 0.90834f * exposure_bias, 0.01566f * exposure_bias),
+			vec3(0.02840f * exposure_bias, 0.13383f * exposure_bias, 0.83777f * exposure_bias));
+
+	const mat3 odt_to_rgb = mat3(
+			vec3(1.60475f, -0.53108f, -0.07367f),
+			vec3(-0.10208f, 1.10813f, -0.00605f),
+			vec3(-0.00327f, -0.07276f, 1.07602f));
+
+	color *= rgb_to_rrt;
+	vec3 color_tonemapped = (color * (color + A) - B) / (color * (C * color + D) + E);
+	color_tonemapped *= odt_to_rgb;
+
+	white *= exposure_bias;
+	float white_tonemapped = (white * (white + A) - B) / (white * (C * white + D) + E);
+
+	return clamp(color_tonemapped / white_tonemapped, vec3(0.0f), vec3(1.0f));
+}
+
 vec3 tonemap_reinhard(vec3 color, float white) {
 	return clamp((white * color + color) / (color * white + white), vec3(0.0f), vec3(1.0f));
 }
@@ -174,6 +205,12 @@ vec3 linear_to_srgb(vec3 color) { // convert linear rgb to srgb, assumes clamped
 
 // inputs are LINEAR, If Linear tonemapping is selected no transform is performed else outputs are clamped [0, 1] color
 vec3 apply_tonemapping(vec3 color, float white) {
+	// Ensure color values are positive.
+	// They can be negative in the case of negative lights, which leads to undesired behavior.
+#if defined(USE_REINHARD_TONEMAPPER) || defined(USE_FILMIC_TONEMAPPER) || defined(USE_ACES_TONEMAPPER) || defined(USE_ACES_FITTED_TONEMAPPER)
+	color = max(vec3(0.0f), color);
+#endif
+
 #ifdef USE_REINHARD_TONEMAPPER
 	return tonemap_reinhard(color, white);
 #endif
@@ -184,6 +221,10 @@ vec3 apply_tonemapping(vec3 color, float white) {
 
 #ifdef USE_ACES_TONEMAPPER
 	return tonemap_aces(color, white);
+#endif
+
+#ifdef USE_ACES_FITTED_TONEMAPPER
+	return tonemap_aces_fitted(color, white);
 #endif
 
 	return color; // no other selected -> linear: no color transform applied
@@ -291,14 +332,14 @@ vec3 apply_fxaa(vec3 color, float exposure, vec2 uv_interp, vec2 pixel_size) {
 	dir.y = ((lumaNW + lumaSW) - (lumaNE + lumaSE));
 
 	float dirReduce = max((lumaNW + lumaNE + lumaSW + lumaSE) *
-								  (0.25 * FXAA_REDUCE_MUL),
+					(0.25 * FXAA_REDUCE_MUL),
 			FXAA_REDUCE_MIN);
 
 	float rcpDirMin = 1.0 / (min(abs(dir.x), abs(dir.y)) + dirReduce);
 	dir = min(vec2(FXAA_SPAN_MAX, FXAA_SPAN_MAX),
 				  max(vec2(-FXAA_SPAN_MAX, -FXAA_SPAN_MAX),
 						  dir * rcpDirMin)) *
-		  pixel_size;
+			pixel_size;
 
 	vec3 rgbA = 0.5 * exposure * (textureLod(source, uv_interp + dir * (1.0 / 3.0 - 0.5), 0.0).xyz + textureLod(source, uv_interp + dir * (2.0 / 3.0 - 0.5), 0.0).xyz);
 	vec3 rgbB = rgbA * 0.5 + 0.25 * exposure * (textureLod(source, uv_interp + dir * -0.5, 0.0).xyz + textureLod(source, uv_interp + dir * 0.5, 0.0).xyz);
@@ -401,9 +442,7 @@ void main() {
 #endif
 
 	// Early Tonemap & SRGB Conversion; note that Linear tonemapping does not clamp to [0, 1]; some operations below expect a [0, 1] range and will clamp
-	// Ensure color values are positive.
-	// They can be negative in the case of negative lights, which leads to undesired behavior.
-	color = apply_tonemapping(max(vec3(0.0), color), white);
+	color = apply_tonemapping(color, white);
 
 #ifdef KEEP_3D_LINEAR
 	// leave color as is (-> don't convert to SRGB)

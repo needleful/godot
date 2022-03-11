@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -35,6 +35,7 @@
 #include "core/os/os.h"
 #include "core/project_settings.h"
 #include "scene/2d/collision_object_2d.h"
+#include "scene/2d/listener_2d.h"
 #include "scene/3d/camera.h"
 #include "scene/3d/collision_object.h"
 #include "scene/3d/listener.h"
@@ -53,16 +54,16 @@
 #include "servers/physics_2d_server.h"
 
 void ViewportTexture::setup_local_to_scene() {
+	Node *local_scene = get_local_scene();
+	if (!local_scene) {
+		return;
+	}
+
 	if (vp) {
 		vp->viewport_textures.erase(this);
 	}
 
 	vp = nullptr;
-
-	Node *local_scene = get_local_scene();
-	if (!local_scene) {
-		return;
-	}
 
 	Node *vpn = local_scene->get_node(path);
 	ERR_FAIL_COND_MSG(!vpn, "ViewportTexture: Path to node is invalid.");
@@ -332,7 +333,6 @@ void Viewport::_notification(int p_what) {
 #endif
 
 			// Enable processing for tooltips, collision debugging, physics object picking, etc.
-			set_process_internal(true);
 			set_physics_process_internal(true);
 
 		} break;
@@ -360,16 +360,6 @@ void Viewport::_notification(int p_what) {
 			remove_from_group("_viewports");
 
 			VS::get_singleton()->viewport_set_active(viewport, false);
-
-		} break;
-		case NOTIFICATION_INTERNAL_PROCESS: {
-			if (gui.tooltip_timer >= 0) {
-				gui.tooltip_timer -= get_process_delta_time();
-				if (gui.tooltip_timer < 0) {
-					_gui_show_tooltip();
-				}
-			}
-
 		} break;
 		case NOTIFICATION_INTERNAL_PHYSICS_PROCESS: {
 			if (get_tree()->is_debugging_collisions_hint() && contact_2d_debug.is_valid()) {
@@ -720,6 +710,7 @@ void Viewport::set_size(const Size2 &p_size) {
 	VS::get_singleton()->viewport_set_size(viewport, size.width, size.height);
 
 	_update_stretch_transform();
+	update_configuration_warning();
 
 	emit_signal("size_changed");
 }
@@ -782,12 +773,15 @@ void Viewport::set_as_audio_listener_2d(bool p_enable) {
 	}
 
 	audio_listener_2d = p_enable;
-
 	_update_listener_2d();
 }
 
 bool Viewport::is_audio_listener_2d() const {
 	return audio_listener_2d;
+}
+
+Listener2D *Viewport::get_listener_2d() const {
+	return listener_2d;
 }
 
 void Viewport::enable_canvas_transform_override(bool p_enable) {
@@ -975,6 +969,21 @@ void Viewport::_camera_make_next_current(Camera *p_exclude) {
 	}
 }
 #endif
+
+void Viewport::_listener_2d_set(Listener2D *p_listener) {
+	if (listener_2d == p_listener) {
+		return;
+	} else if (listener_2d) {
+		listener_2d->clear_current();
+	}
+	listener_2d = p_listener;
+}
+
+void Viewport::_listener_2d_remove(Listener2D *p_listener) {
+	if (listener_2d == p_listener) {
+		listener_2d = nullptr;
+	}
+}
 
 void Viewport::_canvas_layer_add(CanvasLayer *p_canvas_layer) {
 	canvas_layers.insert(p_canvas_layer);
@@ -1479,7 +1488,10 @@ void Viewport::_gui_sort_roots() {
 
 void Viewport::_gui_cancel_tooltip() {
 	gui.tooltip_control = nullptr;
-	gui.tooltip_timer = -1;
+	if (gui.tooltip_timer.is_valid()) {
+		gui.tooltip_timer->release_connections();
+		gui.tooltip_timer = Ref<SceneTreeTimer>();
+	}
 	if (gui.tooltip_popup) {
 		gui.tooltip_popup->queue_delete();
 		gui.tooltip_popup = nullptr;
@@ -1605,10 +1617,10 @@ void Viewport::_gui_call_input(Control *p_control, const Ref<InputEvent> &p_inpu
 	Ref<InputEventMouseButton> mb = p_input;
 
 	bool cant_stop_me_now = (mb.is_valid() &&
-							 (mb->get_button_index() == BUTTON_WHEEL_DOWN ||
-									 mb->get_button_index() == BUTTON_WHEEL_UP ||
-									 mb->get_button_index() == BUTTON_WHEEL_LEFT ||
-									 mb->get_button_index() == BUTTON_WHEEL_RIGHT));
+			(mb->get_button_index() == BUTTON_WHEEL_DOWN ||
+					mb->get_button_index() == BUTTON_WHEEL_UP ||
+					mb->get_button_index() == BUTTON_WHEEL_LEFT ||
+					mb->get_button_index() == BUTTON_WHEEL_RIGHT));
 	Ref<InputEventPanGesture> pn = p_input;
 	cant_stop_me_now = pn.is_valid() || cant_stop_me_now;
 
@@ -1821,7 +1833,7 @@ bool Viewport::_gui_drop(Control *p_at_control, Point2 p_at_pos, bool p_just_che
 }
 
 void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
-	ERR_FAIL_COND(p_event.is_null())
+	ERR_FAIL_COND(p_event.is_null());
 
 	//?
 	/*
@@ -2219,10 +2231,16 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 				}
 			}
 
-			if (can_tooltip && !is_tooltip_shown) {
+			if (can_tooltip && !is_tooltip_shown && over->can_process()) {
+				if (gui.tooltip_timer.is_valid()) {
+					gui.tooltip_timer->release_connections();
+					gui.tooltip_timer = Ref<SceneTreeTimer>();
+				}
 				gui.tooltip_control = over;
 				gui.tooltip_pos = mpos;
-				gui.tooltip_timer = gui.tooltip_delay;
+				gui.tooltip_timer = get_tree()->create_timer(gui.tooltip_delay);
+				gui.tooltip_timer->set_ignore_time_scale(true);
+				gui.tooltip_timer->connect("timeout", this, "_gui_show_tooltip");
 			}
 		}
 
@@ -2408,28 +2426,57 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 		if (from && p_event->is_pressed()) {
 			Control *next = nullptr;
 
-			if (p_event->is_action_pressed("ui_focus_next", true)) {
-				next = from->find_next_valid_focus();
-			}
+			Ref<InputEventJoypadMotion> joypadmotion_event = p_event;
+			if (joypadmotion_event.is_valid()) {
+				Input *input = Input::get_singleton();
 
-			if (p_event->is_action_pressed("ui_focus_prev", true)) {
-				next = from->find_prev_valid_focus();
-			}
+				if (p_event->is_action_pressed("ui_focus_next") && input->is_action_just_pressed("ui_focus_next")) {
+					next = from->find_next_valid_focus();
+				}
 
-			if (!mods && p_event->is_action_pressed("ui_up", true)) {
-				next = from->_get_focus_neighbour(MARGIN_TOP);
-			}
+				if (p_event->is_action_pressed("ui_focus_prev") && input->is_action_just_pressed("ui_focus_prev")) {
+					next = from->find_prev_valid_focus();
+				}
 
-			if (!mods && p_event->is_action_pressed("ui_left", true)) {
-				next = from->_get_focus_neighbour(MARGIN_LEFT);
-			}
+				if (!mods && p_event->is_action_pressed("ui_up") && input->is_action_just_pressed("ui_up")) {
+					next = from->_get_focus_neighbour(MARGIN_TOP);
+				}
 
-			if (!mods && p_event->is_action_pressed("ui_right", true)) {
-				next = from->_get_focus_neighbour(MARGIN_RIGHT);
-			}
+				if (!mods && p_event->is_action_pressed("ui_left") && input->is_action_just_pressed("ui_left")) {
+					next = from->_get_focus_neighbour(MARGIN_LEFT);
+				}
 
-			if (!mods && p_event->is_action_pressed("ui_down", true)) {
-				next = from->_get_focus_neighbour(MARGIN_BOTTOM);
+				if (!mods && p_event->is_action_pressed("ui_right") && input->is_action_just_pressed("ui_right")) {
+					next = from->_get_focus_neighbour(MARGIN_RIGHT);
+				}
+
+				if (!mods && p_event->is_action_pressed("ui_down") && input->is_action_just_pressed("ui_down")) {
+					next = from->_get_focus_neighbour(MARGIN_BOTTOM);
+				}
+			} else {
+				if (p_event->is_action_pressed("ui_focus_next", true)) {
+					next = from->find_next_valid_focus();
+				}
+
+				if (p_event->is_action_pressed("ui_focus_prev", true)) {
+					next = from->find_prev_valid_focus();
+				}
+
+				if (!mods && p_event->is_action_pressed("ui_up", true)) {
+					next = from->_get_focus_neighbour(MARGIN_TOP);
+				}
+
+				if (!mods && p_event->is_action_pressed("ui_left", true)) {
+					next = from->_get_focus_neighbour(MARGIN_LEFT);
+				}
+
+				if (!mods && p_event->is_action_pressed("ui_right", true)) {
+					next = from->_get_focus_neighbour(MARGIN_RIGHT);
+				}
+
+				if (!mods && p_event->is_action_pressed("ui_down", true)) {
+					next = from->_get_focus_neighbour(MARGIN_BOTTOM);
+				}
 			}
 
 			if (next) {
@@ -2935,11 +2982,11 @@ String Viewport::get_configuration_warning() const {
 
 	String warning = Node::get_configuration_warning();
 
-	if (size.x == 0 || size.y == 0) {
+	if (size.x <= 1 || size.y <= 1) {
 		if (warning != String()) {
 			warning += "\n\n";
 		}
-		warning += TTR("Viewport size must be greater than 0 to render anything.");
+		warning += TTR("The Viewport size must be greater than or equal to 2 pixels on both dimensions to render anything.");
 	}
 	return warning;
 }
@@ -3231,7 +3278,7 @@ void Viewport::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "hdr"), "set_hdr", "get_hdr");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "disable_3d"), "set_disable_3d", "is_3d_disabled");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "keep_3d_linear"), "set_keep_3d_linear", "get_keep_3d_linear");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "usage", PROPERTY_HINT_ENUM, "2D,2D No-Sampling,3D,3D No-Effects"), "set_usage", "get_usage");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "usage", PROPERTY_HINT_ENUM, "2D,2D Without Sampling,3D,3D Without Effects"), "set_usage", "get_usage");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "render_direct_to_screen"), "set_use_render_direct_to_screen", "is_using_render_direct_to_screen");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "debug_draw", PROPERTY_HINT_ENUM, "Disabled,Unshaded,Overdraw,Wireframe"), "set_debug_draw", "get_debug_draw");
 	ADD_GROUP("Render Target", "render_target_");

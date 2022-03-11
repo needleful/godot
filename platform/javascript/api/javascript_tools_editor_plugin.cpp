@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -118,9 +118,10 @@ void JavaScriptToolsEditorPlugin::_zip_recursive(String p_path, String p_base_pa
 	}
 	dir->list_dir_begin();
 	String cur = dir->get_next();
+	String project_data_dir_name = ProjectSettings::get_singleton()->get_project_data_dir_name();
 	while (!cur.empty()) {
 		String cs = p_path.plus_file(cur);
-		if (cur == "." || cur == ".." || cur == ".import") {
+		if (cur == "." || cur == ".." || cur == project_data_dir_name) {
 			// Skip
 		} else if (dir->current_is_dir()) {
 			String path = cs.replace_first(p_base_path, "") + "/";

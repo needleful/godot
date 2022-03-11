@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -203,6 +203,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	Color control_font_color_lower = Color(0.63, 0.63, 0.63);
 	Color control_font_color_low = Color(0.69, 0.69, 0.69);
 	Color control_font_color_hover = Color(0.94, 0.94, 0.94);
+	Color control_font_color_focus = Color(0.94, 0.94, 0.94);
 	Color control_font_color_disabled = Color(0.9, 0.9, 0.9, 0.2);
 	Color control_font_color_pressed = Color(1, 1, 1);
 	Color font_color_selection = Color(0.49, 0.49, 0.49);
@@ -237,6 +238,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_color("font_color", "Button", control_font_color);
 	theme->set_color("font_color_pressed", "Button", control_font_color_pressed);
 	theme->set_color("font_color_hover", "Button", control_font_color_hover);
+	theme->set_color("font_color_focus", "Button", control_font_color_focus);
 	theme->set_color("font_color_disabled", "Button", control_font_color_disabled);
 
 	theme->set_constant("hseparation", "Button", 2 * scale);
@@ -250,6 +252,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_color("font_color", "LinkButton", control_font_color);
 	theme->set_color("font_color_pressed", "LinkButton", control_font_color_pressed);
 	theme->set_color("font_color_hover", "LinkButton", control_font_color_hover);
+	theme->set_color("font_color_focus", "LinkButton", control_font_color_focus);
 
 	theme->set_constant("underline_spacing", "LinkButton", 2 * scale);
 
@@ -266,6 +269,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_color("font_color", "ColorPickerButton", Color(1, 1, 1, 1));
 	theme->set_color("font_color_pressed", "ColorPickerButton", Color(0.8, 0.8, 0.8, 1));
 	theme->set_color("font_color_hover", "ColorPickerButton", Color(1, 1, 1, 1));
+	theme->set_color("font_color_focus", "ColorPickerButton", Color(1, 1, 1, 1));
 	theme->set_color("font_color_disabled", "ColorPickerButton", Color(0.9, 0.9, 0.9, 0.3));
 
 	theme->set_constant("hseparation", "ColorPickerButton", 2 * scale);
@@ -282,6 +286,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_color("font_color", "ToolButton", control_font_color);
 	theme->set_color("font_color_pressed", "ToolButton", control_font_color_pressed);
 	theme->set_color("font_color_hover", "ToolButton", control_font_color_hover);
+	theme->set_color("font_color_focus", "ToolButton", control_font_color_focus);
 	theme->set_color("font_color_disabled", "ToolButton", Color(0.9, 0.95, 1, 0.3));
 
 	theme->set_constant("hseparation", "ToolButton", 3);
@@ -307,6 +312,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_color("font_color", "OptionButton", control_font_color);
 	theme->set_color("font_color_pressed", "OptionButton", control_font_color_pressed);
 	theme->set_color("font_color_hover", "OptionButton", control_font_color_hover);
+	theme->set_color("font_color_focus", "OptionButton", control_font_color_focus);
 	theme->set_color("font_color_disabled", "OptionButton", control_font_color_disabled);
 
 	theme->set_constant("hseparation", "OptionButton", 2 * scale);
@@ -325,6 +331,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_color("font_color", "MenuButton", control_font_color);
 	theme->set_color("font_color_pressed", "MenuButton", control_font_color_pressed);
 	theme->set_color("font_color_hover", "MenuButton", control_font_color_hover);
+	theme->set_color("font_color_focus", "MenuButton", control_font_color_focus);
 	theme->set_color("font_color_disabled", "MenuButton", Color(1, 1, 1, 0.3));
 
 	theme->set_constant("hseparation", "MenuButton", 3 * scale);
@@ -364,6 +371,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_color("font_color_pressed", "CheckBox", control_font_color_pressed);
 	theme->set_color("font_color_hover", "CheckBox", control_font_color_hover);
 	theme->set_color("font_color_hover_pressed", "CheckBox", control_font_color_pressed);
+	theme->set_color("font_color_focus", "CheckBox", control_font_color_focus);
 	theme->set_color("font_color_disabled", "CheckBox", control_font_color_disabled);
 
 	theme->set_constant("hseparation", "CheckBox", 4 * scale);
@@ -395,6 +403,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_color("font_color_pressed", "CheckButton", control_font_color_pressed);
 	theme->set_color("font_color_hover", "CheckButton", control_font_color_hover);
 	theme->set_color("font_color_hover_pressed", "CheckButton", control_font_color_pressed);
+	theme->set_color("font_color_focus", "CheckButton", control_font_color_focus);
 	theme->set_color("font_color_disabled", "CheckButton", control_font_color_disabled);
 
 	theme->set_constant("hseparation", "CheckButton", 4 * scale);
@@ -502,8 +511,10 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 
 	theme->set_icon("increment", "HScrollBar", empty_icon);
 	theme->set_icon("increment_highlight", "HScrollBar", empty_icon);
+	theme->set_icon("increment_pressed", "HScrollBar", empty_icon);
 	theme->set_icon("decrement", "HScrollBar", empty_icon);
 	theme->set_icon("decrement_highlight", "HScrollBar", empty_icon);
+	theme->set_icon("decrement_pressed", "HScrollBar", empty_icon);
 
 	// VScrollBar
 
@@ -515,8 +526,10 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 
 	theme->set_icon("increment", "VScrollBar", empty_icon);
 	theme->set_icon("increment_highlight", "VScrollBar", empty_icon);
+	theme->set_icon("increment_pressed", "VScrollBar", empty_icon);
 	theme->set_icon("decrement", "VScrollBar", empty_icon);
 	theme->set_icon("decrement_highlight", "VScrollBar", empty_icon);
+	theme->set_icon("decrement_pressed", "VScrollBar", empty_icon);
 
 	// HSlider
 
@@ -888,8 +901,9 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_constant("bezier_len_neg", "GraphEdit", 160 * scale);
 
 	// Visual Node Ports
-	theme->set_constant("port_grab_distance_horizontal", "GraphEdit", 48 * scale);
-	theme->set_constant("port_grab_distance_vertical", "GraphEdit", 6 * scale);
+
+	theme->set_constant("port_grab_distance_horizontal", "GraphEdit", 24 * scale);
+	theme->set_constant("port_grab_distance_vertical", "GraphEdit", 26 * scale);
 
 	theme->set_stylebox("bg", "GraphEditMinimap", make_flat_stylebox(Color(0.24, 0.24, 0.24), 0, 0, 0, 0));
 	Ref<StyleBoxFlat> style_minimap_camera = make_flat_stylebox(Color(0.65, 0.65, 0.65, 0.2), 0, 0, 0, 0);

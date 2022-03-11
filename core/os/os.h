@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -427,6 +427,7 @@ public:
 	RenderThreadMode get_render_thread_mode() const { return _render_thread_mode; }
 
 	virtual String get_locale() const;
+	String get_locale_language() const;
 
 	String get_safe_dir_name(const String &p_dir_name, bool p_allow_dir_separator = false) const;
 	virtual String get_godot_dir_name() const;
@@ -435,6 +436,7 @@ public:
 	virtual String get_config_path() const;
 	virtual String get_cache_path() const;
 	virtual String get_bundle_resource_dir() const;
+	virtual String get_bundle_icon_path() const;
 
 	virtual String get_user_data_dir() const;
 	virtual String get_resource_dir() const;

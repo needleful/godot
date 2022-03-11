@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -351,7 +351,7 @@ void EditorExportPlatformIOS::get_export_options(List<ExportOption> *r_options) 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "application/app_store_team_id"), ""));
 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "application/provisioning_profile_uuid_debug"), ""));
-	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "application/code_sign_identity_debug", PROPERTY_HINT_PLACEHOLDER_TEXT, "iPhone Developer"), "iPhone Developer"));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "application/code_sign_identity_debug", PROPERTY_HINT_PLACEHOLDER_TEXT, "iPhone Developer"), ""));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::INT, "application/export_method_debug", PROPERTY_HINT_ENUM, "App Store,Development,Ad-Hoc,Enterprise"), 1));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "application/provisioning_profile_uuid_release"), ""));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "application/code_sign_identity_release", PROPERTY_HINT_PLACEHOLDER_TEXT, "iPhone Distribution"), ""));
@@ -448,6 +448,10 @@ void EditorExportPlatformIOS::_fix_config_file(const Ref<EditorExportPreset> &p_
 		"scaleAspectFill",
 		"scaleToFill"
 	};
+	String dbg_sign_id = p_preset->get("application/code_sign_identity_debug").operator String().empty() ? "iPhone Developer" : p_preset->get("application/code_sign_identity_debug");
+	String rel_sign_id = p_preset->get("application/code_sign_identity_release").operator String().empty() ? "iPhone Distribution" : p_preset->get("application/code_sign_identity_release");
+	bool dbg_manual = !p_preset->get("application/provisioning_profile_uuid_debug").operator String().empty() || (dbg_sign_id != "iPhone Developer");
+	bool rel_manual = !p_preset->get("application/provisioning_profile_uuid_release").operator String().empty() || (rel_sign_id != "iPhone Distribution");
 	String str;
 	String strnew;
 	str.parse_utf8((const char *)pfile.ptr(), pfile.size());
@@ -488,13 +492,25 @@ void EditorExportPlatformIOS::_fix_config_file(const Ref<EditorExportPreset> &p_
 			strnew += lines[i].replace("$provisioning_profile_uuid_release", p_preset->get("application/provisioning_profile_uuid_release")) + "\n";
 		} else if (lines[i].find("$provisioning_profile_uuid_debug") != -1) {
 			strnew += lines[i].replace("$provisioning_profile_uuid_debug", p_preset->get("application/provisioning_profile_uuid_debug")) + "\n";
+		} else if (lines[i].find("$code_sign_style_debug") != -1) {
+			if (dbg_manual) {
+				strnew += lines[i].replace("$code_sign_style_debug", "Manual") + "\n";
+			} else {
+				strnew += lines[i].replace("$code_sign_style_debug", "Automatic") + "\n";
+			}
+		} else if (lines[i].find("$code_sign_style_release") != -1) {
+			if (rel_manual) {
+				strnew += lines[i].replace("$code_sign_style_release", "Manual") + "\n";
+			} else {
+				strnew += lines[i].replace("$code_sign_style_release", "Automatic") + "\n";
+			}
 		} else if (lines[i].find("$provisioning_profile_uuid") != -1) {
 			String uuid = p_debug ? p_preset->get("application/provisioning_profile_uuid_debug") : p_preset->get("application/provisioning_profile_uuid_release");
 			strnew += lines[i].replace("$provisioning_profile_uuid", uuid) + "\n";
 		} else if (lines[i].find("$code_sign_identity_debug") != -1) {
-			strnew += lines[i].replace("$code_sign_identity_debug", p_preset->get("application/code_sign_identity_debug")) + "\n";
+			strnew += lines[i].replace("$code_sign_identity_debug", dbg_sign_id) + "\n";
 		} else if (lines[i].find("$code_sign_identity_release") != -1) {
-			strnew += lines[i].replace("$code_sign_identity_release", p_preset->get("application/code_sign_identity_release")) + "\n";
+			strnew += lines[i].replace("$code_sign_identity_release", rel_sign_id) + "\n";
 		} else if (lines[i].find("$additional_plist_content") != -1) {
 			strnew += lines[i].replace("$additional_plist_content", p_config.plist_content) + "\n";
 		} else if (lines[i].find("$godot_archs") != -1) {
@@ -1045,10 +1061,18 @@ Error EditorExportPlatformIOS::_codesign(String p_file, void *p_userdata) {
 	if (p_file.ends_with(".dylib")) {
 		CodesignData *data = (CodesignData *)p_userdata;
 		print_line(String("Signing ") + p_file);
+
+		String sign_id;
+		if (data->debug) {
+			sign_id = data->preset->get("application/code_sign_identity_debug").operator String().empty() ? "iPhone Developer" : data->preset->get("application/code_sign_identity_debug");
+		} else {
+			sign_id = data->preset->get("application/code_sign_identity_release").operator String().empty() ? "iPhone Distribution" : data->preset->get("application/code_sign_identity_release");
+		}
+
 		List<String> codesign_args;
 		codesign_args.push_back("-f");
 		codesign_args.push_back("-s");
-		codesign_args.push_back(data->preset->get(data->debug ? "application/code_sign_identity_debug" : "application/code_sign_identity_release"));
+		codesign_args.push_back(sign_id);
 		codesign_args.push_back(p_file);
 		return OS::get_singleton()->execute("codesign", codesign_args, true);
 	}
@@ -1113,7 +1137,7 @@ void EditorExportPlatformIOS::_add_assets_to_project(const Ref<EditorExportPrese
 	String pbx_embeded_frameworks;
 
 	const String file_info_format = String("$build_id = {isa = PBXBuildFile; fileRef = $ref_id; };\n") +
-									"$ref_id = {isa = PBXFileReference; lastKnownFileType = $file_type; name = \"$name\"; path = \"$file_path\"; sourceTree = \"<group>\"; };\n";
+			"$ref_id = {isa = PBXFileReference; lastKnownFileType = $file_type; name = \"$name\"; path = \"$file_path\"; sourceTree = \"<group>\"; };\n";
 
 	for (int i = 0; i < p_additional_assets.size(); ++i) {
 		String additional_asset_info_format = file_info_format;
@@ -1377,7 +1401,7 @@ Error EditorExportPlatformIOS::_export_additional_assets(const String &p_out_dir
 		for (int j = 0; j < project_static_libs.size(); j++) {
 			project_static_libs.write[j] = project_static_libs[j].get_file(); // Only the file name as it's copied to the project
 		}
-		err = _export_additional_assets(p_out_dir, project_static_libs, true, true, r_exported_assets);
+		err = _export_additional_assets(p_out_dir, project_static_libs, true, false, r_exported_assets);
 		ERR_FAIL_COND_V(err, err);
 
 		Vector<String> ios_bundle_files = export_plugins[i]->get_ios_bundle_files();
@@ -1533,8 +1557,8 @@ Error EditorExportPlatformIOS::_export_ios_plugins(const Ref<EditorExportPreset>
 		String deinitialization_method = plugin.deinitialization_method + "();\n";
 
 		plugin_definition_cpp_code += definition_comment +
-									  "extern void " + initialization_method +
-									  "extern void " + deinitialization_method + "\n";
+				"extern void " + initialization_method +
+				"extern void " + deinitialization_method + "\n";
 
 		plugin_initialization_cpp_code += "\t" + initialization_method;
 		plugin_deinitialization_cpp_code += "\t" + deinitialization_method;
@@ -1699,7 +1723,6 @@ Error EditorExportPlatformIOS::export_project(const Ref<EditorExportPreset> &p_p
 	}
 
 	bool found_library = false;
-	int total_size = 0;
 
 	const String project_file = "godot_ios.xcodeproj/project.pbxproj";
 	Set<String> files_to_parse;
@@ -1756,7 +1779,7 @@ Error EditorExportPlatformIOS::export_project(const Ref<EditorExportPreset> &p_p
 		char fname[16384];
 		ret = unzGetCurrentFileInfo(src_pkg_zip, &info, fname, 16384, nullptr, 0, nullptr, 0);
 
-		String file = fname;
+		String file = String::utf8(fname);
 
 		print_line("READ: " + file);
 		Vector<uint8_t> data;
@@ -1795,7 +1818,6 @@ Error EditorExportPlatformIOS::export_project(const Ref<EditorExportPreset> &p_p
 			file = file.replace("godot_ios", binary_name);
 
 			print_line("ADDING: " + file + " size: " + itos(data.size()));
-			total_size += data.size();
 
 			/* write it into our folder structure */
 			file = dest_dir + file;
@@ -1959,10 +1981,13 @@ Error EditorExportPlatformIOS::export_project(const Ref<EditorExportPreset> &p_p
 	archive_args.push_back("-destination");
 	archive_args.push_back("generic/platform=iOS");
 	archive_args.push_back("archive");
+	archive_args.push_back("-allowProvisioningUpdates");
 	archive_args.push_back("-archivePath");
 	archive_args.push_back(archive_path);
-	err = OS::get_singleton()->execute("xcodebuild", archive_args, true);
+	String archive_str;
+	err = OS::get_singleton()->execute("xcodebuild", archive_args, true, NULL, &archive_str, NULL, true);
 	ERR_FAIL_COND_V(err, err);
+	print_line("xcodebuild (.xcarchive):\n" + archive_str);
 
 	if (ep.step("Making .ipa", 4)) {
 		return ERR_SKIP;
@@ -1976,8 +2001,10 @@ Error EditorExportPlatformIOS::export_project(const Ref<EditorExportPreset> &p_p
 	export_args.push_back("-allowProvisioningUpdates");
 	export_args.push_back("-exportPath");
 	export_args.push_back(dest_dir);
-	err = OS::get_singleton()->execute("xcodebuild", export_args, true);
+	String export_str;
+	err = OS::get_singleton()->execute("xcodebuild", export_args, true, NULL, &export_str, NULL, true);
 	ERR_FAIL_COND_V(err, err);
+	print_line("xcodebuild (.ipa):\n" + export_str);
 #else
 	print_line(".ipa can only be built on macOS. Leaving Xcode project without building the package.");
 #endif

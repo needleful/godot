@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -55,7 +55,7 @@ void AnimationTreeEditor::edit(AnimationTree *p_tree) {
 	tree = p_tree;
 
 	Vector<String> path;
-	if (tree->has_meta("_tree_edit_path")) {
+	if (tree && tree->has_meta("_tree_edit_path")) {
 		path = tree->get_meta("_tree_edit_path");
 		edit_path(path);
 	} else {

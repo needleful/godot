@@ -224,6 +224,7 @@
 			<argument index="1" name="amount" type="float" />
 			<argument index="2" name="step" type="float" />
 			<description>
+				[b]Note:[/b] [code]dectime[/code] has been deprecated and will be removed in Godot 4.0, please use [method move_toward] instead.
 				Returns the result of [code]value[/code] decreased by [code]step[/code] * [code]amount[/code].
 				[codeblock]
 				a = dectime(60, 10, 0.1)) # a is 59.0
@@ -252,7 +253,18 @@
 			<argument index="0" name="s" type="float" />
 			<argument index="1" name="curve" type="float" />
 			<description>
-				Easing function, based on exponent. The curve values are: 0 is constant, 1 is linear, 0 to 1 is ease-in, 1+ is ease out. Negative values are in-out/out in.
+				Returns an "eased" value of [code]x[/code] based on an easing function defined with [code]curve[/code]. This easing function is based on an exponent. The [code]curve[/code] can be any floating-point number, with specific values leading to the following behaviors:
+				[codeblock]
+				- Lower than -1.0 (exclusive): Ease in-out
+				- 1.0: Linear
+				- Between -1.0 and 0.0 (exclusive): Ease out-in
+				- 0.0: Constant
+				- Between 0.0 to 1.0 (exclusive): Ease out
+				- 1.0: Linear
+				- Greater than 1.0 (exclusive): Ease in
+				[/codeblock]
+				[url=https://raw.githubusercontent.com/godotengine/godot-docs/3.4/img/ease_cheatsheet.png]ease() curve values cheatsheet[/url]
+				See also [method smoothstep]. If you need to perform more advanced transitions, use [Tween] or [AnimationPlayer].
 			</description>
 		</method>
 		<method name="exp">
@@ -400,14 +412,16 @@
 			<argument index="1" name="to" type="float" />
 			<argument index="2" name="weight" type="float" />
 			<description>
-				Returns a normalized value considering the given range. This is the opposite of [method lerp].
+				Returns an interpolation or extrapolation factor considering the range specified in [code]from[/code] and [code]to[/code], and the interpolated value specified in [code]weight[/code]. The returned value will be between [code]0.0[/code] and [code]1.0[/code] if [code]weight[/code] is between [code]from[/code] and [code]to[/code] (inclusive). If [code]weight[/code] is located outside this range, then an extrapolation factor will be returned (return value lower than [code]0.0[/code] or greater than [code]1.0[/code]).
 				[codeblock]
+				# The interpolation ratio in the `lerp()` call below is 0.75.
 				var middle = lerp(20, 30, 0.75)
 				# `middle` is now 27.5.
 				# Now, we pretend to have forgotten the original ratio and want to get it back.
 				var ratio = inverse_lerp(20, 30, 27.5)
 				# `ratio` is now 0.75.
 				[/codeblock]
+				See also [method lerp] which performs the reverse of this operation.
 			</description>
 		</method>
 		<method name="is_equal_approx">
@@ -467,13 +481,14 @@
 			<argument index="1" name="to" type="Variant" />
 			<argument index="2" name="weight" type="float" />
 			<description>
-				Linearly interpolates between two values by a normalized value. This is the opposite of [method inverse_lerp].
+				Linearly interpolates between two values by the factor defined in [code]weight[/code]. To perform interpolation, [code]weight[/code] should be between [code]0.0[/code] and [code]1.0[/code] (inclusive). However, values outside this range are allowed and can be used to perform [i]extrapolation[/i].
 				If the [code]from[/code] and [code]to[/code] arguments are of type [int] or [float], the return value is a [float].
 				If both are of the same vector type ([Vector2], [Vector3] or [Color]), the return value will be of the same type ([code]lerp[/code] then calls the vector type's [code]linear_interpolate[/code] method).
 				[codeblock]
 				lerp(0, 4, 0.75) # Returns 3.0
 				lerp(Vector2(1, 5), Vector2(3, 2), 0.5) # Returns Vector2(2, 3.5)
 				[/codeblock]
+				See also [method inverse_lerp] which performs the reverse of this operation. To perform eased interpolation with [method lerp], combine it with [method ease] or [method smoothstep].
 			</description>
 		</method>
 		<method name="lerp_angle">
@@ -483,7 +498,7 @@
 			<argument index="2" name="weight" type="float" />
 			<description>
 				Linearly interpolates between two angles (in radians) by a normalized value.
-				Similar to [method lerp], but interpolates correctly when the angles wrap around [constant @GDScript.TAU].
+				Similar to [method lerp], but interpolates correctly when the angles wrap around [constant @GDScript.TAU]. To perform eased interpolation with [method lerp_angle], combine it with [method ease] or [method smoothstep].
 				[codeblock]
 				extends Sprite
 				var elapsed = 0.0
@@ -822,7 +837,8 @@
 		<method name="range" qualifiers="vararg">
 			<return type="Array" />
 			<description>
-				Returns an array with the given range. Range can be 1 argument N (0 to N-1), two arguments (initial, final-1) or three arguments (initial, final-1, increment).
+				Returns an array with the given range. Range can be 1 argument [code]N[/code] (0 to [code]N[/code] - 1), two arguments ([code]initial[/code], [code]final - 1[/code]) or three arguments ([code]initial[/code], [code]final - 1[/code], [code]increment[/code]). Returns an empty array if the range isn't valid (e.g. [code]range(2, 5, -1)[/code] or [code]range(5, 5, 1)[/code]).
+				Returns an array with the given range. [code]range()[/code] can have 1 argument N ([code]0[/code] to [code]N - 1[/code]), two arguments ([code]initial[/code], [code]final - 1[/code]) or three arguments ([code]initial[/code], [code]final - 1[/code], [code]increment[/code]). [code]increment[/code] can be negative. If [code]increment[/code] is negative, [code]final - 1[/code] will become [code]final + 1[/code]. Also, the initial value must be greater than the final value for the loop to run.
 				[codeblock]
 				print(range(4))
 				print(range(2, 5))
@@ -833,6 +849,20 @@
 				[0, 1, 2, 3]
 				[2, 3, 4]
 				[0, 2, 4]
+				[/codeblock]
+				To iterate over an [Array] backwards, use:
+				[codeblock]
+				var array = [3, 6, 9]
+				var i := array.size() - 1
+				while i &gt;= 0:
+				    print(array[i])
+				    i -= 1
+				[/codeblock]
+				Output:
+				[codeblock]
+				9
+				6
+				3
 				[/codeblock]
 			</description>
 		</method>
@@ -922,6 +952,8 @@
 				smoothstep(0, 2, 1.0) # Returns 0.5
 				smoothstep(0, 2, 2.0) # Returns 1.0
 				[/codeblock]
+				Compared to [method ease] with a curve value of [code]-1.6521[/code], [method smoothstep] returns the smoothest possible curve with no sudden changes in the derivative. If you need to perform more advanced transitions, use [Tween] or [AnimationPlayer].
+				[url=https://raw.githubusercontent.com/godotengine/godot-docs/3.4/img/smoothstep_ease_comparison.png]Comparison between smoothstep() and ease(x, -1.6521) return values[/url]
 			</description>
 		</method>
 		<method name="sqrt">

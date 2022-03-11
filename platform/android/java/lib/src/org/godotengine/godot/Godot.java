@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -130,6 +130,7 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 	private boolean use_32_bits = false;
 	private boolean use_immersive = false;
 	private boolean use_debug_opengl = false;
+	private boolean translucent = false;
 	private boolean mStatePaused;
 	private boolean activityResumed;
 	private int mState;
@@ -357,7 +358,7 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 		// ...add to FrameLayout
 		containerLayout.addView(edittext);
 
-		mView = new GodotView(activity, this, xrMode, use_gl3, use_32_bits, use_debug_opengl);
+		mView = new GodotView(activity, this, xrMode, use_gl3, use_32_bits, use_debug_opengl, translucent);
 		containerLayout.addView(mView, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 		edittext.setView(mView);
 		io.setEdit(edittext);
@@ -397,7 +398,11 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 		for (GodotPlugin plugin : pluginRegistry.getAllPlugins()) {
 			View pluginView = plugin.onMainCreate(activity);
 			if (pluginView != null) {
-				containerLayout.addView(pluginView);
+				if (plugin.shouldBeOnTop()) {
+					containerLayout.addView(pluginView);
+				} else {
+					containerLayout.addView(pluginView, 0);
+				}
 			}
 		}
 	}
@@ -419,7 +424,7 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 	@SuppressLint("MissingPermission")
 	@Keep
 	private void vibrate(int durationMs) {
-		if (requestPermission("VIBRATE")) {
+		if (durationMs > 0 && requestPermission("VIBRATE")) {
 			Vibrator v = (Vibrator)getContext().getSystemService(Context.VIBRATOR_SERVICE);
 			if (v != null) {
 				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -604,10 +609,14 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 				xrMode = XRMode.REGULAR;
 			} else if (command_line[i].equals(XRMode.OVR.cmdLineArg)) {
 				xrMode = XRMode.OVR;
+			} else if (command_line[i].equals(XRMode.OPENXR.cmdLineArg)) {
+				xrMode = XRMode.OPENXR;
 			} else if (command_line[i].equals("--use_depth_32")) {
 				use_32_bits = true;
 			} else if (command_line[i].equals("--debug_opengl")) {
 				use_debug_opengl = true;
+			} else if (command_line[i].equals("--translucent")) {
+				translucent = true;
 			} else if (command_line[i].equals("--use_immersive")) {
 				use_immersive = true;
 				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) { // check if the application runs on an android 4.4+
@@ -676,8 +685,7 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 
 			if (!pack_valid) {
 				Intent notifierIntent = new Intent(activity, activity.getClass());
-				notifierIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
-										Intent.FLAG_ACTIVITY_CLEAR_TOP);
+				notifierIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
 				PendingIntent pendingIntent = PendingIntent.getActivity(activity, 0,
 						notifierIntent, PendingIntent.FLAG_UPDATE_CURRENT);

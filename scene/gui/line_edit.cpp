@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -381,13 +381,17 @@ void LineEdit::_gui_input(Ref<InputEvent> p_event) {
 					FALLTHROUGH;
 				}
 				case KEY_LEFT: {
-#ifdef APPLE_STYLE_KEYS
-					shift_selection_check_pre(k->get_shift());
-#else
-					if (!k->get_alt()) {
-						shift_selection_check_pre(k->get_shift());
-					}
+#ifndef APPLE_STYLE_KEYS
+					if (!k->get_alt())
 #endif
+					{
+						shift_selection_check_pre(k->get_shift());
+						if (selection.enabled && !k->get_shift()) {
+							set_cursor_position(selection.begin);
+							deselect();
+							break;
+						}
+					}
 
 #ifdef APPLE_STYLE_KEYS
 					if (k->get_command()) {
@@ -430,8 +434,13 @@ void LineEdit::_gui_input(Ref<InputEvent> p_event) {
 					FALLTHROUGH;
 				}
 				case KEY_RIGHT: {
-					shift_selection_check_pre(k->get_shift());
-
+					if (selection.enabled && !k->get_shift()) {
+						set_cursor_position(selection.end);
+						deselect();
+						break;
+					} else {
+						shift_selection_check_pre(k->get_shift());
+					}
 #ifdef APPLE_STYLE_KEYS
 					if (k->get_command()) {
 						set_cursor_position(text.length());
@@ -675,8 +684,8 @@ bool LineEdit::_is_over_clear_button(const Point2 &p_pos) const {
 
 void LineEdit::_notification(int p_what) {
 	switch (p_what) {
-#ifdef TOOLS_ENABLED
 		case NOTIFICATION_ENTER_TREE: {
+#ifdef TOOLS_ENABLED
 			if (Engine::get_singleton()->is_editor_hint() && !get_tree()->is_node_being_edited(this)) {
 				cursor_set_blink_enabled(EDITOR_DEF("text_editor/cursor/caret_blink", false));
 				cursor_set_blink_speed(EDITOR_DEF("text_editor/cursor/caret_blink_speed", 0.65));
@@ -685,8 +694,15 @@ void LineEdit::_notification(int p_what) {
 					EditorSettings::get_singleton()->connect("settings_changed", this, "_editor_settings_changed");
 				}
 			}
-		} break;
 #endif
+			update_cached_width();
+			update_placeholder_width();
+		} break;
+		case NOTIFICATION_THEME_CHANGED: {
+			update_cached_width();
+			update_placeholder_width();
+			update();
+		} break;
 		case NOTIFICATION_RESIZED: {
 			scroll_offset = 0;
 			set_cursor_position(get_cursor_position());
@@ -1910,8 +1926,6 @@ void LineEdit::_bind_methods() {
 }
 
 LineEdit::LineEdit() {
-	undo_stack_pos = nullptr;
-	_create_undo_state();
 	align = ALIGN_LEFT;
 	cached_width = 0;
 	cached_placeholder_width = 0;
@@ -1928,6 +1942,9 @@ LineEdit::LineEdit() {
 	clear_button_status.pressing_inside = false;
 	shortcut_keys_enabled = true;
 	selecting_enabled = true;
+
+	undo_stack_pos = nullptr;
+	_create_undo_state();
 
 	deselect();
 	set_focus_mode(FOCUS_ALL);

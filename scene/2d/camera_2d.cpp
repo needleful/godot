@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -197,7 +197,7 @@ Transform2D Camera2D::get_camera_transform() {
 
 	Rect2 screen_rect(-screen_offset + ret_camera_pos, screen_size * zoom);
 
-	if (!limit_smoothing_enabled) {
+	if (!smoothing_enabled || !limit_smoothing_enabled) {
 		if (screen_rect.position.x < limit[MARGIN_LEFT]) {
 			screen_rect.position.x = limit[MARGIN_LEFT];
 		}
@@ -259,12 +259,13 @@ void Camera2D::_notification(int p_what) {
 
 		} break;
 		case NOTIFICATION_EXIT_TREE: {
+			const bool viewport_valid = !custom_viewport || ObjectDB::get_instance(custom_viewport_id);
 			if (is_current()) {
-				if (viewport && !(custom_viewport && !ObjectDB::get_instance(custom_viewport_id))) {
+				if (viewport && viewport_valid) {
 					viewport->set_canvas_transform(Transform2D());
 				}
 			}
-			if (viewport) {
+			if (viewport && viewport_valid) {
 				viewport->disconnect("size_changed", this, "_update_scroll");
 			}
 			remove_from_group(group_name);

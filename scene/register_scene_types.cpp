@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -47,6 +47,7 @@
 #include "scene/2d/light_2d.h"
 #include "scene/2d/light_occluder_2d.h"
 #include "scene/2d/line_2d.h"
+#include "scene/2d/listener_2d.h"
 #include "scene/2d/mesh_instance_2d.h"
 #include "scene/2d/multimesh_instance_2d.h"
 #include "scene/2d/navigation_2d.h"
@@ -216,6 +217,8 @@
 #include "scene/resources/mesh_library.h"
 #include "scene/resources/occluder_shape.h"
 #endif
+
+#include "modules/modules_enabled.gen.h" // For freetype.
 
 static Ref<ResourceFormatSaverText> resource_saver_text;
 static Ref<ResourceFormatLoaderText> resource_loader_text;
@@ -490,7 +493,7 @@ void register_scene_types() {
 
 #endif
 
-	AcceptDialog::set_swap_ok_cancel(GLOBAL_DEF("gui/common/swap_ok_cancel", bool(OS::get_singleton()->get_swap_ok_cancel())));
+	AcceptDialog::set_swap_ok_cancel(GLOBAL_DEF_NOVAL("gui/common/swap_ok_cancel", bool(OS::get_singleton()->get_swap_ok_cancel())));
 
 	ClassDB::register_class<Shader>();
 	ClassDB::register_class<VisualShader>();
@@ -597,6 +600,7 @@ void register_scene_types() {
 	OS::get_singleton()->yield(); //may take time to init
 
 	ClassDB::register_class<Camera2D>();
+	ClassDB::register_class<Listener2D>();
 	ClassDB::register_virtual_class<Joint2D>();
 	ClassDB::register_class<PinJoint2D>();
 	ClassDB::register_class<GrooveJoint2D>();
@@ -763,7 +767,9 @@ void register_scene_types() {
 		GLOBAL_DEF("layer_names/2d_physics/layer_" + itos(i + 1), "");
 		GLOBAL_DEF("layer_names/3d_physics/layer_" + itos(i + 1), "");
 	}
+}
 
+void initialize_theme() {
 	bool default_theme_hidpi = GLOBAL_DEF("gui/theme/use_hidpi", false);
 	ProjectSettings::get_singleton()->set_custom_property_info("gui/theme/use_hidpi", PropertyInfo(Variant::BOOL, "gui/theme/use_hidpi", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED));
 	String theme_path = GLOBAL_DEF_RST("gui/theme/custom", "");

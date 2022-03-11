@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -44,12 +44,13 @@ public:
 
 	typedef uint32_t ID;
 
-	typedef void *(*PairCallback)(CollisionObject2DSW *A, int p_subindex_A, CollisionObject2DSW *B, int p_subindex_B, void *p_userdata);
-	typedef void (*UnpairCallback)(CollisionObject2DSW *A, int p_subindex_A, CollisionObject2DSW *B, int p_subindex_B, void *p_data, void *p_userdata);
+	typedef void *(*PairCallback)(CollisionObject2DSW *p_object_A, int p_subindex_A, CollisionObject2DSW *p_object_B, int p_subindex_B, void *p_pair_data, void *p_user_data);
+	typedef void (*UnpairCallback)(CollisionObject2DSW *p_object_A, int p_subindex_A, CollisionObject2DSW *p_object_B, int p_subindex_B, void *p_pair_data, void *p_user_data);
 
 	// 0 is an invalid ID
 	virtual ID create(CollisionObject2DSW *p_object_, int p_subindex = 0, const Rect2 &p_aabb = Rect2(), bool p_static = false) = 0;
 	virtual void move(ID p_id, const Rect2 &p_aabb) = 0;
+	virtual void recheck_pairs(ID p_id) = 0;
 	virtual void set_static(ID p_id, bool p_static) = 0;
 	virtual void remove(ID p_id) = 0;
 

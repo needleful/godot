@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -91,6 +91,7 @@ void EditorSpatialGizmo::clear() {
 	for (int i = 0; i < instances.size(); i++) {
 		if (instances[i].instance.is_valid()) {
 			VS::get_singleton()->free(instances[i].instance);
+			instances.write[i].instance = RID();
 		}
 	}
 
@@ -179,8 +180,10 @@ void EditorSpatialGizmo::Instance::create_instance(Spatial *p_base, bool p_hidde
 	VS::get_singleton()->instance_set_layer_mask(instance, layer); //gizmos are 26
 }
 
-void EditorSpatialGizmo::add_mesh(const Ref<ArrayMesh> &p_mesh, bool p_billboard, const Ref<SkinReference> &p_skin_reference, const Ref<Material> &p_material) {
+void EditorSpatialGizmo::add_mesh(const Ref<Mesh> &p_mesh, bool p_billboard, const Ref<SkinReference> &p_skin_reference, const Ref<Material> &p_material) {
 	ERR_FAIL_COND(!spatial_node);
+	ERR_FAIL_COND_MSG(!p_mesh.is_valid(), "EditorSpatialGizmo.add_mesh() requires a valid Mesh resource.");
+
 	Instance ins;
 
 	ins.billboard = p_billboard;
@@ -741,8 +744,8 @@ void EditorSpatialGizmo::free() {
 	for (int i = 0; i < instances.size(); i++) {
 		if (instances[i].instance.is_valid()) {
 			VS::get_singleton()->free(instances[i].instance);
+			instances.write[i].instance = RID();
 		}
-		instances.write[i].instance = RID();
 	}
 
 	clear();
@@ -1221,6 +1224,29 @@ void AudioStreamPlayer3DSpatialGizmoPlugin::redraw(EditorSpatialGizmo *p_gizmo) 
 		p_gizmo->add_handles(handles, get_material("handles"));
 	}
 
+	p_gizmo->add_unscaled_billboard(icon, 0.05);
+}
+
+//////
+
+ListenerSpatialGizmoPlugin::ListenerSpatialGizmoPlugin() {
+	create_icon_material("listener_icon", SpatialEditor::get_singleton()->get_icon("GizmoListener", "EditorIcons"));
+}
+
+bool ListenerSpatialGizmoPlugin::has_gizmo(Spatial *p_spatial) {
+	return Object::cast_to<Listener>(p_spatial) != nullptr;
+}
+
+String ListenerSpatialGizmoPlugin::get_name() const {
+	return "Listener";
+}
+
+int ListenerSpatialGizmoPlugin::get_priority() const {
+	return -1;
+}
+
+void ListenerSpatialGizmoPlugin::redraw(EditorSpatialGizmo *p_gizmo) {
+	const Ref<Material> icon = get_material("listener_icon", p_gizmo);
 	p_gizmo->add_unscaled_billboard(icon, 0.05);
 }
 
@@ -2764,13 +2790,8 @@ void GIProbeGizmoPlugin::redraw(EditorSpatialGizmo *p_gizmo) {
 				continue;
 			}
 
-			Vector2 dir;
-			dir[j] = 1.0;
-			Vector2 ta, tb;
 			int j_n1 = (j + 1) % 3;
 			int j_n2 = (j + 2) % 3;
-			ta[j_n1] = 1.0;
-			tb[j_n2] = 1.0;
 
 			for (int k = 0; k < 4; k++) {
 				Vector3 from = aabb.position, to = aabb.position;

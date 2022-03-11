@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -89,11 +89,11 @@ bool CollisionSolverSW::solve_static_plane(const ShapeSW *p_shape_A, const Trans
 	return found;
 }
 
-bool CollisionSolverSW::solve_ray(const ShapeSW *p_shape_A, const Transform &p_transform_A, const ShapeSW *p_shape_B, const Transform &p_transform_B, CallbackResult p_result_callback, void *p_userdata, bool p_swap_result) {
+bool CollisionSolverSW::solve_ray(const ShapeSW *p_shape_A, const Transform &p_transform_A, const ShapeSW *p_shape_B, const Transform &p_transform_B, CallbackResult p_result_callback, void *p_userdata, bool p_swap_result, real_t p_margin) {
 	const RayShapeSW *ray = static_cast<const RayShapeSW *>(p_shape_A);
 
 	Vector3 from = p_transform_A.origin;
-	Vector3 to = from + p_transform_A.basis.get_axis(2) * ray->get_length();
+	Vector3 to = from + p_transform_A.basis.get_axis(2) * (ray->get_length() + p_margin);
 	Vector3 support_A = to;
 
 	Transform ai = p_transform_B.affine_inverse();
@@ -138,17 +138,20 @@ struct _ConcaveCollisionInfo {
 	Vector3 close_A, close_B;
 };
 
-void CollisionSolverSW::concave_callback(void *p_userdata, ShapeSW *p_convex) {
+bool CollisionSolverSW::concave_callback(void *p_userdata, ShapeSW *p_convex) {
 	_ConcaveCollisionInfo &cinfo = *(_ConcaveCollisionInfo *)(p_userdata);
 	cinfo.aabb_tests++;
 
 	bool collided = collision_solver(cinfo.shape_A, *cinfo.transform_A, p_convex, *cinfo.transform_B, cinfo.result_callback, cinfo.userdata, cinfo.swap_result, nullptr, cinfo.margin_A, cinfo.margin_B);
 	if (!collided) {
-		return;
+		return false;
 	}
 
 	cinfo.collided = true;
 	cinfo.collisions++;
+
+	// Stop at first collision if contacts are not needed.
+	return !cinfo.result_callback;
 }
 
 bool CollisionSolverSW::solve_concave(const ShapeSW *p_shape_A, const Transform &p_transform_A, const ShapeSW *p_shape_B, const Transform &p_transform_B, CallbackResult p_result_callback, void *p_userdata, bool p_swap_result, real_t p_margin_A, real_t p_margin_B) {
@@ -229,9 +232,9 @@ bool CollisionSolverSW::solve_static(const ShapeSW *p_shape_A, const Transform &
 		}
 
 		if (swap) {
-			return solve_ray(p_shape_B, p_transform_B, p_shape_A, p_transform_A, p_result_callback, p_userdata, true);
+			return solve_ray(p_shape_B, p_transform_B, p_shape_A, p_transform_A, p_result_callback, p_userdata, true, p_margin_B);
 		} else {
-			return solve_ray(p_shape_A, p_transform_A, p_shape_B, p_transform_B, p_result_callback, p_userdata, false);
+			return solve_ray(p_shape_A, p_transform_A, p_shape_B, p_transform_B, p_result_callback, p_userdata, false, p_margin_A);
 		}
 
 	} else if (concave_B) {
@@ -250,19 +253,18 @@ bool CollisionSolverSW::solve_static(const ShapeSW *p_shape_A, const Transform &
 	}
 }
 
-void CollisionSolverSW::concave_distance_callback(void *p_userdata, ShapeSW *p_convex) {
+bool CollisionSolverSW::concave_distance_callback(void *p_userdata, ShapeSW *p_convex) {
 	_ConcaveCollisionInfo &cinfo = *(_ConcaveCollisionInfo *)(p_userdata);
 	cinfo.aabb_tests++;
-	if (cinfo.collided) {
-		return;
-	}
 
 	Vector3 close_A, close_B;
 	cinfo.collided = !gjk_epa_calculate_distance(cinfo.shape_A, *cinfo.transform_A, p_convex, *cinfo.transform_B, close_A, close_B);
 
 	if (cinfo.collided) {
-		return;
+		// No need to process any more result.
+		return true;
 	}
+
 	if (!cinfo.tested || close_A.distance_squared_to(close_B) < cinfo.close_A.distance_squared_to(cinfo.close_B)) {
 		cinfo.close_A = close_A;
 		cinfo.close_B = close_B;
@@ -270,6 +272,8 @@ void CollisionSolverSW::concave_distance_callback(void *p_userdata, ShapeSW *p_c
 	}
 
 	cinfo.collisions++;
+
+	return false;
 }
 
 bool CollisionSolverSW::solve_distance_plane(const ShapeSW *p_shape_A, const Transform &p_transform_A, const ShapeSW *p_shape_B, const Transform &p_transform_B, Vector3 &r_point_A, Vector3 &r_point_B) {

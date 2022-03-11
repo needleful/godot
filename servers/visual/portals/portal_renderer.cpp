@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -64,10 +64,6 @@ OcclusionHandle PortalRenderer::instance_moving_create(VSInstance *p_instance, R
 }
 
 void PortalRenderer::instance_moving_update(OcclusionHandle p_handle, const AABB &p_aabb, bool p_force_reinsert) {
-	// we can ignore these, they are statics / dynamics, and don't need updating
-	// .. these should have been filtered out before calling the visual server...
-	DEV_ASSERT(!_occlusion_handle_is_in_room(p_handle));
-
 	p_handle--;
 	Moving &moving = _moving_pool[p_handle];
 	moving.exact_aabb = p_aabb;
@@ -76,6 +72,10 @@ void PortalRenderer::instance_moving_update(OcclusionHandle p_handle, const AABB
 	if (!_loaded || moving.global) {
 		return;
 	}
+
+	// we can ignore these, they are statics / dynamics, and don't need updating
+	// .. these should have been filtered out before calling the visual server...
+	DEV_CHECK_ONCE(!_occlusion_handle_is_in_room(p_handle));
 
 	// quick reject for most roaming cases
 	if (!p_force_reinsert && moving.expanded_aabb.encloses(p_aabb)) {
@@ -165,7 +165,7 @@ void PortalRenderer::instance_moving_destroy(OcclusionHandle p_handle) {
 	// The alternative is to remove the reference, but this is not currently supported
 	// (it would mean rejigging rooms etc)
 	if (_occlusion_handle_is_in_room(p_handle)) {
-		_ensure_unloaded();
+		_ensure_unloaded("deleting STATIC or DYNAMIC");
 		return;
 	}
 
@@ -224,7 +224,7 @@ PortalHandle PortalRenderer::portal_create() {
 
 void PortalRenderer::portal_destroy(PortalHandle p_portal) {
 	ERR_FAIL_COND(!p_portal);
-	_ensure_unloaded();
+	_ensure_unloaded("deleting Portal");
 
 	// plus one based
 	p_portal--;
@@ -378,7 +378,7 @@ void PortalRenderer::roomgroup_prepare(RoomGroupHandle p_roomgroup, ObjectID p_r
 
 void PortalRenderer::roomgroup_destroy(RoomGroupHandle p_roomgroup) {
 	ERR_FAIL_COND(!p_roomgroup);
-	_ensure_unloaded();
+	_ensure_unloaded("deleting RoomGroup");
 
 	// plus one based
 	p_roomgroup--;
@@ -618,7 +618,7 @@ RoomHandle PortalRenderer::room_create() {
 
 void PortalRenderer::room_destroy(RoomHandle p_room) {
 	ERR_FAIL_COND(!p_room);
-	_ensure_unloaded();
+	_ensure_unloaded("deleting Room");
 
 	// plus one based
 	p_room--;
@@ -822,20 +822,6 @@ void PortalRenderer::rooms_finalize(bool p_generate_pvs, bool p_cull_using_pvs, 
 	// from position
 	_rooms_lookup_bsp.create(*this);
 
-	// calculate the roaming expansion margin based on the average room size
-	Vector3 total_size = Vector3(0, 0, 0);
-	for (int n = 0; n < get_num_rooms(); n++) {
-		total_size += get_room(n)._aabb.size;
-	}
-	if (get_num_rooms()) {
-		total_size /= get_num_rooms();
-		AABB temp;
-		temp.size = total_size;
-
-		// longest axis of average room * fudge factor
-		_roaming_expansion_margin = temp.get_longest_axis_size() * 0.08;
-	}
-
 	// calculate PVS
 	if (p_generate_pvs) {
 		PVSBuilder pvs;
@@ -1007,10 +993,19 @@ void PortalRenderer::sprawl_roaming(uint32_t p_mover_pool_id, MovingBase &r_movi
 }
 
 // This gets called when you delete an instance the the room system depends on
-void PortalRenderer::_ensure_unloaded() {
+void PortalRenderer::_ensure_unloaded(String p_reason) {
 	if (_loaded) {
 		_loaded = false;
-		_log("Portal system unloaded.", 1);
+		_gameplay_monitor.unload(*this);
+
+		String str;
+		if (p_reason != String()) {
+			str = "Portal system unloaded ( " + p_reason + " ).";
+		} else {
+			str = "Portal system unloaded.";
+		}
+
+		_log(str, 1);
 
 		// this should probably have some thread protection, but I doubt it matters
 		// as this will worst case give wrong result for a frame
@@ -1020,6 +1015,17 @@ void PortalRenderer::_ensure_unloaded() {
 
 void PortalRenderer::rooms_and_portals_clear() {
 	_loaded = false;
+
+	// N.B. We want to make sure all the tick counters on movings rooms etc to zero,
+	// so that on loading the next level gameplay entered signals etc will be
+	// correctly sent and everything is fresh.
+	// This is mostly done by the gameplay_monitor, but rooms_and_portals_clear()
+	// will also clear tick counters where possible
+	// (there is no TrackedList for the RoomGroup pool for example).
+	// This could be made neater by moving everything to TrackedPooledLists, but this
+	// may be overkill.
+	_gameplay_monitor.unload(*this);
+
 	_statics.clear();
 	_static_ghosts.clear();
 

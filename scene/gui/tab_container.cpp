@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -363,10 +363,10 @@ void TabContainer::_notification(int p_what) {
 				}
 
 				int tab_width = tab_widths[i];
-				if (get_tab_disabled(index)) {
-					_draw_tab(tab_disabled, font_color_disabled, index, tabs_ofs_cache + x);
-				} else if (index == current) {
+				if (index == current) {
 					x_current = x;
+				} else if (get_tab_disabled(index)) {
+					_draw_tab(tab_disabled, font_color_disabled, index, tabs_ofs_cache + x);
 				} else {
 					_draw_tab(tab_bg, font_color_bg, index, tabs_ofs_cache + x);
 				}
@@ -380,9 +380,10 @@ void TabContainer::_notification(int p_what) {
 				panel->draw(canvas, Rect2(0, header_height, size.width, size.height - header_height));
 			}
 
-			// Draw selected tab in front. only draw selected tab when it's in visible range.
+			// Draw selected tab in front. Only draw selected tab when it's in visible range.
 			if (tabs.size() > 0 && current - first_tab_cache < tab_widths.size() && current >= first_tab_cache) {
-				_draw_tab(tab_fg, font_color_fg, current, tabs_ofs_cache + x_current);
+				Ref<StyleBox> current_style_box = get_tab_disabled(current) ? tab_disabled : tab_fg;
+				_draw_tab(current_style_box, font_color_fg, current, tabs_ofs_cache + x_current);
 			}
 
 			// Draw the popup menu.
@@ -495,8 +496,8 @@ void TabContainer::_on_mouse_exited() {
 
 int TabContainer::_get_tab_width(int p_index) const {
 	ERR_FAIL_INDEX_V(p_index, get_tab_count(), 0);
-	Control *control = Object::cast_to<Control>(_get_tabs()[p_index]);
-	if (!control || control->is_set_as_toplevel() || get_tab_hidden(p_index)) {
+	Control *control = get_tab_control(p_index);
+	if (!control || get_tab_hidden(p_index)) {
 		return 0;
 	}
 
@@ -556,28 +557,16 @@ void TabContainer::add_child_notify(Node *p_child) {
 		return;
 	}
 
-	bool first = false;
+	call_deferred("_repaint");
+	update();
 
-	if (get_tab_count() != 1) {
-		c->hide();
-	} else {
-		c->show();
-		//call_deferred("set_current_tab",0);
-		first = true;
+	bool first = (get_tab_count() == 1);
+
+	if (first) {
 		current = 0;
 		previous = 0;
 	}
-	c->set_anchors_and_margins_preset(Control::PRESET_WIDE);
-	if (tabs_visible) {
-		c->set_margin(MARGIN_TOP, _get_top_margin());
-	}
-	Ref<StyleBox> sb = get_stylebox("panel");
-	c->set_margin(MARGIN_TOP, c->get_margin(MARGIN_TOP) + sb->get_margin(MARGIN_TOP));
-	c->set_margin(MARGIN_LEFT, c->get_margin(MARGIN_LEFT) + sb->get_margin(MARGIN_LEFT));
-	c->set_margin(MARGIN_RIGHT, c->get_margin(MARGIN_RIGHT) - sb->get_margin(MARGIN_RIGHT));
-	c->set_margin(MARGIN_BOTTOM, c->get_margin(MARGIN_BOTTOM) - sb->get_margin(MARGIN_BOTTOM));
 
-	update();
 	p_child->connect("renamed", this, "_child_renamed_callback");
 	if (first) {
 		emit_signal("tab_changed", current);
@@ -1054,6 +1043,9 @@ void TabContainer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_tab_icon", "tab_idx"), &TabContainer::get_tab_icon);
 	ClassDB::bind_method(D_METHOD("set_tab_disabled", "tab_idx", "disabled"), &TabContainer::set_tab_disabled);
 	ClassDB::bind_method(D_METHOD("get_tab_disabled", "tab_idx"), &TabContainer::get_tab_disabled);
+	ClassDB::bind_method(D_METHOD("set_tab_hidden", "tab_idx", "hidden"), &TabContainer::set_tab_hidden);
+	ClassDB::bind_method(D_METHOD("get_tab_hidden", "tab_idx"), &TabContainer::get_tab_hidden);
+	ClassDB::bind_method(D_METHOD("get_tab_idx_at_point", "point"), &TabContainer::get_tab_idx_at_point);
 	ClassDB::bind_method(D_METHOD("set_popup", "popup"), &TabContainer::set_popup);
 	ClassDB::bind_method(D_METHOD("get_popup"), &TabContainer::get_popup);
 	ClassDB::bind_method(D_METHOD("set_drag_to_rearrange_enabled", "enabled"), &TabContainer::set_drag_to_rearrange_enabled);
@@ -1065,6 +1057,7 @@ void TabContainer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_use_hidden_tabs_for_min_size"), &TabContainer::get_use_hidden_tabs_for_min_size);
 
 	ClassDB::bind_method(D_METHOD("_child_renamed_callback"), &TabContainer::_child_renamed_callback);
+	ClassDB::bind_method(D_METHOD("_repaint"), &TabContainer::_repaint);
 	ClassDB::bind_method(D_METHOD("_on_theme_changed"), &TabContainer::_on_theme_changed);
 	ClassDB::bind_method(D_METHOD("_on_mouse_exited"), &TabContainer::_on_mouse_exited);
 	ClassDB::bind_method(D_METHOD("_update_current_tab"), &TabContainer::_update_current_tab);

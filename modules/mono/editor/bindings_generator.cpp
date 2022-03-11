@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -354,8 +354,7 @@ String BindingsGenerator::bbcode_to_xml(const String &p_bbcode, const TypeInterf
 				xml_output.append(link_target);
 				xml_output.append("</c>");
 			} else if (link_tag == "enum") {
-				StringName search_cname = !target_itype ? target_cname :
-															StringName(target_itype->name + "." + (String)target_cname);
+				StringName search_cname = !target_itype ? target_cname : StringName(target_itype->name + "." + (String)target_cname);
 
 				const Map<StringName, TypeInterface>::Element *enum_match = enum_types.find(search_cname);
 
@@ -376,7 +375,7 @@ String BindingsGenerator::bbcode_to_xml(const String &p_bbcode, const TypeInterf
 					xml_output.append(link_target);
 					xml_output.append("</c>");
 				}
-			} else if (link_tag == "const") {
+			} else if (link_tag == "constant") {
 				if (!target_itype || !target_itype->is_object_type) {
 					if (OS::get_singleton()->is_stdout_verbose()) {
 						if (target_itype) {
@@ -939,7 +938,7 @@ Error BindingsGenerator::generate_cs_core_project(const String &p_proj_dir) {
 #define ADD_INTERNAL_CALL(m_icall)                                                               \
 	if (!m_icall.editor_only) {                                                                  \
 		cs_icalls_content.append(MEMBER_BEGIN "[MethodImpl(MethodImplOptions.InternalCall)]\n"); \
-		cs_icalls_content.append(INDENT2 "internal extern static ");                             \
+		cs_icalls_content.append(INDENT2 "internal static extern ");                             \
 		cs_icalls_content.append(m_icall.im_type_out + " ");                                     \
 		cs_icalls_content.append(m_icall.name + "(");                                            \
 		cs_icalls_content.append(m_icall.im_sig + ");\n");                                       \
@@ -1043,7 +1042,7 @@ Error BindingsGenerator::generate_cs_editor_project(const String &p_proj_dir) {
 #define ADD_INTERNAL_CALL(m_icall)                                                               \
 	if (m_icall.editor_only) {                                                                   \
 		cs_icalls_content.append(MEMBER_BEGIN "[MethodImpl(MethodImplOptions.InternalCall)]\n"); \
-		cs_icalls_content.append(INDENT2 "internal extern static ");                             \
+		cs_icalls_content.append(INDENT2 "internal static extern ");                             \
 		cs_icalls_content.append(m_icall.im_type_out + " ");                                     \
 		cs_icalls_content.append(m_icall.name + "(");                                            \
 		cs_icalls_content.append(m_icall.im_sig + ");\n");                                       \
@@ -2350,7 +2349,7 @@ bool BindingsGenerator::_populate_object_type_interfaces() {
 				if (itype.cname != name_cache.type_Object || imethod.name != "free") {
 					WARN_PRINT("Notification: New unexpected virtual non-overridable method found."
 							   " We only expected Object.free, but found '" +
-							   itype.name + "." + imethod.name + "'.");
+							itype.name + "." + imethod.name + "'.");
 				}
 			} else if (return_info.type == Variant::INT && return_info.usage & PROPERTY_USAGE_CLASS_IS_ENUM) {
 				imethod.return_type.cname = return_info.class_name;
@@ -2577,7 +2576,13 @@ bool BindingsGenerator::_arg_default_value_from_variant(const Variant &p_val, Ar
 			break;
 		case Variant::STRING:
 		case Variant::NODE_PATH:
-			r_iarg.default_argument = "\"" + r_iarg.default_argument + "\"";
+			if (r_iarg.type.cname == name_cache.type_NodePath) {
+				r_iarg.default_argument = "(%s)\"" + r_iarg.default_argument + "\"";
+				r_iarg.def_param_mode = ArgumentInterface::NULLABLE_REF;
+			} else {
+				CRASH_COND(r_iarg.type.cname != name_cache.type_String);
+				r_iarg.default_argument = "\"" + r_iarg.default_argument + "\"";
+			}
 			break;
 		case Variant::PLANE: {
 			Plane plane = p_val.operator Plane();

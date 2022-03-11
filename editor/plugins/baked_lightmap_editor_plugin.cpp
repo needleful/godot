@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -33,14 +33,11 @@
 void BakedLightmapEditorPlugin::_bake_select_file(const String &p_file) {
 	if (lightmap) {
 		BakedLightmap::BakeError err;
-		uint32_t time_started = OS::get_singleton()->get_ticks_msec();
 		if (get_tree()->get_edited_scene_root() && get_tree()->get_edited_scene_root() == lightmap) {
 			err = lightmap->bake(lightmap, p_file);
 		} else {
 			err = lightmap->bake(lightmap->get_parent(), p_file);
 		}
-
-		bake_func_end(time_started);
 
 		switch (err) {
 			case BakedLightmap::BAKE_ERROR_NO_SAVE_PATH: {
@@ -173,6 +170,7 @@ BakedLightmapEditorPlugin::BakedLightmapEditorPlugin(EditorNode *p_node) {
 
 	BakedLightmap::bake_step_function = bake_func_step;
 	BakedLightmap::bake_substep_function = bake_func_substep;
+	BakedLightmap::bake_end_function = bake_func_end;
 }
 
 BakedLightmapEditorPlugin::~BakedLightmapEditorPlugin() {

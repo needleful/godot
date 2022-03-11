@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -91,6 +91,7 @@ int Math::range_step_decimals(double p_step) {
 }
 
 double Math::dectime(double p_value, double p_amount, double p_step) {
+	WARN_DEPRECATED_MSG("The `dectime()` function has been deprecated and will be removed in Godot 4.0. Use `move_toward()` instead.");
 	double sgn = p_value < 0 ? -1.0 : 1.0;
 	double val = Math::abs(p_value);
 	val -= p_amount * p_step;

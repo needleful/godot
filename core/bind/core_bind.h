@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -256,6 +256,7 @@ public:
 	Vector<String> get_cmdline_args();
 
 	String get_locale() const;
+	String get_locale_language() const;
 	String get_latin_keyboard_variant() const;
 	int keyboard_get_layout_count() const;
 	int keyboard_get_current_layout() const;
@@ -311,7 +312,7 @@ public:
 
 	void delay_usec(int p_usec) const;
 	void delay_msec(int p_msec) const;
-	uint32_t get_ticks_msec() const;
+	uint64_t get_ticks_msec() const;
 	uint64_t get_ticks_usec() const;
 	uint32_t get_splash_tick_msec() const;
 
@@ -682,8 +683,8 @@ class _Thread : public Reference {
 protected:
 	Variant ret;
 	Variant userdata;
-	SafeFlag active;
-	Object *target_instance;
+	SafeFlag running;
+	ObjectID target_instance_id;
 	StringName target_method;
 	Thread thread;
 	static void _bind_methods();
@@ -701,6 +702,7 @@ public:
 	Error start(Object *p_instance, const StringName &p_method, const Variant &p_userdata = Variant(), Priority p_priority = PRIORITY_NORMAL);
 	String get_id() const;
 	bool is_active() const;
+	bool is_alive() const;
 	Variant wait_to_finish();
 
 	_Thread();
@@ -740,6 +742,11 @@ public:
 	bool has_integer_constant(const StringName &p_class, const StringName &p_name) const;
 	int get_integer_constant(const StringName &p_class, const StringName &p_name) const;
 	StringName get_category(const StringName &p_node) const;
+
+	bool has_enum(const StringName &p_class, const StringName &p_name, bool p_no_inheritance = false) const;
+	PoolStringArray get_enum_list(const StringName &p_class, bool p_no_inheritance = false) const;
+	PoolStringArray get_enum_constants(const StringName &p_class, const StringName &p_enum, bool p_no_inheritance = false) const;
+	StringName get_integer_constant_enum(const StringName &p_class, const StringName &p_name, bool p_no_inheritance = false) const;
 
 	bool is_class_enabled(StringName p_class) const;
 

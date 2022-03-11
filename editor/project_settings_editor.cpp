@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -114,8 +114,13 @@ void ProjectSettingsEditor::_notification(int p_what) {
 
 			translation_list->connect("button_pressed", this, "_translation_delete");
 			_update_actions();
-			popup_add->add_icon_item(get_icon("Keyboard", "EditorIcons"), TTR("Key "), INPUT_KEY); //"Key " - because the word 'key' has already been used as a key animation
+
+			// List Physical Key before Key to encourage its use.
+			// Physical Key should be used for most game inputs as it allows keys to work
+			// on non-QWERTY layouts out of the box.
+			// This is especially important for WASD movement layouts.
 			popup_add->add_icon_item(get_icon("KeyboardPhysical", "EditorIcons"), TTR("Physical Key"), INPUT_KEY_PHYSICAL);
+			popup_add->add_icon_item(get_icon("Keyboard", "EditorIcons"), TTR("Key "), INPUT_KEY); //"Key " - because the word 'key' has already been used as a key animation
 			popup_add->add_icon_item(get_icon("JoyButton", "EditorIcons"), TTR("Joy Button"), INPUT_JOY_BUTTON);
 			popup_add->add_icon_item(get_icon("JoyAxis", "EditorIcons"), TTR("Joy Axis"), INPUT_JOY_MOTION);
 			popup_add->add_icon_item(get_icon("Mouse", "EditorIcons"), TTR("Mouse Button"), INPUT_MOUSE_BUTTON);
@@ -148,8 +153,8 @@ void ProjectSettingsEditor::_notification(int p_what) {
 			search_box->set_right_icon(get_icon("Search", "EditorIcons"));
 			search_box->set_clear_button_enabled(true);
 			action_add_error->add_color_override("font_color", get_color("error_color", "Editor"));
-			popup_add->set_item_icon(popup_add->get_item_index(INPUT_KEY), get_icon("Keyboard", "EditorIcons"));
 			popup_add->set_item_icon(popup_add->get_item_index(INPUT_KEY_PHYSICAL), get_icon("KeyboardPhysical", "EditorIcons"));
+			popup_add->set_item_icon(popup_add->get_item_index(INPUT_KEY), get_icon("Keyboard", "EditorIcons"));
 			popup_add->set_item_icon(popup_add->get_item_index(INPUT_JOY_BUTTON), get_icon("JoyButton", "EditorIcons"));
 			popup_add->set_item_icon(popup_add->get_item_index(INPUT_JOY_MOTION), get_icon("JoyAxis", "EditorIcons"));
 			popup_add->set_item_icon(popup_add->get_item_index(INPUT_MOUSE_BUTTON), get_icon("Mouse", "EditorIcons"));
@@ -253,7 +258,7 @@ void ProjectSettingsEditor::_device_input_add() {
 	int idx = edit_idx;
 	Dictionary old_val = ProjectSettings::get_singleton()->get(name);
 	Dictionary action = old_val.duplicate();
-	Array events = action["events"];
+	Array events = action["events"].duplicate();
 
 	switch (add_type) {
 		case INPUT_MOUSE_BUTTON: {
@@ -378,7 +383,7 @@ void ProjectSettingsEditor::_press_a_key_confirm() {
 
 	Dictionary old_val = ProjectSettings::get_singleton()->get(name);
 	Dictionary action = old_val.duplicate();
-	Array events = action["events"];
+	Array events = action["events"].duplicate();
 
 	for (int i = 0; i < events.size(); i++) {
 		Ref<InputEventKey> aie = events[i];
@@ -472,16 +477,16 @@ void ProjectSettingsEditor::_add_item(int p_item, Ref<InputEvent> p_exiting_even
 	add_type = InputType(p_item);
 
 	switch (add_type) {
-		case INPUT_KEY: {
-			press_a_key_physical = false;
+		case INPUT_KEY_PHYSICAL: {
+			press_a_key_physical = true;
 			press_a_key_label->set_text(TTR("Press a Key..."));
 			press_a_key->get_ok()->set_disabled(true);
 			last_wait_for_key = Ref<InputEvent>();
 			press_a_key->popup_centered(Size2(250, 80) * EDSCALE);
 			press_a_key->grab_focus();
 		} break;
-		case INPUT_KEY_PHYSICAL: {
-			press_a_key_physical = true;
+		case INPUT_KEY: {
+			press_a_key_physical = false;
 			press_a_key_label->set_text(TTR("Press a Key..."));
 			press_a_key->get_ok()->set_disabled(true);
 			last_wait_for_key = Ref<InputEvent>();
@@ -649,7 +654,7 @@ void ProjectSettingsEditor::_action_button_pressed(Object *p_obj, int p_column, 
 			Dictionary action = old_val.duplicate();
 			int idx = ti->get_metadata(0);
 
-			Array events = action["events"];
+			Array events = action["events"].duplicate();
 			ERR_FAIL_INDEX(idx, events.size());
 			events.remove(idx);
 			action["events"] = events;

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -34,6 +34,9 @@
 #include "core/os/os.h"
 #include "core/pair.h"
 #include "physics_2d_server_sw.h"
+
+#define TEST_MOTION_MIN_CONTACT_DEPTH_FACTOR 0.05
+
 _FORCE_INLINE_ static bool _can_collide_with(CollisionObject2DSW *p_object, uint32_t p_collision_mask, bool p_collide_with_bodies, bool p_collide_with_areas) {
 	if (!(p_object->get_collision_layer() & p_collision_mask)) {
 		return false;
@@ -434,6 +437,8 @@ bool Physics2DDirectSpaceStateSW::rest_info(RID p_shape, const Transform2D &p_sh
 	Shape2DSW *shape = Physics2DServerSW::singletonsw->shape_owner.get(p_shape);
 	ERR_FAIL_COND_V(!shape, 0);
 
+	real_t min_contact_depth = p_margin * TEST_MOTION_MIN_CONTACT_DEPTH_FACTOR;
+
 	Rect2 aabb = p_shape_xform.xform(shape->get_aabb());
 	aabb = aabb.merge(Rect2(aabb.position + p_motion, aabb.size)); //motion
 	aabb = aabb.grow(p_margin);
@@ -444,7 +449,7 @@ bool Physics2DDirectSpaceStateSW::rest_info(RID p_shape, const Transform2D &p_sh
 	rcd.best_len = 0;
 	rcd.best_object = nullptr;
 	rcd.best_shape = 0;
-	rcd.min_allowed_depth = space->test_motion_min_contact_depth;
+	rcd.min_allowed_depth = min_contact_depth;
 
 	for (int i = 0; i < amount; i++) {
 		if (!_can_collide_with(space->intersection_query_results[i], p_collision_mask, p_collide_with_bodies, p_collide_with_areas)) {
@@ -560,7 +565,7 @@ int Space2DSW::test_body_ray_separation(Body2DSW *p_body, const Transform2D &p_t
 
 	for (int i = 0; i < p_result_max; i++) {
 		//reset results
-		r_results[i].collision_depth = 0;
+		r_results[i].collision_depth = -1.0;
 	}
 
 	int rays_found = 0;
@@ -660,13 +665,24 @@ int Space2DSW::test_body_ray_separation(Body2DSW *p_body, const Transform2D &p_t
 								Vector2 a = sr[k * 2 + 0];
 								Vector2 b = sr[k * 2 + 1];
 
-								recover_motion += (b - a) / cbk.amount;
+								// Compute plane on b towards a.
+								Vector2 n = (a - b).normalized();
+								float d = n.dot(b);
 
-								float depth = a.distance_to(b);
+								// Compute depth on recovered motion.
+								float depth = n.dot(a + recover_motion) - d;
+
+								// Apply recovery without margin.
+								float separation_depth = depth - p_margin;
+								if (separation_depth > 0.0) {
+									// Only recover if there is penetration.
+									recover_motion -= n * separation_depth;
+								}
+
 								if (depth > result.collision_depth) {
 									result.collision_depth = depth;
 									result.collision_point = b;
-									result.collision_normal = (b - a).normalized();
+									result.collision_normal = -n;
 									result.collision_local_shape = j;
 									result.collider_shape = shape_idx;
 									result.collider = col_obj->get_self();
@@ -694,14 +710,6 @@ int Space2DSW::test_body_ray_separation(Body2DSW *p_body, const Transform2D &p_t
 
 			recover_attempts--;
 		} while (recover_attempts);
-	}
-
-	//optimize results (remove non colliding)
-	for (int i = 0; i < rays_found; i++) {
-		if (r_results[i].collision_depth == 0) {
-			rays_found--;
-			SWAP(r_results[i], r_results[rays_found]);
-		}
 	}
 
 	r_recover_motion = body_transform.elements[2] - p_transform.elements[2];
@@ -756,6 +764,8 @@ bool Space2DSW::test_body_motion(Body2DSW *p_body, const Transform2D &p_from, co
 	static const int max_excluded_shape_pairs = 32;
 	ExcludedShapeSW excluded_shape_pairs[max_excluded_shape_pairs];
 	int excluded_shape_pair_count = 0;
+
+	real_t min_contact_depth = p_margin * TEST_MOTION_MIN_CONTACT_DEPTH_FACTOR;
 
 	float motion_length = p_motion.length();
 	Vector2 motion_normal = p_motion / motion_length;
@@ -868,6 +878,8 @@ bool Space2DSW::test_body_motion(Body2DSW *p_body, const Transform2D &p_from, co
 				break;
 			}
 
+			recovered = true;
+
 			Vector2 recover_motion;
 			for (int i = 0; i < cbk.amount; i++) {
 				Vector2 a = sr[i * 2 + 0];
@@ -879,9 +891,9 @@ bool Space2DSW::test_body_motion(Body2DSW *p_body, const Transform2D &p_from, co
 
 				// Compute depth on recovered motion.
 				float depth = n.dot(a + recover_motion) - d;
-				if (depth > 0.0) {
+				if (depth > min_contact_depth + CMP_EPSILON) {
 					// Only recover if there is penetration.
-					recover_motion -= n * depth * 0.4;
+					recover_motion -= n * (depth - min_contact_depth) * 0.4;
 				}
 			}
 
@@ -889,8 +901,6 @@ bool Space2DSW::test_body_motion(Body2DSW *p_body, const Transform2D &p_from, co
 				collided = false;
 				break;
 			}
-
-			recovered = true;
 
 			body_transform.elements[2] += recover_motion;
 			body_aabb.position += recover_motion;
@@ -1068,7 +1078,10 @@ bool Space2DSW::test_body_motion(Body2DSW *p_body, const Transform2D &p_from, co
 		rcd.best_shape = 0;
 
 		// Allowed depth can't be lower than motion length, in order to handle contacts at low speed.
-		rcd.min_allowed_depth = MIN(motion_length, test_motion_min_contact_depth);
+		rcd.min_allowed_depth = MIN(motion_length, min_contact_depth);
+
+		body_aabb.position += p_motion * unsafe;
+		int amount = _cull_aabb_for_body(p_body, body_aabb);
 
 		int from_shape = best_shape != -1 ? best_shape : 0;
 		int to_shape = best_shape != -1 ? best_shape + 1 : p_body->get_shape_count();
@@ -1084,10 +1097,6 @@ bool Space2DSW::test_body_motion(Body2DSW *p_body, const Transform2D &p_from, co
 			if (p_exclude_raycast_shapes && body_shape->get_type() == Physics2DServer::SHAPE_RAY) {
 				continue;
 			}
-
-			body_aabb.position += p_motion * unsafe;
-
-			int amount = _cull_aabb_for_body(p_body, body_aabb);
 
 			for (int i = 0; i < amount; i++) {
 				const CollisionObject2DSW *col_obj = intersection_query_results[i];
@@ -1186,15 +1195,29 @@ bool Space2DSW::test_body_motion(Body2DSW *p_body, const Transform2D &p_from, co
 	return collided;
 }
 
-void *Space2DSW::_broadphase_pair(CollisionObject2DSW *A, int p_subindex_A, CollisionObject2DSW *B, int p_subindex_B, void *p_self) {
-	if (!A->test_collision_mask(B)) {
+void *Space2DSW::_broadphase_pair(CollisionObject2DSW *p_object_A, int p_subindex_A, CollisionObject2DSW *p_object_B, int p_subindex_B, void *p_pair_data, void *p_self) {
+	bool valid_collision_pair = p_object_A->test_collision_mask(p_object_B);
+
+	if (p_pair_data) {
+		// Checking an existing pair.
+		if (valid_collision_pair) {
+			// Nothing to do, pair is still valid.
+			return p_pair_data;
+		} else {
+			// Logical collision not valid anymore, unpair.
+			_broadphase_unpair(p_object_A, p_subindex_A, p_object_B, p_subindex_B, p_pair_data, p_self);
+			return nullptr;
+		}
+	}
+
+	if (!valid_collision_pair) {
 		return nullptr;
 	}
 
-	CollisionObject2DSW::Type type_A = A->get_type();
-	CollisionObject2DSW::Type type_B = B->get_type();
+	CollisionObject2DSW::Type type_A = p_object_A->get_type();
+	CollisionObject2DSW::Type type_B = p_object_B->get_type();
 	if (type_A > type_B) {
-		SWAP(A, B);
+		SWAP(p_object_A, p_object_B);
 		SWAP(p_subindex_A, p_subindex_B);
 		SWAP(type_A, type_B);
 	}
@@ -1203,33 +1226,35 @@ void *Space2DSW::_broadphase_pair(CollisionObject2DSW *A, int p_subindex_A, Coll
 	self->collision_pairs++;
 
 	if (type_A == CollisionObject2DSW::TYPE_AREA) {
-		Area2DSW *area = static_cast<Area2DSW *>(A);
+		Area2DSW *area_a = static_cast<Area2DSW *>(p_object_A);
 		if (type_B == CollisionObject2DSW::TYPE_AREA) {
-			Area2DSW *area_b = static_cast<Area2DSW *>(B);
-			Area2Pair2DSW *area2_pair = memnew(Area2Pair2DSW(area_b, p_subindex_B, area, p_subindex_A));
+			Area2DSW *area_b = static_cast<Area2DSW *>(p_object_B);
+			Area2Pair2DSW *area2_pair = memnew(Area2Pair2DSW(area_b, p_subindex_B, area_a, p_subindex_A));
 			return area2_pair;
 		} else {
-			Body2DSW *body = static_cast<Body2DSW *>(B);
-			AreaPair2DSW *area_pair = memnew(AreaPair2DSW(body, p_subindex_B, area, p_subindex_A));
+			Body2DSW *body_b = static_cast<Body2DSW *>(p_object_B);
+			AreaPair2DSW *area_pair = memnew(AreaPair2DSW(body_b, p_subindex_B, area_a, p_subindex_A));
 			return area_pair;
 		}
 
 	} else {
-		BodyPair2DSW *b = memnew(BodyPair2DSW((Body2DSW *)A, p_subindex_A, (Body2DSW *)B, p_subindex_B));
-		return b;
+		Body2DSW *body_a = static_cast<Body2DSW *>(p_object_A);
+		Body2DSW *body_b = static_cast<Body2DSW *>(p_object_B);
+		BodyPair2DSW *body_pair = memnew(BodyPair2DSW(body_a, p_subindex_A, body_b, p_subindex_B));
+		return body_pair;
 	}
 
 	return nullptr;
 }
 
-void Space2DSW::_broadphase_unpair(CollisionObject2DSW *A, int p_subindex_A, CollisionObject2DSW *B, int p_subindex_B, void *p_data, void *p_self) {
-	if (!p_data) {
+void Space2DSW::_broadphase_unpair(CollisionObject2DSW *p_object_A, int p_subindex_A, CollisionObject2DSW *p_object_B, int p_subindex_B, void *p_pair_data, void *p_self) {
+	if (!p_pair_data) {
 		return;
 	}
 
 	Space2DSW *self = (Space2DSW *)p_self;
 	self->collision_pairs--;
-	Constraint2DSW *c = (Constraint2DSW *)p_data;
+	Constraint2DSW *c = (Constraint2DSW *)p_pair_data;
 	memdelete(c);
 }
 
@@ -1345,9 +1370,6 @@ void Space2DSW::set_param(Physics2DServer::SpaceParameter p_param, real_t p_valu
 		case Physics2DServer::SPACE_PARAM_CONSTRAINT_DEFAULT_BIAS:
 			constraint_bias = p_value;
 			break;
-		case Physics2DServer::SPACE_PARAM_TEST_MOTION_MIN_CONTACT_DEPTH:
-			test_motion_min_contact_depth = p_value;
-			break;
 	}
 }
 
@@ -1367,8 +1389,6 @@ real_t Space2DSW::get_param(Physics2DServer::SpaceParameter p_param) const {
 			return body_time_to_sleep;
 		case Physics2DServer::SPACE_PARAM_CONSTRAINT_DEFAULT_BIAS:
 			return constraint_bias;
-		case Physics2DServer::SPACE_PARAM_TEST_MOTION_MIN_CONTACT_DEPTH:
-			return test_motion_min_contact_depth;
 	}
 	return 0;
 }
@@ -1400,7 +1420,6 @@ Space2DSW::Space2DSW() {
 	contact_recycle_radius = 1.0;
 	contact_max_separation = 1.5;
 	contact_max_allowed_penetration = 0.3;
-	test_motion_min_contact_depth = 0.005;
 
 	constraint_bias = 0.2;
 	body_linear_velocity_sleep_threshold = GLOBAL_DEF("physics/2d/sleep_threshold_linear", 2.0);

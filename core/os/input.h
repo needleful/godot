@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -79,6 +79,7 @@ public:
 	static Input *get_singleton();
 
 	virtual bool is_key_pressed(int p_scancode) const = 0;
+	virtual bool is_physical_key_pressed(int p_scancode) const = 0;
 	virtual bool is_mouse_button_pressed(int p_button) const = 0;
 	virtual bool is_joy_button_pressed(int p_device, int p_button) const = 0;
 	virtual bool is_action_pressed(const StringName &p_action, bool p_exact = false) const = 0;
@@ -116,6 +117,10 @@ public:
 	virtual Vector3 get_accelerometer() const = 0;
 	virtual Vector3 get_magnetometer() const = 0;
 	virtual Vector3 get_gyroscope() const = 0;
+	virtual void set_gravity(const Vector3 &p_gravity) = 0;
+	virtual void set_accelerometer(const Vector3 &p_accel) = 0;
+	virtual void set_magnetometer(const Vector3 &p_magnetometer) = 0;
+	virtual void set_gyroscope(const Vector3 &p_gyroscope) = 0;
 
 	virtual void action_press(const StringName &p_action, float p_strength = 1.f) = 0;
 	virtual void action_release(const StringName &p_action) = 0;

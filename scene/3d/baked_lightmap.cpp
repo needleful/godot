@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -257,6 +257,7 @@ BakedLightmapData::~BakedLightmapData() {
 
 Lightmapper::BakeStepFunc BakedLightmap::bake_step_function;
 Lightmapper::BakeStepFunc BakedLightmap::bake_substep_function;
+Lightmapper::BakeEndFunc BakedLightmap::bake_end_function;
 
 Size2i BakedLightmap::_compute_lightmap_size(const MeshesFound &p_mesh) {
 	double area = 0;
@@ -388,7 +389,7 @@ void BakedLightmap::_find_meshes_and_lights(Node *p_at_node, Vector<MeshesFound>
 
 			GeometryInstance *gi = Object::cast_to<GeometryInstance>(p_at_node);
 			if (gi) {
-				all_override = mi->get_material_override();
+				all_override = gi->get_material_override();
 			}
 
 			for (int i = 0; i < bmeshes.size(); i += 2) {
@@ -413,8 +414,8 @@ void BakedLightmap::_find_meshes_and_lights(Node *p_at_node, Vector<MeshesFound>
 				mf.mesh = mesh;
 
 				if (gi) {
-					mf.cast_shadows = mi->get_cast_shadows_setting() != GeometryInstance::SHADOW_CASTING_SETTING_OFF;
-					mf.generate_lightmap = mi->get_generate_lightmap();
+					mf.cast_shadows = gi->get_cast_shadows_setting() != GeometryInstance::SHADOW_CASTING_SETTING_OFF;
+					mf.generate_lightmap = gi->get_generate_lightmap();
 				} else {
 					mf.cast_shadows = true;
 					mf.generate_lightmap = true;
@@ -571,6 +572,10 @@ bool BakedLightmap::_lightmap_bake_step_function(float p_completion, const Strin
 }
 
 BakedLightmap::BakeError BakedLightmap::bake(Node *p_from_node, String p_data_save_path) {
+	if (!p_from_node && !get_parent()) {
+		return BAKE_ERROR_NO_ROOT;
+	}
+
 	bool no_save_path = false;
 	if (p_data_save_path == "" && (get_light_data().is_null() || !get_light_data()->get_path().is_resource_file())) {
 		no_save_path = true;
@@ -606,15 +611,21 @@ BakedLightmap::BakeError BakedLightmap::bake(Node *p_from_node, String p_data_sa
 		}
 	}
 
+	uint32_t time_started = OS::get_singleton()->get_ticks_msec();
+
 	if (bake_step_function) {
 		bool cancelled = bake_step_function(0.0, TTR("Finding meshes and lights"), nullptr, true);
 		if (cancelled) {
+			bake_end_function(time_started);
 			return BAKE_ERROR_USER_ABORTED;
 		}
 	}
 
 	Ref<Lightmapper> lightmapper = Lightmapper::create();
-	ERR_FAIL_COND_V(lightmapper.is_null(), BAKE_ERROR_NO_LIGHTMAPPER);
+	if (lightmapper.is_null()) {
+		bake_end_function(time_started);
+		return BAKE_ERROR_NO_LIGHTMAPPER;
+	}
 
 	Vector<LightsFound> lights_found;
 	Vector<MeshesFound> meshes_found;
@@ -622,6 +633,7 @@ BakedLightmap::BakeError BakedLightmap::bake(Node *p_from_node, String p_data_sa
 	_find_meshes_and_lights(p_from_node ? p_from_node : get_parent(), meshes_found, lights_found);
 
 	if (meshes_found.size() == 0) {
+		bake_end_function(time_started);
 		return BAKE_ERROR_NO_MESHES;
 	}
 
@@ -630,6 +642,7 @@ BakedLightmap::BakeError BakedLightmap::bake(Node *p_from_node, String p_data_sa
 			float p = (float)(m_i) / meshes_found.size();
 			bool cancelled = bake_step_function(p * 0.05, vformat(TTR("Preparing geometry (%d/%d)"), m_i + 1, meshes_found.size()), nullptr, false);
 			if (cancelled) {
+				bake_end_function(time_started);
 				return BAKE_ERROR_USER_ABORTED;
 			}
 		}
@@ -818,6 +831,7 @@ BakedLightmap::BakeError BakedLightmap::bake(Node *p_from_node, String p_data_sa
 	Lightmapper::BakeError bake_err = lightmapper->bake(Lightmapper::BakeQuality(bake_quality), use_denoiser, bounces, bounce_indirect_energy, bias, gen_atlas, max_atlas_size, environment_image, environment_xform, _lightmap_bake_step_function, &bsud, bake_substep_function);
 
 	if (bake_err != Lightmapper::BAKE_OK) {
+		bake_end_function(time_started);
 		switch (bake_err) {
 			case Lightmapper::BAKE_ERROR_USER_ABORTED: {
 				return BAKE_ERROR_USER_ABORTED;
@@ -847,6 +861,7 @@ BakedLightmap::BakeError BakedLightmap::bake(Node *p_from_node, String p_data_sa
 		if (bake_step_function) {
 			bool cancelled = bake_step_function(0.85, TTR("Generating capture"), nullptr, true);
 			if (cancelled) {
+				bake_end_function(time_started);
 				return BAKE_ERROR_USER_ABORTED;
 			}
 		}
@@ -926,6 +941,7 @@ BakedLightmap::BakeError BakedLightmap::bake(Node *p_from_node, String p_data_sa
 	if (bake_step_function) {
 		bool cancelled = bake_step_function(0.9, TTR("Saving lightmaps"), nullptr, true);
 		if (cancelled) {
+			bake_end_function(time_started);
 			return BAKE_ERROR_USER_ABORTED;
 		}
 	}
@@ -1081,6 +1097,7 @@ BakedLightmap::BakeError BakedLightmap::bake(Node *p_from_node, String p_data_sa
 	if (bake_step_function) {
 		bool cancelled = bake_step_function(1.0, TTR("Done"), nullptr, true);
 		if (cancelled) {
+			bake_end_function(time_started);
 			return BAKE_ERROR_USER_ABORTED;
 		}
 	}
@@ -1089,10 +1106,12 @@ BakedLightmap::BakeError BakedLightmap::bake(Node *p_from_node, String p_data_sa
 	data->set_path(p_data_save_path);
 
 	if (err != OK) {
+		bake_end_function(time_started);
 		return BAKE_ERROR_CANT_CREATE_IMAGE;
 	}
 
 	set_light_data(data);
+	bake_end_function(time_started);
 
 	return BAKE_ERROR_OK;
 }
@@ -1580,6 +1599,7 @@ void BakedLightmap::_bind_methods() {
 	BIND_ENUM_CONSTANT(BAKE_ERROR_INVALID_MESH);
 	BIND_ENUM_CONSTANT(BAKE_ERROR_USER_ABORTED);
 	BIND_ENUM_CONSTANT(BAKE_ERROR_NO_LIGHTMAPPER);
+	BIND_ENUM_CONSTANT(BAKE_ERROR_NO_ROOT);
 
 	BIND_ENUM_CONSTANT(ENVIRONMENT_MODE_DISABLED);
 	BIND_ENUM_CONSTANT(ENVIRONMENT_MODE_SCENE);

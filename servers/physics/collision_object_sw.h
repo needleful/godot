@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -79,6 +79,7 @@ private:
 	SelfList<CollisionObjectSW> pending_shape_update_list;
 
 	void _update_shapes();
+	void _recheck_shapes();
 
 protected:
 	void _update_shapes_with_motion(const Vector3 &p_motion);
@@ -155,13 +156,15 @@ public:
 
 	_FORCE_INLINE_ void set_collision_layer(uint32_t p_layer) {
 		collision_layer = p_layer;
-		_shape_changed();
+		_recheck_shapes();
+		_shapes_changed();
 	}
 	_FORCE_INLINE_ uint32_t get_collision_layer() const { return collision_layer; }
 
 	_FORCE_INLINE_ void set_collision_mask(uint32_t p_mask) {
 		collision_mask = p_mask;
-		_shape_changed();
+		_recheck_shapes();
+		_shapes_changed();
 	}
 	_FORCE_INLINE_ uint32_t get_collision_mask() const { return collision_mask; }
 

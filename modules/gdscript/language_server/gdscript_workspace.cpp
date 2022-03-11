@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -49,6 +49,59 @@ void GDScriptWorkspace::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_file_uri", "path"), &GDScriptWorkspace::get_file_uri);
 	ClassDB::bind_method(D_METHOD("publish_diagnostics", "path"), &GDScriptWorkspace::publish_diagnostics);
 	ClassDB::bind_method(D_METHOD("generate_script_api", "path"), &GDScriptWorkspace::generate_script_api);
+	ClassDB::bind_method(D_METHOD("apply_new_signal", "obj", "function", "args"), &GDScriptWorkspace::apply_new_signal);
+}
+
+void GDScriptWorkspace::apply_new_signal(Object *obj, String function, PoolStringArray args) {
+	Ref<Script> script = obj->get_script();
+
+	if (script->get_language()->get_name() != "GDScript") {
+		return;
+	}
+
+	String function_signature = "func " + function;
+	String source = script->get_source_code();
+
+	if (source.find(function_signature) != -1) {
+		return;
+	}
+
+	int first_class = source.find("\nclass ");
+	int start_line = 0;
+	if (first_class != -1) {
+		start_line = source.substr(0, first_class).split("\n").size();
+	} else {
+		start_line = source.split("\n").size();
+	}
+
+	String function_body = "\n\n" + function_signature + "(";
+	for (int i = 0; i < args.size(); ++i) {
+		function_body += args[i];
+		if (i < args.size() - 1) {
+			function_body += ", ";
+		}
+	}
+	function_body += ")";
+	if (EditorSettings::get_singleton()->get_setting("text_editor/completion/add_type_hints")) {
+		function_body += " -> void";
+	}
+	function_body += ":\n\tpass # Replace with function body.\n";
+
+	lsp::TextEdit text_edit;
+
+	if (first_class != -1) {
+		function_body += "\n\n";
+	}
+	text_edit.range.end.line = text_edit.range.start.line = start_line;
+
+	text_edit.newText = function_body;
+
+	String uri = get_file_uri(script->get_path());
+
+	lsp::ApplyWorkspaceEditParams params;
+	params.edit.add_edit(uri, text_edit);
+
+	GDScriptLanguageProtocol::get_singleton()->request_client("workspace/applyEdit", params.to_json());
 }
 
 void GDScriptWorkspace::did_delete_files(const Dictionary &p_params) {
@@ -360,6 +413,9 @@ Error GDScriptWorkspace::initialize() {
 		}
 	}
 
+	EditorNode *editor_node = EditorNode::get_singleton();
+	editor_node->connect("script_add_function_request", this, "apply_new_signal");
+
 	return OK;
 }
 
@@ -551,7 +607,7 @@ void GDScriptWorkspace::completion(const lsp::CompletionParams &p_params, List<S
 	}
 }
 
-const lsp::DocumentSymbol *GDScriptWorkspace::resolve_symbol(const lsp::TextDocumentPositionParams &p_doc_pos, const String &p_symbol_name, bool p_func_requred) {
+const lsp::DocumentSymbol *GDScriptWorkspace::resolve_symbol(const lsp::TextDocumentPositionParams &p_doc_pos, const String &p_symbol_name, bool p_func_required) {
 	const lsp::DocumentSymbol *symbol = nullptr;
 
 	String path = get_file_path(p_doc_pos.textDocument.uri);
@@ -576,7 +632,10 @@ const lsp::DocumentSymbol *GDScriptWorkspace::resolve_symbol(const lsp::TextDocu
 
 			} else {
 				ScriptLanguage::LookupResult ret;
-				if (OK == GDScriptLanguage::get_singleton()->lookup_code(parser->get_text_for_lookup_symbol(pos, symbol_identifier, p_func_requred), symbol_identifier, path, nullptr, ret)) {
+				if (symbol_identifier == "new" && parser->get_lines()[p_doc_pos.position.line].replace(" ", "").replace("\t", "").find("new(") > -1) {
+					symbol_identifier = "_init";
+				}
+				if (OK == GDScriptLanguage::get_singleton()->lookup_code(parser->get_text_for_lookup_symbol(pos, symbol_identifier, p_func_required), symbol_identifier, path, nullptr, ret)) {
 					if (ret.type == ScriptLanguage::LookupResult::RESULT_SCRIPT_LOCATION) {
 						String target_script_path = path;
 						if (!ret.script.is_null()) {

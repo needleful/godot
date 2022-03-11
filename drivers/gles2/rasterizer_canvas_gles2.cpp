@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -319,7 +319,7 @@ void RasterizerCanvasGLES2::render_batches(Item *p_current_clip, bool &r_reclip,
 			default: {
 				int end_command = batch.first_command + batch.num_commands;
 
-				RAST_DEV_DEBUG_ASSERT(batch.item);
+				DEV_ASSERT(batch.item);
 				RasterizerCanvas::Item::Command *const *commands = batch.item->commands.ptr();
 
 				for (int i = batch.first_command; i < end_command; i++) {

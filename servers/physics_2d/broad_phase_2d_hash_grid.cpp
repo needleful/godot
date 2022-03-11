@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -88,7 +88,7 @@ void BroadPhase2DHashGrid::_check_motion(Element *p_elem) {
 
 		if (physical_collision && logical_collision) {
 			if (!E->get()->colliding && pair_callback) {
-				E->get()->ud = pair_callback(p_elem->owner, p_elem->subindex, E->key()->owner, E->key()->subindex, pair_userdata);
+				E->get()->ud = pair_callback(p_elem->owner, p_elem->subindex, E->key()->owner, E->key()->subindex, nullptr, pair_userdata);
 			}
 			E->get()->colliding = true;
 		} else { // No collision
@@ -334,6 +334,14 @@ void BroadPhase2DHashGrid::move(ID p_id, const Rect2 &p_aabb) {
 	}
 
 	_check_motion(&e);
+}
+
+void BroadPhase2DHashGrid::recheck_pairs(ID p_id) {
+	Map<ID, Element>::Element *E = element_map.find(p_id);
+	ERR_FAIL_COND(!E);
+
+	Element &e = E->get();
+	move(p_id, e.aabb);
 }
 
 void BroadPhase2DHashGrid::set_static(ID p_id, bool p_static) {
@@ -643,92 +651,3 @@ BroadPhase2DHashGrid::~BroadPhase2DHashGrid() {
 
 	memdelete_arr(hash_table);
 }
-
-/* 3D version of voxel traversal:
-
-public IEnumerable<Point3D> GetCellsOnRay(Ray ray, int maxDepth)
-{
-    // Implementation is based on:
-    // "A Fast Voxel Traversal Algorithm for Ray Tracing"
-    // John Amanatides, Andrew Woo
-    // http://www.cse.yorku.ca/~amana/research/grid.pdf
-    // https://web.archive.org/web/20100616193049/http://www.devmaster.net/articles/raytracing_series/A%20faster%20voxel%20traversal%20algorithm%20for%20ray%20tracing.pdf
-
-    // NOTES:
-    // * This code assumes that the ray's position and direction are in 'cell coordinates', which means
-    //   that one unit equals one cell in all directions.
-    // * When the ray doesn't start within the voxel grid, calculate the first position at which the
-    //   ray could enter the grid. If it never enters the grid, there is nothing more to do here.
-    // * Also, it is important to test when the ray exits the voxel grid when the grid isn't infinite.
-    // * The Point3D structure is a simple structure having three integer fields (X, Y and Z).
-
-    // The cell in which the ray starts.
-    Point3D start = GetCellAt(ray.Position);        // Rounds the position's X, Y and Z down to the nearest integer values.
-    int x = start.X;
-    int y = start.Y;
-    int z = start.Z;
-
-    // Determine which way we go.
-    int stepX = Math.Sign(ray.Direction.X);
-    int stepY = Math.Sign(ray.Direction.Y);
-    int stepZ = Math.Sign(ray.Direction.Z);
-
-    // Calculate cell boundaries. When the step (i.e. direction sign) is positive,
-    // the next boundary is AFTER our current position, meaning that we have to add 1.
-    // Otherwise, it is BEFORE our current position, in which case we add nothing.
-    Point3D cellBoundary = new Point3D(
-	x + (stepX > 0 ? 1 : 0),
-	y + (stepY > 0 ? 1 : 0),
-	z + (stepZ > 0 ? 1 : 0));
-
-    // NOTE: For the following calculations, the result will be Single.PositiveInfinity
-    // when ray.Direction.X, Y or Z equals zero, which is OK. However, when the left-hand
-    // value of the division also equals zero, the result is Single.NaN, which is not OK.
-
-    // Determine how far we can travel along the ray before we hit a voxel boundary.
-    Vector3 tMax = new Vector3(
-	(cellBoundary.X - ray.Position.X) / ray.Direction.X,    // Boundary is a plane on the YZ axis.
-	(cellBoundary.Y - ray.Position.Y) / ray.Direction.Y,    // Boundary is a plane on the XZ axis.
-	(cellBoundary.Z - ray.Position.Z) / ray.Direction.Z);    // Boundary is a plane on the XY axis.
-    if (Single.IsNaN(tMax.X)) tMax.X = Single.PositiveInfinity;
-    if (Single.IsNaN(tMax.Y)) tMax.Y = Single.PositiveInfinity;
-    if (Single.IsNaN(tMax.Z)) tMax.Z = Single.PositiveInfinity;
-
-    // Determine how far we must travel along the ray before we have crossed a gridcell.
-    Vector3 tDelta = new Vector3(
-	stepX / ray.Direction.X,                    // Crossing the width of a cell.
-	stepY / ray.Direction.Y,                    // Crossing the height of a cell.
-	stepZ / ray.Direction.Z);                    // Crossing the depth of a cell.
-    if (Single.IsNaN(tDelta.X)) tDelta.X = Single.PositiveInfinity;
-    if (Single.IsNaN(tDelta.Y)) tDelta.Y = Single.PositiveInfinity;
-    if (Single.IsNaN(tDelta.Z)) tDelta.Z = Single.PositiveInfinity;
-
-    // For each step, determine which distance to the next voxel boundary is lowest (i.e.
-    // which voxel boundary is nearest) and walk that way.
-    for (int i = 0; i < maxDepth; i++)
-    {
-	// Return it.
-	yield return new Point3D(x, y, z);
-
-	// Do the next step.
-	if (tMax.X < tMax.Y && tMax.X < tMax.Z)
-	{
-	    // tMax.X is the lowest, an YZ cell boundary plane is nearest.
-	    x += stepX;
-	    tMax.X += tDelta.X;
-	}
-	else if (tMax.Y < tMax.Z)
-	{
-	    // tMax.Y is the lowest, an XZ cell boundary plane is nearest.
-	    y += stepY;
-	    tMax.Y += tDelta.Y;
-	}
-	else
-	{
-	    // tMax.Z is the lowest, an XY cell boundary plane is nearest.
-	    z += stepZ;
-	    tMax.Z += tDelta.Z;
-	}
-    }
-
-    */

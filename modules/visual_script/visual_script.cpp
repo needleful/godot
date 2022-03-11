@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -2232,6 +2232,7 @@ Variant VisualScriptFunctionState::_signal_callback(const Variant **p_args, int 
 }
 
 void VisualScriptFunctionState::connect_to_signal(Object *p_obj, const String &p_signal, Array p_binds) {
+	ERR_FAIL_NULL(p_obj);
 	Vector<Variant> binds;
 	for (int i = 0; i < p_binds.size(); i++) {
 		binds.push_back(p_binds[i]);
@@ -2434,7 +2435,6 @@ void VisualScriptLanguage::debug_get_stack_level_locals(int p_level, List<String
 	const StringName *f = _call_stack[l].function;
 
 	ERR_FAIL_COND(!_call_stack[l].instance->functions.has(*f));
-	//VisualScriptInstance::Function *func = &_call_stack[l].instance->functions[*f];
 
 	VisualScriptNodeInstance *node = _call_stack[l].instance->instances[*_call_stack[l].current_id];
 	ERR_FAIL_COND(!node);
@@ -2480,23 +2480,8 @@ void VisualScriptLanguage::debug_get_stack_level_locals(int p_level, List<String
 		p_locals->push_back("working_mem/mem_" + itos(i));
 		p_values->push_back((*_call_stack[l].work_mem)[i]);
 	}
-
-	/*
-    ERR_FAIL_INDEX(p_level,_debug_call_stack_pos);
-
-
-    VisualFunction *f = _call_stack[l].function;
-
-    List<Pair<StringName,int> > locals;
-
-    f->debug_get_stack_member_state(*_call_stack[l].line,&locals);
-    for( List<Pair<StringName,int> >::Element *E = locals.front();E;E=E->next() ) {
-
-	p_locals->push_back(E->get().first);
-	p_values->push_back(_call_stack[l].stack[E->get().second]);
-    }
-*/
 }
+
 void VisualScriptLanguage::debug_get_stack_level_members(int p_level, List<String> *p_members, List<Variant> *p_values, int p_max_subitems, int p_max_depth) {
 	if (_debug_parse_err_node >= 0) {
 		return;

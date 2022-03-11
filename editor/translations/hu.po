@@ -1,6 +1,6 @@
 # Hungarian translation of the Godot Engine editor
-# Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.
-# Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).
+# Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.
+# Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).
 # This file is distributed under the same license as the Godot source code.
 # Árpád Horváth <horvatha4@googlemail.com>, 2018.
 # Nagy Lajos <neutron9707@gmail.com>, 2017.
@@ -16,12 +16,19 @@
 # Czmorek Dávid <czmdav.soft@gmail.com>, 2020.
 # Újvári Marcell <mmarci72@gmail.com>, 2021.
 # Gergő Pistai <gergopistai@gmail.com>, 2021.
+# Misi <varady.misi@gmail.com>, 2021.
+# Looky1173 <lgl1173and2006@gmail.com>, 2021.
+# Frontrider <frontrider@tutanota.com>, 2021.
+# Andras Virag <snowflake71@gmail.com>, 2021.
+# balintmaci <balintmaci@gmail.com>, 2021.
+# Balázs Püspök-Kiss <pkblazsak@gmail.com>, 2021.
 msgid ""
 msgstr ""
 "Project-Id-Version: Godot Engine editor\n"
+"Report-Msgid-Bugs-To: https://github.com/godotengine/godot\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2021-03-31 03:53+0000\n"
-"Last-Translator: Gergő Pistai <gergopistai@gmail.com>\n"
+"PO-Revision-Date: 2021-12-23 15:30+0000\n"
+"Last-Translator: Balázs Püspök-Kiss <pkblazsak@gmail.com>\n"
 "Language-Team: Hungarian <https://hosted.weblate.org/projects/godot-engine/"
 "godot/hu/>\n"
 "Language: hu\n"
@@ -29,7 +36,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.6-dev\n"
+"X-Generator: Weblate 4.10.1\n"
 
 #: core/math/expression.cpp modules/gdscript/gdscript_functions.cpp
 #: modules/visual_script/visual_script_builtin_funcs.cpp
@@ -379,13 +386,12 @@ msgstr "Animáció - Beszúrás"
 #. TRANSLATORS: This describes the target of new animation track, will be inserted into another string.
 #: editor/animation_track_editor.cpp
 msgid "node '%s'"
-msgstr ""
+msgstr "'%s' csomópont"
 
 #. TRANSLATORS: This describes the target of new animation track, will be inserted into another string.
 #: editor/animation_track_editor.cpp
-#, fuzzy
 msgid "animation"
-msgstr "Animáció"
+msgstr "animáció"
 
 #: editor/animation_track_editor.cpp
 msgid "AnimationPlayer can't animate itself, only other players."
@@ -395,9 +401,8 @@ msgstr ""
 
 #. TRANSLATORS: This describes the target of new animation track, will be inserted into another string.
 #: editor/animation_track_editor.cpp
-#, fuzzy
 msgid "property '%s'"
-msgstr "Tulajdonság"
+msgstr "'%s' tulajdonság"
 
 #: editor/animation_track_editor.cpp
 msgid "Anim Create & Insert"
@@ -488,7 +493,7 @@ msgstr "Animáció - Kulcsok Mozgatása"
 #: editor/animation_track_editor.cpp
 #: modules/visual_script/visual_script_editor.cpp
 msgid "Clipboard is empty!"
-msgstr ""
+msgstr "A vágólap üres!"
 
 #: editor/animation_track_editor.cpp
 msgid "Paste Tracks"
@@ -611,7 +616,6 @@ msgid "Go to Previous Step"
 msgstr "Ugrás az Előző Lépésre"
 
 #: editor/animation_track_editor.cpp
-#, fuzzy
 msgid "Apply Reset"
 msgstr "Visszaállítás"
 
@@ -867,6 +871,7 @@ msgstr "Elhalasztott"
 msgid ""
 "Defers the signal, storing it in a queue and only firing it at idle time."
 msgstr ""
+"Késlelteti a jelzést, amit egy sorban tárol és csak holtidőben adja ki."
 
 #: editor/connections_dialog.cpp
 msgid "Oneshot"
@@ -957,9 +962,8 @@ msgid "Edit..."
 msgstr "Szerkesztés..."
 
 #: editor/connections_dialog.cpp
-#, fuzzy
 msgid "Go to Method"
-msgstr "Ugrás metódusra"
+msgstr "Ugrás az eljárásra"
 
 #: editor/create_dialog.cpp
 msgid "Change %s Type"
@@ -979,7 +983,7 @@ msgstr "Nincs találat a következőre: \"%s\"."
 
 #: editor/create_dialog.cpp editor/property_selector.cpp
 msgid "No description available for %s."
-msgstr ""
+msgstr "Nincs elérhető leírás: %s."
 
 #: editor/create_dialog.cpp editor/editor_file_dialog.cpp
 #: editor/filesystem_dock.cpp
@@ -1039,7 +1043,7 @@ msgstr ""
 msgid "Dependencies"
 msgstr "Függőségek"
 
-#: editor/dependency_editor.cpp
+#: editor/dependency_editor.cpp editor/editor_resource_picker.cpp
 msgid "Resource"
 msgstr "Forrás"
 
@@ -1079,17 +1083,16 @@ msgid "Owners Of:"
 msgstr "Tulajdonosai:"
 
 #: editor/dependency_editor.cpp
-#, fuzzy
 msgid ""
 "Remove the selected files from the project? (Cannot be undone.)\n"
 "Depending on your filesystem configuration, the files will either be moved "
 "to the system trash or deleted permanently."
 msgstr ""
-"Eltávolítja a kiválasztott fájlokat a projektből? (nem visszavonható)\n"
-"Az eltávolított fájlokat a lomtárban találja, ha visszaállítaná őket."
+"Eltávolítja a kiválasztott fájlokat a projektből? (Nem visszavonható.)\n"
+"A rendszerbeállítások szerint az eltávolított fájlok vagy a lomtárba "
+"kerülnek vagy véglegesen törlődnek."
 
 #: editor/dependency_editor.cpp
-#, fuzzy
 msgid ""
 "The files being removed are required by other resources in order for them to "
 "work.\n"
@@ -1097,9 +1100,10 @@ msgid ""
 "Depending on your filesystem configuration, the files will either be moved "
 "to the system trash or deleted permanently."
 msgstr ""
-"Az eltávolítandó fájlokat szükségelik más források a működésükhöz.\n"
-"Eltávolítja őket ennek ellenére? (nem visszavonható)\n"
-"Az eltávolított fájlokat a lomtárban találja, ha visszaállítaná őket."
+"Az eltávolítandó fájlokra szükség van egyéb erőforrások működéséhez.\n"
+"Eltávolítja őket ennek ellenére? (Nem visszavonható.)\n"
+"A rendszerbeállítások szerint az eltávolított fájlok vagy a lomtárba "
+"kerülnek vagy véglegesen törlődnek."
 
 #: editor/dependency_editor.cpp
 msgid "Cannot remove:"
@@ -1171,7 +1175,7 @@ msgstr "Köszönet a Godot közösségétől!"
 
 #: editor/editor_about.cpp editor/editor_node.cpp editor/project_manager.cpp
 msgid "Click to copy."
-msgstr ""
+msgstr "Kattints a másoláshoz."
 
 #: editor/editor_about.cpp
 msgid "Godot Engine contributors"
@@ -1269,41 +1273,36 @@ msgid "Licenses"
 msgstr "Licencek"
 
 #: editor/editor_asset_installer.cpp
-#, fuzzy
 msgid "Error opening asset file for \"%s\" (not in ZIP format)."
-msgstr "Hiba a csomagfájl megnyitása során (nem ZIP formátumú)."
+msgstr "Hiba a \"%s\" csomagfájl megnyitása során (nem ZIP formátumú)."
 
 #: editor/editor_asset_installer.cpp
-#, fuzzy
 msgid "%s (already exists)"
-msgstr "'%s' (már létezik)"
+msgstr "%s (már létezik)"
 
 #: editor/editor_asset_installer.cpp
 msgid "Contents of asset \"%s\" - %d file(s) conflict with your project:"
-msgstr ""
+msgstr "\"%s\" csomag tartalma - %d fájl ütközik a projekteddel:"
 
 #: editor/editor_asset_installer.cpp
 msgid "Contents of asset \"%s\" - No files conflict with your project:"
-msgstr ""
+msgstr "\"%s\" csomag tartalma - Nincs fájl ütközés a projekteddel:"
 
 #: editor/editor_asset_installer.cpp
 msgid "Uncompressing Assets"
 msgstr "Eszközök Kicsomagolása"
 
 #: editor/editor_asset_installer.cpp
-#, fuzzy
 msgid "The following files failed extraction from asset \"%s\":"
-msgstr "A következő fájlokat nem sikerült kibontani a csomagból:"
+msgstr "A következő fájlokat nem sikerült kibontani \"%s\" csomagból:"
 
 #: editor/editor_asset_installer.cpp
-#, fuzzy
 msgid "(and %s more files)"
-msgstr "És további %s fájl."
+msgstr "(és további %s fájl)"
 
 #: editor/editor_asset_installer.cpp
-#, fuzzy
 msgid "Asset \"%s\" installed successfully!"
-msgstr "A csomag telepítése sikeres volt!"
+msgstr "\"%s\" csomag telepítése sikeres!"
 
 #: editor/editor_asset_installer.cpp
 #: editor/plugins/asset_library_editor_plugin.cpp
@@ -1315,7 +1314,6 @@ msgid "Install"
 msgstr "Telepítés"
 
 #: editor/editor_asset_installer.cpp
-#, fuzzy
 msgid "Asset Installer"
 msgstr "Csomagtelepítő"
 
@@ -1380,9 +1378,8 @@ msgid "Bypass"
 msgstr "Kitérés"
 
 #: editor/editor_audio_buses.cpp
-#, fuzzy
 msgid "Bus Options"
-msgstr "Busz beállítások"
+msgstr "Busz Beállítások"
 
 #: editor/editor_audio_buses.cpp editor/filesystem_dock.cpp
 #: editor/plugins/animation_player_editor_plugin.cpp editor/scene_tree_dock.cpp
@@ -1549,13 +1546,14 @@ msgid "Can't add autoload:"
 msgstr "Nem lehet hozzáadni az automatikus betöltést:"
 
 #: editor/editor_autoload_settings.cpp
-#, fuzzy
 msgid "%s is an invalid path. File does not exist."
-msgstr "A fájl nem létezik."
+msgstr "%s útvonal hibás. A fájl nem létezik."
 
 #: editor/editor_autoload_settings.cpp
 msgid "%s is an invalid path. Not in resource path (res://)."
 msgstr ""
+"%s egy érvénytelen elérési útvonal. Nincs az erőforrás elérési útvonalában "
+"(res://)."
 
 #: editor/editor_autoload_settings.cpp
 msgid "Add AutoLoad"
@@ -1579,9 +1577,8 @@ msgid "Name"
 msgstr "Név"
 
 #: editor/editor_autoload_settings.cpp
-#, fuzzy
 msgid "Global Variable"
-msgstr "Változó átnevezése"
+msgstr "Globális Változó"
 
 #: editor/editor_data.cpp
 msgid "Paste Params"
@@ -1705,13 +1702,13 @@ msgstr ""
 "Engedélyezze az 'Import Pvrtc' beállítást a Projekt Beállításokban, vagy "
 "kapcsolja ki a 'Driver Fallback Enabled' beállítást."
 
-#: editor/editor_export.cpp platform/android/export/export.cpp
+#: editor/editor_export.cpp platform/android/export/export_plugin.cpp
 #: platform/iphone/export/export.cpp platform/javascript/export/export.cpp
 #: platform/osx/export/export.cpp platform/uwp/export/export.cpp
 msgid "Custom debug template not found."
 msgstr "Az egyéni hibakeresési sablon nem található."
 
-#: editor/editor_export.cpp platform/android/export/export.cpp
+#: editor/editor_export.cpp platform/android/export/export_plugin.cpp
 #: platform/iphone/export/export.cpp platform/javascript/export/export.cpp
 #: platform/osx/export/export.cpp platform/uwp/export/export.cpp
 msgid "Custom release template not found."
@@ -1755,19 +1752,20 @@ msgstr "Dock importálása"
 
 #: editor/editor_feature_profile.cpp
 msgid "Allows to view and edit 3D scenes."
-msgstr ""
+msgstr "Lehetővé teszi a 3D jelenetek megtekintését és szerkesztését."
 
 #: editor/editor_feature_profile.cpp
 msgid "Allows to edit scripts using the integrated script editor."
 msgstr ""
+"Lehetővé teszi a szkriptek módosítását a beépített szkript szerkesztővel."
 
 #: editor/editor_feature_profile.cpp
 msgid "Provides built-in access to the Asset Library."
-msgstr ""
+msgstr "Beépített hozzáférést ad a Csomagkönyvtárhoz."
 
 #: editor/editor_feature_profile.cpp
 msgid "Allows editing the node hierarchy in the Scene dock."
-msgstr ""
+msgstr "Engedélyezi a Node hierarchia szerkesztését a Jelenet dokkban."
 
 #: editor/editor_feature_profile.cpp
 msgid ""
@@ -2095,7 +2093,7 @@ msgstr ""
 msgid "(Re)Importing Assets"
 msgstr "Eszközök (Újra) Betöltése"
 
-#: editor/editor_help.cpp editor/plugins/spatial_editor_plugin.cpp
+#: editor/editor_help.cpp
 msgid "Top"
 msgstr "Eleje"
 
@@ -2138,19 +2136,39 @@ msgstr "Metódusok"
 
 #: editor/editor_help.cpp
 msgid "Theme Properties"
-msgstr "Téma tulajdonságai"
+msgstr "Téma Tulajdonságai"
+
+#: editor/editor_help.cpp editor/plugins/theme_editor_plugin.cpp
+#, fuzzy
+msgid "Colors"
+msgstr "Szín"
+
+#: editor/editor_help.cpp editor/plugins/theme_editor_plugin.cpp
+msgid "Constants"
+msgstr "Állandók"
+
+#: editor/editor_help.cpp editor/plugins/theme_editor_plugin.cpp
+#, fuzzy
+msgid "Fonts"
+msgstr "Betűtípus"
+
+#: editor/editor_help.cpp editor/plugins/theme_editor_plugin.cpp
+#, fuzzy
+msgid "Icons"
+msgstr "Ikon"
+
+#: editor/editor_help.cpp
+#, fuzzy
+msgid "Styles"
+msgstr "Stílus"
 
 #: editor/editor_help.cpp
 msgid "Enumerations"
 msgstr "Felsorolások"
 
-#: editor/editor_help.cpp editor/plugins/theme_editor_plugin.cpp
-msgid "Constants"
-msgstr "Konstansok"
-
 #: editor/editor_help.cpp
 msgid "Property Descriptions"
-msgstr "Tulajdonságleírások"
+msgstr "Tulajdonság leírásai"
 
 #: editor/editor_help.cpp
 msgid "(value)"
@@ -2166,7 +2184,7 @@ msgstr ""
 
 #: editor/editor_help.cpp
 msgid "Method Descriptions"
-msgstr "Metódusleírások"
+msgstr "Metódus leírások"
 
 #: editor/editor_help.cpp
 msgid ""
@@ -2429,6 +2447,15 @@ msgstr ""
 "Nem sikerült a Scene mentése. Valószínű, hogy a függőségei (példányok vagy "
 "öröklések) nem voltak megfelelőek."
 
+#: editor/editor_node.cpp
+#, fuzzy
+msgid "Could not save one or more scenes!"
+msgstr "Az alprocesszt nem lehetett elindítani!"
+
+#: editor/editor_node.cpp
+msgid "Save All Scenes"
+msgstr "Az összes jelenet mentése"
+
 #: editor/editor_node.cpp editor/scene_tree_dock.cpp
 msgid "Can't overwrite scene that is still open!"
 msgstr "Nem lehet felülírni a még nyitott jelenetet!"
@@ -2571,6 +2598,10 @@ msgid "Save changes to '%s' before closing?"
 msgstr "Bezárás előtt menti a '%s'-n végzett módosításokat?"
 
 #: editor/editor_node.cpp
+msgid "%s no longer exists! Please specify a new save location."
+msgstr ""
+
+#: editor/editor_node.cpp
 msgid ""
 "The current scene has no root node, but %d modified external resource(s) "
 "were saved anyway."
@@ -2610,6 +2641,32 @@ msgstr "Ezt a műveletet nem lehet végrehajtani egy kiválaszott Node nélkül.
 #: editor/editor_node.cpp
 msgid "Current scene not saved. Open anyway?"
 msgstr "Még nem mentette az aktuális jelenetet. Megnyitja mindenképp?"
+
+#: editor/editor_node.cpp
+msgid "Can't undo while mouse buttons are pressed."
+msgstr ""
+
+#: editor/editor_node.cpp
+msgid "Nothing to undo."
+msgstr ""
+
+#: editor/editor_node.cpp
+#, fuzzy
+msgid "Undo: %s"
+msgstr "Visszavonás"
+
+#: editor/editor_node.cpp
+msgid "Can't redo while mouse buttons are pressed."
+msgstr ""
+
+#: editor/editor_node.cpp
+msgid "Nothing to redo."
+msgstr ""
+
+#: editor/editor_node.cpp
+#, fuzzy
+msgid "Redo: %s"
+msgstr "Újra"
 
 #: editor/editor_node.cpp
 msgid "Can't reload a scene that was never saved."
@@ -2898,10 +2955,6 @@ msgstr "Legutóbbi Megnyitása"
 #: editor/editor_node.cpp
 msgid "Save Scene"
 msgstr "Jelenet Mentése"
-
-#: editor/editor_node.cpp
-msgid "Save All Scenes"
-msgstr "Az összes jelenet mentése"
 
 #: editor/editor_node.cpp
 msgid "Convert To..."
@@ -3297,6 +3350,11 @@ msgid "Merge With Existing"
 msgstr "Egyesítés Meglévővel"
 
 #: editor/editor_node.cpp
+#, fuzzy
+msgid "Apply MeshInstance Transforms"
+msgstr "Animáció - Transzformáció Változtatása"
+
+#: editor/editor_node.cpp
 msgid "Open & Run a Script"
 msgstr "Szkriptet Megnyit és Futtat"
 
@@ -3543,6 +3601,10 @@ msgstr "Kulcs/érték pár hozzáadása"
 msgid ""
 "The selected resource (%s) does not match any type expected for this "
 "property (%s)."
+msgstr ""
+
+#: editor/editor_resource_picker.cpp
+msgid "Quick Load"
 msgstr ""
 
 #: editor/editor_resource_picker.cpp editor/property_editor.cpp
@@ -4369,16 +4431,24 @@ msgid "Clear Default for '%s'"
 msgstr "Alapértelmezett Törlése '%s'-nél"
 
 #: editor/import_dock.cpp
+msgid "Reimport"
+msgstr "Újraimportálás"
+
+#: editor/import_dock.cpp
+msgid ""
+"You have pending changes that haven't been applied yet. Click Reimport to "
+"apply changes made to the import options.\n"
+"Selecting another resource in the FileSystem dock without clicking Reimport "
+"first will discard changes made in the Import dock."
+msgstr ""
+
+#: editor/import_dock.cpp
 msgid "Import As:"
 msgstr "Importálás Mint:"
 
 #: editor/import_dock.cpp
 msgid "Preset"
 msgstr "Előre beállított"
-
-#: editor/import_dock.cpp
-msgid "Reimport"
-msgstr "Újraimportálás"
 
 #: editor/import_dock.cpp
 msgid "Save Scenes, Re-Import, and Restart"
@@ -5652,6 +5722,18 @@ msgid "Move CanvasItem \"%s\" to (%d, %d)"
 msgstr "%s CanvasItem mozgatása (%d, %d)-ra/re"
 
 #: editor/plugins/canvas_item_editor_plugin.cpp
+#: editor/plugins/spatial_editor_plugin.cpp
+#, fuzzy
+msgid "Locked"
+msgstr "Kijelölés zárolása"
+
+#: editor/plugins/canvas_item_editor_plugin.cpp
+#: editor/plugins/spatial_editor_plugin.cpp
+#, fuzzy
+msgid "Grouped"
+msgstr "Csoportok"
+
+#: editor/plugins/canvas_item_editor_plugin.cpp
 msgid ""
 "Children of containers have their anchors and margins values overridden by "
 "their parent."
@@ -6577,7 +6659,13 @@ msgid "Remove Selected Item"
 msgstr "Kijelölt Elem Eltávolítása"
 
 #: editor/plugins/mesh_library_editor_plugin.cpp
-msgid "Import from Scene"
+#, fuzzy
+msgid "Import from Scene (Ignore Transforms)"
+msgstr "Importálás Jelenetből"
+
+#: editor/plugins/mesh_library_editor_plugin.cpp
+#, fuzzy
+msgid "Import from Scene (Apply Transforms)"
 msgstr "Importálás Jelenetből"
 
 #: editor/plugins/mesh_library_editor_plugin.cpp
@@ -7164,6 +7252,16 @@ msgstr "Generált Pontok Száma:"
 msgid "Flip Portal"
 msgstr ""
 
+#: editor/plugins/room_manager_editor_plugin.cpp
+#, fuzzy
+msgid "Occluder Set Transform"
+msgstr "Megnéz a Síklap transzformációját."
+
+#: editor/plugins/room_manager_editor_plugin.cpp
+#, fuzzy
+msgid "Center Node"
+msgstr "Node létrehozás"
+
 #: editor/plugins/root_motion_editor_plugin.cpp
 msgid "AnimationTree has no path set to an AnimationPlayer"
 msgstr ""
@@ -7296,11 +7394,13 @@ msgid "Move Down"
 msgstr "Mozgatás Lefelé"
 
 #: editor/plugins/script_editor_plugin.cpp
-msgid "Next script"
+#, fuzzy
+msgid "Next Script"
 msgstr "Következő Szkript"
 
 #: editor/plugins/script_editor_plugin.cpp
-msgid "Previous script"
+#, fuzzy
+msgid "Previous Script"
 msgstr "Előző Szkript"
 
 #: editor/plugins/script_editor_plugin.cpp
@@ -7648,11 +7748,11 @@ msgid "This skeleton has no bones, create some children Bone2D nodes."
 msgstr ""
 
 #: editor/plugins/skeleton_2d_editor_plugin.cpp
-msgid "Create Rest Pose from Bones"
+msgid "Set Rest Pose to Bones"
 msgstr ""
 
 #: editor/plugins/skeleton_2d_editor_plugin.cpp
-msgid "Set Rest Pose to Bones"
+msgid "Create Rest Pose from Bones"
 msgstr ""
 
 #: editor/plugins/skeleton_2d_editor_plugin.cpp
@@ -7660,12 +7760,14 @@ msgid "Skeleton2D"
 msgstr "Csontváz2D"
 
 #: editor/plugins/skeleton_2d_editor_plugin.cpp
-msgid "Make Rest Pose (From Bones)"
-msgstr ""
+#, fuzzy
+msgid "Reset to Rest Pose"
+msgstr "Visszaállítás Alapértelmezettre"
 
 #: editor/plugins/skeleton_2d_editor_plugin.cpp
-msgid "Set Bones to Rest Pose"
-msgstr ""
+#, fuzzy
+msgid "Overwrite Rest Pose"
+msgstr "Felülírás"
 
 #: editor/plugins/skeleton_editor_plugin.cpp
 msgid "Create physical bones"
@@ -7690,6 +7792,76 @@ msgstr "Ortogonális"
 #: editor/plugins/spatial_editor_plugin.cpp
 msgid "Perspective"
 msgstr "Perspektíva"
+
+#: editor/plugins/spatial_editor_plugin.cpp
+#, fuzzy
+msgid "Top Orthogonal"
+msgstr "Ortogonális"
+
+#: editor/plugins/spatial_editor_plugin.cpp
+#, fuzzy
+msgid "Top Perspective"
+msgstr "Perspektíva"
+
+#: editor/plugins/spatial_editor_plugin.cpp
+#, fuzzy
+msgid "Bottom Orthogonal"
+msgstr "Ortogonális"
+
+#: editor/plugins/spatial_editor_plugin.cpp
+#, fuzzy
+msgid "Bottom Perspective"
+msgstr "Perspektíva"
+
+#: editor/plugins/spatial_editor_plugin.cpp
+#, fuzzy
+msgid "Left Orthogonal"
+msgstr "Ortogonális"
+
+#: editor/plugins/spatial_editor_plugin.cpp
+#, fuzzy
+msgid "Left Perspective"
+msgstr "Perspektíva"
+
+#: editor/plugins/spatial_editor_plugin.cpp
+#, fuzzy
+msgid "Right Orthogonal"
+msgstr "Ortogonális"
+
+#: editor/plugins/spatial_editor_plugin.cpp
+#, fuzzy
+msgid "Right Perspective"
+msgstr "Perspektíva"
+
+#: editor/plugins/spatial_editor_plugin.cpp
+#, fuzzy
+msgid "Front Orthogonal"
+msgstr "Ortogonális"
+
+#: editor/plugins/spatial_editor_plugin.cpp
+#, fuzzy
+msgid "Front Perspective"
+msgstr "Perspektíva"
+
+#: editor/plugins/spatial_editor_plugin.cpp
+#, fuzzy
+msgid "Rear Orthogonal"
+msgstr "Ortogonális"
+
+#: editor/plugins/spatial_editor_plugin.cpp
+#, fuzzy
+msgid "Rear Perspective"
+msgstr "Perspektíva"
+
+#. TRANSLATORS: This will be appended to the view name when Auto Orthogonal is enabled.
+#: editor/plugins/spatial_editor_plugin.cpp
+msgid " [auto]"
+msgstr ""
+
+#. TRANSLATORS: This will be appended to the view name when Portal Occulusion is enabled.
+#: editor/plugins/spatial_editor_plugin.cpp
+msgid " [portals active]"
+msgstr ""
 
 #: editor/plugins/spatial_editor_plugin.cpp
 msgid "Transform Aborted."
@@ -7809,15 +7981,7 @@ msgid "Bottom View."
 msgstr ""
 
 #: editor/plugins/spatial_editor_plugin.cpp
-msgid "Bottom"
-msgstr ""
-
-#: editor/plugins/spatial_editor_plugin.cpp
 msgid "Left View."
-msgstr ""
-
-#: editor/plugins/spatial_editor_plugin.cpp
-msgid "Left"
 msgstr ""
 
 #: editor/plugins/spatial_editor_plugin.cpp
@@ -7825,23 +7989,11 @@ msgid "Right View."
 msgstr ""
 
 #: editor/plugins/spatial_editor_plugin.cpp
-msgid "Right"
-msgstr ""
-
-#: editor/plugins/spatial_editor_plugin.cpp
 msgid "Front View."
 msgstr ""
 
 #: editor/plugins/spatial_editor_plugin.cpp
-msgid "Front"
-msgstr ""
-
-#: editor/plugins/spatial_editor_plugin.cpp
 msgid "Rear View."
-msgstr ""
-
-#: editor/plugins/spatial_editor_plugin.cpp
-msgid "Rear"
 msgstr ""
 
 #: editor/plugins/spatial_editor_plugin.cpp
@@ -8036,6 +8188,26 @@ msgid "Right View"
 msgstr ""
 
 #: editor/plugins/spatial_editor_plugin.cpp
+msgid "Orbit View Down"
+msgstr ""
+
+#: editor/plugins/spatial_editor_plugin.cpp
+msgid "Orbit View Left"
+msgstr ""
+
+#: editor/plugins/spatial_editor_plugin.cpp
+msgid "Orbit View Right"
+msgstr ""
+
+#: editor/plugins/spatial_editor_plugin.cpp
+msgid "Orbit View Up"
+msgstr ""
+
+#: editor/plugins/spatial_editor_plugin.cpp
+msgid "Orbit View 180"
+msgstr ""
+
+#: editor/plugins/spatial_editor_plugin.cpp
 msgid "Switch Perspective/Orthogonal View"
 msgstr ""
 
@@ -8109,6 +8281,10 @@ msgid "View Portal Culling"
 msgstr ""
 
 #: editor/plugins/spatial_editor_plugin.cpp
+msgid "View Occlusion Culling"
+msgstr ""
+
+#: editor/plugins/spatial_editor_plugin.cpp
 #: modules/gridmap/grid_map_editor_plugin.cpp
 msgid "Settings..."
 msgstr "Beállítások..."
@@ -8174,8 +8350,9 @@ msgid "Post"
 msgstr ""
 
 #: editor/plugins/spatial_editor_plugin.cpp
-msgid "Nameless gizmo"
-msgstr ""
+#, fuzzy
+msgid "Unnamed Gizmo"
+msgstr "Névtelen projekt"
 
 #: editor/plugins/sprite_editor_plugin.cpp
 msgid "Create Mesh2D"
@@ -8425,21 +8602,6 @@ msgstr "Felsorolások:"
 #: editor/plugins/texture_region_editor_plugin.cpp
 msgid "TextureRegion"
 msgstr ""
-
-#: editor/plugins/theme_editor_plugin.cpp
-#, fuzzy
-msgid "Colors"
-msgstr "Szín"
-
-#: editor/plugins/theme_editor_plugin.cpp
-#, fuzzy
-msgid "Fonts"
-msgstr "Betűtípus"
-
-#: editor/plugins/theme_editor_plugin.cpp
-#, fuzzy
-msgid "Icons"
-msgstr "Ikon"
 
 #: editor/plugins/theme_editor_plugin.cpp
 #, fuzzy
@@ -10856,12 +11018,12 @@ msgid ""
 msgstr ""
 
 #: editor/project_settings_editor.cpp
-msgid "Key "
-msgstr "Kulcs "
-
-#: editor/project_settings_editor.cpp
 msgid "Physical Key"
 msgstr ""
+
+#: editor/project_settings_editor.cpp
+msgid "Key "
+msgstr "Kulcs "
 
 #: editor/project_settings_editor.cpp
 msgid "Joy Button"
@@ -12161,6 +12323,15 @@ msgstr "Görbe Pont Pozíció Beállítása"
 msgid "Set Portal Point Position"
 msgstr "Görbe Pont Pozíció Beállítása"
 
+#: editor/spatial_editor_gizmos.cpp
+msgid "Set Occluder Sphere Radius"
+msgstr ""
+
+#: editor/spatial_editor_gizmos.cpp
+#, fuzzy
+msgid "Set Occluder Sphere Position"
+msgstr "Be-Görbe Pozíció Beállítása"
+
 #: modules/csg/csg_gizmos.cpp
 msgid "Change Cylinder Radius"
 msgstr ""
@@ -12445,6 +12616,11 @@ msgstr "Fénytérképek Ábrázolása"
 #: modules/mono/csharp_script.cpp
 msgid "Class name can't be a reserved keyword"
 msgstr ""
+
+#: modules/mono/csharp_script.cpp
+#, fuzzy
+msgid "Build Solution"
+msgstr "Kijelölés kitöltése"
 
 #: modules/mono/mono_gd/gd_mono_utils.cpp
 msgid "End of inner exception stack trace"
@@ -12921,165 +13097,174 @@ msgstr ""
 msgid "Get %s"
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Package name is missing."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Package segments must be of non-zero length."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "The character '%s' is not allowed in Android application package names."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "A digit cannot be the first character in a package segment."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "The character '%s' cannot be the first character in a package segment."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "The package must have at least one '.' separator."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Select device from the list"
 msgstr "Válasszon készüléket a listából"
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Running on %s"
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 #, fuzzy
 msgid "Exporting APK..."
 msgstr "Összes exportálása"
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 #, fuzzy
 msgid "Uninstalling..."
 msgstr "Eltávolítás"
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 #, fuzzy
 msgid "Installing to device, please wait..."
 msgstr "Betöltés, kérem várjon..."
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 #, fuzzy
 msgid "Could not install to device: %s"
 msgstr "Az alprocesszt nem lehetett elindítani!"
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 #, fuzzy
 msgid "Running on device..."
 msgstr "Tetszőleges Szkript Futtatása..."
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 #, fuzzy
 msgid "Could not execute on device."
 msgstr "Nem sikerült létrehozni a mappát."
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Unable to find the 'apksigner' tool."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid ""
 "Android build template not installed in the project. Install it from the "
 "Project menu."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid ""
 "Either Debug Keystore, Debug User AND Debug Password settings must be "
 "configured OR none of them."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Debug keystore not configured in the Editor Settings nor in the preset."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid ""
 "Either Release Keystore, Release User AND Release Password settings must be "
 "configured OR none of them."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Release keystore incorrectly configured in the export preset."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "A valid Android SDK path is required in Editor Settings."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Invalid Android SDK path in Editor Settings."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Missing 'platform-tools' directory!"
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Unable to find Android SDK platform-tools' adb command."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Please check in the Android SDK directory specified in Editor Settings."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Missing 'build-tools' directory!"
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Unable to find Android SDK build-tools' apksigner command."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Invalid public key for APK expansion."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Invalid package name:"
 msgstr "Érvénytelen csomagnév:"
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid ""
 "Invalid \"GodotPaymentV3\" module included in the \"android/modules\" "
 "project setting (changed in Godot 3.2.2).\n"
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "\"Use Custom Build\" must be enabled to use the plugins."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid ""
-"\"Degrees Of Freedom\" is only valid when \"Xr Mode\" is \"Oculus Mobile VR"
-"\"."
+"\"Hand Tracking\" is only valid when \"Xr Mode\" is \"Oculus Mobile VrApi\" "
+"or \"OpenXR\"."
 msgstr ""
 
-#: platform/android/export/export.cpp
-msgid ""
-"\"Hand Tracking\" is only valid when \"Xr Mode\" is \"Oculus Mobile VR\"."
+#: platform/android/export/export_plugin.cpp
+msgid "\"Passthrough\" is only valid when \"Xr Mode\" is \"OpenXR\"."
 msgstr ""
 
-#: platform/android/export/export.cpp
-msgid ""
-"\"Focus Awareness\" is only valid when \"Xr Mode\" is \"Oculus Mobile VR\"."
-msgstr ""
-
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "\"Export AAB\" is only valid when \"Use Custom Build\" is enabled."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
+msgid ""
+"Changing the \"Min Sdk\" is only valid when \"Use Custom Build\" is enabled."
+msgstr ""
+
+#: platform/android/export/export_plugin.cpp
+msgid ""
+"Changing the \"Target Sdk\" is only valid when \"Use Custom Build\" is "
+"enabled."
+msgstr ""
+
+#: platform/android/export/export_plugin.cpp
+msgid "\"Target Sdk\" version must be greater or equal to \"Min Sdk\" version."
+msgstr ""
+
+#: platform/android/export/export_plugin.cpp
 msgid ""
 "'apksigner' could not be found.\n"
 "Please check the command is available in the Android SDK build-tools "
@@ -13087,62 +13272,62 @@ msgid ""
 "The resulting %s is unsigned."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Signing debug %s..."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 #, fuzzy
 msgid "Signing release %s..."
 msgstr ""
 "Fájlok vizsgálata,\n"
 "kérjük várjon..."
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Could not find keystore, unable to export."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "'apksigner' returned with error #%d"
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 #, fuzzy
 msgid "Verifying %s..."
 msgstr "%s Hozzáadása..."
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "'apksigner' verification of %s failed."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 #, fuzzy
 msgid "Exporting for Android"
 msgstr "Összes exportálása"
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Invalid filename! Android App Bundle requires the *.aab extension."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "APK Expansion not compatible with Android App Bundle."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Invalid filename! Android APK requires the *.apk extension."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Unsupported export format!\n"
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid ""
 "Trying to build from a custom built template, but no version info for it "
 "exists. Please reinstall from the 'Project' menu."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid ""
 "Android build version mismatch:\n"
 "   Template installed: %s\n"
@@ -13150,56 +13335,56 @@ msgid ""
 "Please reinstall Android build template from 'Project' menu."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid ""
 "Unable to overwrite res://android/build/res/*.xml files with project name"
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Could not export project files to gradle project\n"
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Could not write expansion package file!"
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Building Android Project (gradle)"
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid ""
 "Building of Android project failed, check output for the error.\n"
 "Alternatively visit docs.godotengine.org for Android build documentation."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Moving output"
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid ""
 "Unable to copy and rename export file, check gradle project directory for "
 "outputs."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 #, fuzzy
 msgid "Package not found: %s"
 msgstr "Az animáció nem található: '%s'"
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 #, fuzzy
 msgid "Creating APK..."
 msgstr "Kontúrok létrehozása…"
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid ""
 "Could not find template APK to export:\n"
 "%s"
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid ""
 "Missing libraries in the export template for the selected architectures: "
 "%s.\n"
@@ -13207,21 +13392,21 @@ msgid ""
 "architectures in the export preset."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 #, fuzzy
 msgid "Adding files..."
 msgstr "%s Hozzáadása..."
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 #, fuzzy
 msgid "Could not export project files"
 msgstr "Az alprocesszt nem lehetett elindítani!"
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Aligning APK..."
 msgstr ""
 
-#: platform/android/export/export.cpp
+#: platform/android/export/export_plugin.cpp
 msgid "Could not unzip temporary unaligned APK."
 msgstr ""
 
@@ -13678,6 +13863,14 @@ msgid ""
 "It only provides navigation data."
 msgstr ""
 
+#: scene/3d/occluder.cpp
+msgid "No shape is set."
+msgstr ""
+
+#: scene/3d/occluder.cpp
+msgid "Only uniform scales are supported."
+msgstr ""
+
 #: scene/3d/particles.cpp
 msgid ""
 "GPU-based particles are not supported by the GLES2 video driver.\n"
@@ -13967,6 +14160,14 @@ msgstr "Használjon érvényes kiterjesztést."
 msgid "Enable grid minimap."
 msgstr "Rács kistérkép engedélyezése."
 
+#: scene/gui/nine_patch_rect.cpp
+msgid ""
+"The Tile and Tile Fit options for Axis Stretch properties are only effective "
+"when using the GLES3 rendering backend.\n"
+"The GLES2 backend is currently in use, so these modes will act like Stretch "
+"instead."
+msgstr ""
+
 #: scene/gui/popup.cpp
 msgid ""
 "Popups will hide by default unless you call popup() or any of the popup*() "
@@ -13995,6 +14196,14 @@ msgid ""
 "Environment -> Default Environment) could not be loaded."
 msgstr ""
 
+#: scene/main/timer.cpp
+msgid ""
+"Very low timer wait times (< 0.05 seconds) may behave in significantly "
+"different ways depending on the rendered or physics frame rate.\n"
+"Consider using a script's process loop instead of relying on a Timer for "
+"very low wait times."
+msgstr ""
+
 #: scene/main/viewport.cpp
 msgid ""
 "This viewport is not set as render target. If you intend for it to display "
@@ -14008,7 +14217,13 @@ msgstr ""
 "té, és állítsa hozzá a belső textúráját valamilyen node-hoz kirajzolásra."
 
 #: scene/main/viewport.cpp
-msgid "Viewport size must be greater than 0 to render anything."
+msgid ""
+"The Viewport size must be greater than or equal to 2 pixels on both "
+"dimensions to render anything."
+msgstr ""
+
+#: scene/resources/occluder_shape.cpp
+msgid "OccluderShapeSphere Set Spheres"
 msgstr ""
 
 #: scene/resources/visual_shader_nodes.cpp
@@ -14060,673 +14275,3 @@ msgstr ""
 #: servers/visual/shader_language.cpp
 msgid "Constants cannot be modified."
 msgstr ""
-
-#~ msgid "Package Contents:"
-#~ msgstr "Csomag tartalma:"
-
-#~ msgid "Singleton"
-#~ msgstr "Egyke"
-
-#~ msgid "Erase profile '%s'? (no undo)"
-#~ msgstr "Törli a(z) '%s' profilt? (nem visszavonható)"
-
-#~ msgid "Enabled Properties:"
-#~ msgstr "Engedélyezett tulajdonságok:"
-
-#~ msgid "Enabled Features:"
-#~ msgstr "Engedélyezett funkciók:"
-
-#~ msgid "Unset"
-#~ msgstr "Nincs beállítva"
-
-#~ msgid "Class Options"
-#~ msgstr "Osztály beállításai"
-
-#~ msgid "Set"
-#~ msgstr "Beállít"
-
-#~ msgid "Saved %s modified resource(s)."
-#~ msgstr "%s módosított erőforrás mentve."
-
-#~ msgid "Q&A"
-#~ msgstr "Kérdések és válaszok"
-
-#~ msgid "Status:"
-#~ msgstr "Állapot:"
-
-#~ msgid "Edit:"
-#~ msgstr "Szerkesztés:"
-
-#~ msgid "Redownload"
-#~ msgstr "Letöltés újra"
-
-#~ msgid "(Installed)"
-#~ msgstr "(Telepítve)"
-
-#~ msgid "(Missing)"
-#~ msgstr "(Hiányzik)"
-
-#~ msgid "Request Failed."
-#~ msgstr "A kérés sikertelen."
-
-#~ msgid "Redirect Loop."
-#~ msgstr "Ciklus átiránítása."
-
-#~ msgid "Download Complete."
-#~ msgstr "A Letöltés Befejeződött."
-
-#~ msgid "Remove Template"
-#~ msgstr "Sablon Eltávolítása"
-
-#~ msgid "Download Templates"
-#~ msgstr "Sablonok Letöltése"
-
-#~ msgid "Select mirror from list: (Shift+Click: Open in Browser)"
-#~ msgstr ""
-#~ "Tükör kiválasztása a listából: (Shift + kattintás: megnyitás a "
-#~ "böngészőben)"
-
-#~ msgid "Move to Trash"
-#~ msgstr "Lomtárba Helyezés"
-
-#~ msgid "Expand All Properties"
-#~ msgstr "Összes tulajdonság kinyitása"
-
-#~ msgid "Copy Params"
-#~ msgstr "Paraméterek Másolása"
-
-#~ msgid "Open in Help"
-#~ msgstr "Megnyitás Súgóban"
-
-#~ msgid "Drag: Rotate"
-#~ msgstr "Húzás: Forgatás"
-
-#~ msgid "Press 'v' to Change Pivot, 'Shift+v' to Drag Pivot (while moving)."
-#~ msgstr ""
-#~ "Nyomja meg a 'v' gombot a Forgatási Pont Megváltoztatásához, Vagy 'Shift "
-#~ "+ v'-t a Forgatási Pont Húzásához (mozgás közben)."
-
-#~ msgid "Alt+RMB: Depth list selection"
-#~ msgstr "Alt + Jobb Egérgomb: Mélységi lista választás"
-
-#~ msgid "Clone Down"
-#~ msgstr "Klónozás Lefelé"
-
-#~ msgid "Size"
-#~ msgstr "Méret"
-
-#~ msgid "Theme File"
-#~ msgstr "Témafájl"
-
-#~ msgid "Templates"
-#~ msgstr "Sablonok"
-
-#~ msgid "An animation player can't animate itself, only other players."
-#~ msgstr ""
-#~ "Egy AnimationPlayer nem tudja önmagát animálni, csak más AnimationPlayer "
-#~ "node-okat."
-
-#~ msgid "Clipboard is empty"
-#~ msgstr "A vágólap üres"
-
-#~ msgid "No"
-#~ msgstr "Nem"
-
-#~ msgid "This scene has never been saved. Save before running?"
-#~ msgstr "Ez a Scene még soha nem volt mentve. Menti futtatás előtt?"
-
-#~ msgid "Search complete"
-#~ msgstr "A keresés kész"
-
-#~ msgid "There is already file or folder with the same name in this location."
-#~ msgstr "Ezen a helyen már van azonos nevű fájl vagy mappa."
-
-#~ msgid "Error trying to save layout!"
-#~ msgstr "Hiba történt az elrendezés mentésekor!"
-
-#~ msgid "Default editor layout overridden."
-#~ msgstr "Alapértelmezett szerkesztő elrendezés felülírva."
-
-#~ msgid "Move pivot"
-#~ msgstr "Forgatási pont áthelyezése"
-
-#~ msgid "Move anchor"
-#~ msgstr "Horgony áthelyezése"
-
-#~ msgid "Resize CanvasItem"
-#~ msgstr "CanvasItem átméretezése"
-
-#~ msgid "Polygon->UV"
-#~ msgstr "Sokszög -> UV"
-
-#~ msgid "UV->Polygon"
-#~ msgstr "UV -> Sokszög"
-
-#, fuzzy
-#~ msgid "Add initial export..."
-#~ msgstr "Kezdeti exportálás hozzáadása..."
-
-#~ msgid "Pack File"
-#~ msgstr "Csomagfájl"
-
-#~ msgid ""
-#~ "When exporting or deploying, the resulting executable will attempt to "
-#~ "connect to the IP of this computer in order to be debugged."
-#~ msgstr ""
-#~ "Exportáláskor vagy telepítéskor az így kapott futtatható program "
-#~ "megpróbál ennek a számítógépnek az IP-jéhez csatlakozni távoli "
-#~ "hibakeresés érdekében."
-
-#~ msgid "Current scene was never saved, please save it prior to running."
-#~ msgstr ""
-#~ "A jelenlegi Scene soha nem volt még mentve, mentse el a futtatás előtt."
-
-#~ msgid "Revert"
-#~ msgstr "Visszaállítás"
-
-#~ msgid "This action cannot be undone. Revert anyway?"
-#~ msgstr "Ez a művelet nem vonható vissza. Visszaállítja mindenképp?"
-
-#~ msgid "Revert Scene"
-#~ msgstr "Scene visszaállítás"
-
-#~ msgid "Issue Tracker"
-#~ msgstr "Problémakövető"
-
-#~ msgid "Replaced %d occurrence(s)."
-#~ msgstr "Lecserélve %d előfordulás."
-
-#~ msgid "Create Static Convex Body"
-#~ msgstr "Statikus Konvex Test Létrehozása"
-
-#~ msgid ""
-#~ "There are currently no tutorials for this class, you can [color=$color]"
-#~ "[url=$url]contribute one[/url][/color] or [color=$color][url="
-#~ "$url2]request one[/url][/color]."
-#~ msgstr ""
-#~ "Jelenleg nincsenek oktatóanyagok ehhez az osztályhoz. [color=$color][url="
-#~ "$url]Hozzájárulhat eggyel[/url][/color], vagy [color=$color][url="
-#~ "$url2]kérvényezhet egyet[/url][/color]."
-
-#~ msgid "enum  "
-#~ msgstr "enum  "
-
-#, fuzzy
-#~ msgid "Brief Description"
-#~ msgstr "Rövid Leírás:"
-
-#, fuzzy
-#~ msgid "Class Description"
-#~ msgstr "Leírás"
-
-#~ msgid "Project export failed with error code %d."
-#~ msgstr "Projekt export nem sikerült, hibakód %d."
-
-#~ msgid "Password:"
-#~ msgstr "Jelszó:"
-
-#~ msgid "Pause the scene"
-#~ msgstr "Szünetelteti a jelenetet"
-
-#~ msgid "Shift+"
-#~ msgstr "Shift+"
-
-#~ msgid "Alt+"
-#~ msgstr "Alt+"
-
-#~ msgid "Control+"
-#~ msgstr "Control+"
-
-#, fuzzy
-#~ msgid "Snap to Grid"
-#~ msgstr "Rácshoz illesztés"
-
-#, fuzzy
-#~ msgid "Add input +"
-#~ msgstr "Bemenet Hozzáadása"
-
-#, fuzzy
-#~ msgid "Input"
-#~ msgstr "Bemenet Hozzáadása"
-
-#, fuzzy
-#~ msgid "Methods:"
-#~ msgstr "Metódusok"
-
-#, fuzzy
-#~ msgid "Theme Properties:"
-#~ msgstr "Tulajdonságok"
-
-#~ msgid "Constants:"
-#~ msgstr "Konstansok:"
-
-#, fuzzy
-#~ msgid "Class Description:"
-#~ msgstr "Leírás:"
-
-#, fuzzy
-#~ msgid "Property Descriptions:"
-#~ msgstr "Tulajdonság Leírása:"
-
-#, fuzzy
-#~ msgid "Method Descriptions:"
-#~ msgstr "Metódus Leírás:"
-
-#, fuzzy
-#~ msgid "Reverse sorting."
-#~ msgstr "Lekérdezés..."
-
-#~ msgid ""
-#~ "Can't open file_type_cache.cch for writing, not saving file type cache!"
-#~ msgstr ""
-#~ "Nem lehet megnyitni a file_type_cache.cch fájlt írásra, a fájltípus "
-#~ "gyorsítótár nem lesz mentve!"
-
-#~ msgid "Cannot navigate to '%s' as it has not been found in the file system!"
-#~ msgstr "Nem lehet '%s'-t elérni, mivel nem létezik a fájlrendszerben!"
-
-#~ msgid "Error loading image:"
-#~ msgstr "Hiba a kép betöltésekor:"
-
-#~ msgid "No pixels with transparency > 128 in image..."
-#~ msgstr "Nem létezik egyetlen pixel sem >128-as átlátszósággal a képben..."
-
-#~ msgid "Parent has no solid faces to populate."
-#~ msgstr "A szülőnek nincsenek kitölthető szilárd oldalai."
-
-#~ msgid "Couldn't map area."
-#~ msgstr "A területet nem lehetett leképezni."
-
-#~ msgid "Faces contain no area!"
-#~ msgstr "Az oldalak nem tartalmaznak területet!"
-
-#~ msgid "No faces!"
-#~ msgstr "Nincsenek oldalak!"
-
-#, fuzzy
-#~ msgid "Error: could not load file."
-#~ msgstr "Nem sikerült létrehozni a mappát."
-
-#~ msgid "Doppler Enable"
-#~ msgstr "Doppler engedélyezése"
-
-#~ msgid "Error initializing FreeType."
-#~ msgstr "FreeType inicializálási hiba."
-
-#~ msgid "Unknown font format."
-#~ msgstr "Ismeretlen betűtípus formátum."
-
-#~ msgid "Error loading font."
-#~ msgstr "Hiba a betűtípus betöltésekor."
-
-#~ msgid "Invalid font size."
-#~ msgstr "Érvénytelen betűtípus méret."
-
-#, fuzzy
-#~ msgid "Previous Folder"
-#~ msgstr "Előző Sík"
-
-#, fuzzy
-#~ msgid "Next Folder"
-#~ msgstr "Mappa Létrehozása"
-
-#, fuzzy
-#~ msgid "Open in an external image editor."
-#~ msgstr "Következő Szerkesztő Megnyitása"
-
-#~ msgid "Reverse"
-#~ msgstr "Visszafele"
-
-#, fuzzy
-#~ msgid "View log"
-#~ msgstr "Fájlok Megtekintése"
-
-#, fuzzy
-#~ msgid "Enabled Classes"
-#~ msgstr "Osztályok Keresése"
-
-#~ msgid "Update Always"
-#~ msgstr "Frissítés Mindig"
-
-#~ msgid "Path to Node:"
-#~ msgstr "Út a Node-hoz:"
-
-#~ msgid "Delete selected files?"
-#~ msgstr "Törli a kiválasztott fájlokat?"
-
-#~ msgid "There is no 'res://default_bus_layout.tres' file."
-#~ msgstr "Nincs 'res://default_bus_layout.tres' fájl."
-
-#~ msgid "Go to parent folder"
-#~ msgstr "Ugrás a szülőmappába"
-
-#~ msgid "Open Scene(s)"
-#~ msgstr "Scene(k) megnyitás"
-
-#~ msgid "Previous Directory"
-#~ msgstr "Előző Könyvtár"
-
-#~ msgid "Next Directory"
-#~ msgstr "Következő Könyvtár"
-
-#~ msgid "Ease in"
-#~ msgstr "Lassan Be"
-
-#~ msgid "Ease out"
-#~ msgstr "Lassan Ki"
-
-#~ msgid "Create Convex Static Body"
-#~ msgstr "Konvex Statikus Test Létrehozása"
-
-#, fuzzy
-#~ msgid "Custom Node"
-#~ msgstr "Node-ok Másolása"
-
-#, fuzzy
-#~ msgid "Snap (s): "
-#~ msgstr "Lépés (mp):"
-
-#, fuzzy
-#~ msgid "Insert keys."
-#~ msgstr "Kulcsok Beszúrása"
-
-#, fuzzy
-#~ msgid "Font Size:"
-#~ msgstr "Körvonal Mérete:"
-
-#~ msgid "Line:"
-#~ msgstr "Sor:"
-
-#~ msgid "Col:"
-#~ msgstr "Oszlop:"
-
-#, fuzzy
-#~ msgid "Add Split"
-#~ msgstr "Pont hozzáadása"
-
-#, fuzzy
-#~ msgid "Remove Split"
-#~ msgstr "Pont eltávolítása"
-
-#, fuzzy
-#~ msgid "Poly"
-#~ msgstr "Sokszög Szerkesztése"
-
-#, fuzzy
-#~ msgid "Splits"
-#~ msgstr "Útvonal Felosztása"
-
-#~ msgid "Create Poly"
-#~ msgstr "Sokszög Létrehozása"
-
-#~ msgid "Create a new polygon from scratch"
-#~ msgstr "Új sokszög létrehozása a semmiből"
-
-#, fuzzy
-#~ msgid "Zoom out"
-#~ msgstr "Kicsinyítés"
-
-#, fuzzy
-#~ msgid "Zoom in"
-#~ msgstr "Nagyítás"
-
-#~ msgid "Create Poly3D"
-#~ msgstr "Poly3D Létrehozása"
-
-#~ msgid ""
-#~ "No OccluderPolygon2D resource on this node.\n"
-#~ "Create and assign one?"
-#~ msgstr ""
-#~ "Nincs OccluderPolygon2D erőforrás ezen a Node-on.\n"
-#~ "Létrehoz egyet és hozzárendeli a Node-hoz?"
-
-#~ msgid "LMB: Move Point."
-#~ msgstr "Bal Egérgomb: Pont Mozgatása."
-
-#~ msgid "Ctrl+LMB: Split Segment."
-#~ msgstr "Ctrl + Bal Egérgomb: Szakasz Felosztása."
-
-#~ msgid "RMB: Erase Point."
-#~ msgstr "Jobb Egérgomb: Pont Törlése."
-
-#~ msgid "Save Theme As"
-#~ msgstr "Téma Mentése Másként"
-
-#, fuzzy
-#~ msgid "Zoom:"
-#~ msgstr "Nagyítás"
-
-#~ msgid "Class List:"
-#~ msgstr "Osztálylista:"
-
-#~ msgid "Public Methods"
-#~ msgstr "Publikus Metódusok"
-
-#~ msgid "Public Methods:"
-#~ msgstr "Publikus Metódusok:"
-
-#~ msgid "GUI Theme Items:"
-#~ msgstr "GUI Téma Elemek:"
-
-#, fuzzy
-#~ msgid "Toggle folder status as Favorite."
-#~ msgstr "Mappa Kedvencnek jelölése / Kedvenc jelölés visszavonása"
-
-#, fuzzy
-#~ msgid "Whole words"
-#~ msgstr "Teljes Szavak"
-
-#, fuzzy
-#~ msgid "Match case"
-#~ msgstr "Pontos Egyezés"
-
-#~ msgid "Ok"
-#~ msgstr "Rendben"
-
-#~ msgid "Search the class hierarchy."
-#~ msgstr "Keresés az osztályhierarchiában."
-
-#, fuzzy
-#~ msgid "Search in files"
-#~ msgstr "Osztályok Keresése"
-
-#~ msgid ""
-#~ "Built-in scripts can only be edited when the scene they belong to is "
-#~ "loaded"
-#~ msgstr ""
-#~ "A beépített szkriptek csak akkor szerkeszthetőek, amikor az a Scene "
-#~ "amihez tartoznak éppen be van töltve"
-
-#~ msgid "Convert To Uppercase"
-#~ msgstr "Konvertálás Nagybetűsre"
-
-#~ msgid "Convert To Lowercase"
-#~ msgstr "Konvertálás Kisbetűsre"
-
-#~ msgid "Bake!"
-#~ msgstr "Besütés!"
-
-#~ msgid "Bake the navigation mesh."
-#~ msgstr "A navigációs mesh besütése."
-
-#~ msgid "Change RGB Constant"
-#~ msgstr "RGB állandó változtatás"
-
-#~ msgid "Change Vec Scalar Operator"
-#~ msgstr "Vektor skalár kezelő változtatás"
-
-#~ msgid "Change RGB Operator"
-#~ msgstr "RGB kezelő változtatás"
-
-#~ msgid "Toggle Rot Only"
-#~ msgstr "Csak vörös kapcsolása"
-
-#~ msgid "Change Vec Function"
-#~ msgstr "Vektor-függvény változtatás"
-
-#~ msgid "Change RGB Uniform"
-#~ msgstr "Egységes-RGB változtatás"
-
-#~ msgid "Change Default Value"
-#~ msgstr "Alapérték változtatás"
-
-#~ msgid "Modify Color Ramp"
-#~ msgstr "Szín Gradiens Módosítása"
-
-#~ msgid "Move Anim Track Up"
-#~ msgstr "Animáció nyomvonal felfelé mozgatás"
-
-#~ msgid "Move Anim Track Down"
-#~ msgstr "Animáció nyomvonal lefelé mozgatás"
-
-#~ msgid "Anim Track Change Interpolation"
-#~ msgstr "Animáció nyomvonal interpoláció változtatás"
-
-#~ msgid "Anim Track Change Value Mode"
-#~ msgstr "Animáció nyomvonal érték mód változtatás"
-
-#~ msgid "Anim Track Change Wrap Mode"
-#~ msgstr "Animáció nyomvonal takarási mód változtatás"
-
-#~ msgid "Edit Node Curve"
-#~ msgstr "Node görbe szerkesztés"
-
-#~ msgid "Edit Selection Curve"
-#~ msgstr "Kiválasztás görbe szerkesztés"
-
-#~ msgid "Anim Add Key"
-#~ msgstr "Animáció kulcs hozzáadás"
-
-#~ msgid "In"
-#~ msgstr "Be"
-
-#~ msgid "Out"
-#~ msgstr "Ki"
-
-#~ msgid "In-Out"
-#~ msgstr "Be-Ki"
-
-#~ msgid "Out-In"
-#~ msgstr "Ki-Be"
-
-#~ msgid "Anim Create Typed Value Key"
-#~ msgstr "Animáció típusos érték kulcs létrehozás"
-
-#~ msgid "Anim Add Call Track"
-#~ msgstr "Animációhoz hívási nyomvonal hozzáadása"
-
-#~ msgid "Length (s):"
-#~ msgstr "Hossz (mp):"
-
-#~ msgid "Cursor step snap (in seconds)."
-#~ msgstr "Kurzor hozzáillesztése a lépésekhez (másodpercben)."
-
-#~ msgid "Enable/Disable looping in animation."
-#~ msgstr "Az animáció ismétlésének engedélyezése/tiltása."
-
-#~ msgid "Add new tracks."
-#~ msgstr "Új nyomvonalak hozzáadása."
-
-#~ msgid "Move current track up."
-#~ msgstr "Jelenlegi nyomvonal felfelé mozgatása."
-
-#~ msgid "Move current track down."
-#~ msgstr "Jelenlegi nyomvonal lefelé mozgatása."
-
-#~ msgid "Track tools"
-#~ msgstr "Nyomvonal eszközök"
-
-#~ msgid "Enable editing of individual keys by clicking them."
-#~ msgstr "Engedélyezi az egyes kulcsok szerkesztését rákattintással."
-
-#~ msgid "Key"
-#~ msgstr "Kulcs"
-
-#~ msgid "Call Functions in Which Node?"
-#~ msgstr "Melyik Node-ban hívjon funkciókat?"
-
-#~ msgid "Thanks!"
-#~ msgstr "Kösz!"
-
-#~ msgid "I see..."
-#~ msgstr "Értem..."
-
-#~ msgid "Ugh"
-#~ msgstr "Hoppá"
-
-#~ msgid "Stop Profiling"
-#~ msgstr "Profilozás Leállítása"
-
-#~ msgid "Start Profiling"
-#~ msgstr "Profilozás Indítása"
-
-#~ msgid "Default (Same as Editor)"
-#~ msgstr "Alapértelmezett (Ugyanaz, Mint a Szerkesztőnek)"
-
-#~ msgid "Create new animation in player."
-#~ msgstr "Új animáció létrehozása a lejátszóban."
-
-#~ msgid "Load animation from disk."
-#~ msgstr "Animáció betöltése a lemezről."
-
-#~ msgid "Load an animation from disk."
-#~ msgstr "Animáció betöltése a lemezről."
-
-#~ msgid "Save the current animation"
-#~ msgstr "Jelenlegi animáció elmentése"
-
-#~ msgid "Edit Target Blend Times"
-#~ msgstr "Cél Keverési Idők Módosítása"
-
-#~ msgid "Copy Animation"
-#~ msgstr "Animáció Másolása"
-
-#~ msgid "Fetching:"
-#~ msgstr "Lekérés:"
-
-#~ msgid "prev"
-#~ msgstr "előző"
-
-#~ msgid "next"
-#~ msgstr "következő"
-
-#~ msgid "last"
-#~ msgstr "utolsó"
-
-#~ msgid "Edit IK Chain"
-#~ msgstr "IK Lánc Szerkesztése"
-
-#~ msgid "Drag pivot from mouse position"
-#~ msgstr "Forgatási pont húzása az egér helyétől"
-
-#~ msgid "Set pivot at mouse position"
-#~ msgstr "Forgatási pont beállítása az egér helyére"
-
-#~ msgid "Add/Remove Color Ramp Point"
-#~ msgstr "Szín Gradiens Pont Hozzáadása / Eltávolítása"
-
-#~ msgid ""
-#~ "Invalid version.txt format inside templates. Revision is not a valid "
-#~ "identifier."
-#~ msgstr ""
-#~ "Érvénytelen version.txt formátum a sablonokban. A revízió nem érvényes "
-#~ "azonosító."
-
-#~ msgid "Can't write file."
-#~ msgstr "Nem lehet fájlt írni."
-
-#, fuzzy
-#~ msgid "Replace By"
-#~ msgstr "Lecserél"
-
-#~ msgid "Backwards"
-#~ msgstr "Visszafelé"
-
-#~ msgid "Prompt On Replace"
-#~ msgstr "Figyelmeztetés Lecseréléskor"
-
-#~ msgid "Skip"
-#~ msgstr "Átlapoz"
-
-#~ msgid "Move Add Key"
-#~ msgstr "Hozzáadás kulcs mozgatása"

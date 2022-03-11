@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -2254,7 +2254,7 @@ void RasterizerStorageGLES2::mesh_add_surface(RID p_mesh, uint32_t p_format, VS:
 	}
 
 	//bool has_morph = p_blend_shapes.size();
-	bool use_split_stream = GLOBAL_GET("rendering/mesh_storage/split_stream") && !(p_format & VS::ARRAY_FLAG_USE_DYNAMIC_UPDATE);
+	bool use_split_stream = GLOBAL_GET("rendering/misc/mesh_storage/split_stream") && !(p_format & VS::ARRAY_FLAG_USE_DYNAMIC_UPDATE);
 
 	Surface::Attrib attribs[VS::ARRAY_MAX];
 
@@ -2287,6 +2287,7 @@ void RasterizerStorageGLES2::mesh_add_surface(RID p_mesh, uint32_t p_format, VS:
 				if (p_format & VS::ARRAY_COMPRESS_VERTEX) {
 					attribs[i].type = _GL_HALF_FLOAT_OES;
 					positions_stride += attribs[i].size * 2;
+					uses_half_float = true;
 				} else {
 					attribs[i].type = GL_FLOAT;
 					positions_stride += attribs[i].size * 4;
@@ -2309,7 +2310,7 @@ void RasterizerStorageGLES2::mesh_add_surface(RID p_mesh, uint32_t p_format, VS:
 					// UNLESS tangent exists and is also compressed
 					// then it will be oct16 encoded along with tangent
 					attribs[i].normalized = GL_TRUE;
-					attribs[i].size = 4;
+					attribs[i].size = 2;
 					attribs[i].type = GL_SHORT;
 					attributes_stride += 4;
 				} else {
@@ -2330,6 +2331,7 @@ void RasterizerStorageGLES2::mesh_add_surface(RID p_mesh, uint32_t p_format, VS:
 			case VS::ARRAY_TANGENT: {
 				if (p_format & VS::ARRAY_FLAG_USE_OCTAHEDRAL_COMPRESSION) {
 					attribs[i].enabled = false;
+					attribs[VS::ARRAY_NORMAL].size = 4;
 					if (p_format & VS::ARRAY_COMPRESS_TANGENT && p_format & VS::ARRAY_COMPRESS_NORMAL) {
 						// normal and tangent will each be oct16 (2 bytes each)
 						// pack into single vec4<GL_BYTE> for memory bandwidth
@@ -3788,6 +3790,7 @@ void RasterizerStorageGLES2::update_dirty_blend_shapes() {
 										wr[0] = Math::halfptr_to_float(&((uint16_t *)rd)[0]) * base_weight;
 										wr[1] = Math::halfptr_to_float(&((uint16_t *)rd)[1]) * base_weight;
 										wr[2] = Math::halfptr_to_float(&((uint16_t *)rd)[2]) * base_weight;
+										wr[3] = 1.0f;
 									} else {
 										float a[3] = { 0 };
 										a[0] = wr[0] = rd[0] * base_weight;
@@ -3797,27 +3800,63 @@ void RasterizerStorageGLES2::update_dirty_blend_shapes() {
 									}
 								} break;
 								case VS::ARRAY_NORMAL: {
-									if (s->format & VS::ARRAY_COMPRESS_NORMAL) {
-										wr[0] = (((int8_t *)rd)[0] / 127.0) * base_weight;
-										wr[1] = (((int8_t *)rd)[1] / 127.0) * base_weight;
-										wr[2] = (((int8_t *)rd)[2] / 127.0) * base_weight;
+									if (s->format & VS::ARRAY_FLAG_USE_OCTAHEDRAL_COMPRESSION) {
+										if (s->format & VS::ARRAY_COMPRESS_NORMAL && s->format & VS::ARRAY_FORMAT_TANGENT && s->format & VS::ARRAY_COMPRESS_TANGENT) {
+											Vector2 oct(((int8_t *)rd)[0] / 127.0, ((int8_t *)rd)[1] / 127.0);
+											Vector3 vec = VS::oct_to_norm(oct);
+											wr[0] = vec.x * base_weight;
+											wr[1] = vec.y * base_weight;
+											wr[2] = vec.z * base_weight;
+										} else {
+											Vector2 oct(((int16_t *)rd)[0] / 32767.0, ((int16_t *)rd)[1] / 32767.0);
+											Vector3 vec = VS::oct_to_norm(oct);
+											wr[0] = vec.x * base_weight;
+											wr[1] = vec.y * base_weight;
+											wr[2] = vec.z * base_weight;
+										}
 									} else {
-										wr[0] = rd[0] * base_weight;
-										wr[1] = rd[1] * base_weight;
-										wr[2] = rd[2] * base_weight;
+										if (s->format & VS::ARRAY_COMPRESS_NORMAL) {
+											wr[0] = (((int8_t *)rd)[0] / 127.0) * base_weight;
+											wr[1] = (((int8_t *)rd)[1] / 127.0) * base_weight;
+											wr[2] = (((int8_t *)rd)[2] / 127.0) * base_weight;
+										} else {
+											wr[0] = rd[0] * base_weight;
+											wr[1] = rd[1] * base_weight;
+											wr[2] = rd[2] * base_weight;
+										}
 									}
 								} break;
 								case VS::ARRAY_TANGENT: {
-									if (s->format & VS::ARRAY_COMPRESS_TANGENT) {
-										wr[0] = (((int8_t *)rd)[0] / 127.0) * base_weight;
-										wr[1] = (((int8_t *)rd)[1] / 127.0) * base_weight;
-										wr[2] = (((int8_t *)rd)[2] / 127.0) * base_weight;
-										wr[3] = (((int8_t *)rd)[3] / 127.0) * base_weight;
+									if (s->format & VS::ARRAY_FLAG_USE_OCTAHEDRAL_COMPRESSION) {
+										if (s->format & VS::ARRAY_COMPRESS_TANGENT && s->format & VS::ARRAY_FORMAT_NORMAL && s->format & VS::ARRAY_COMPRESS_NORMAL) {
+											Vector2 oct(((int8_t *)rd)[0] / 127.0, ((int8_t *)rd)[1] / 127.0);
+											float sign;
+											Vector3 vec = VS::oct_to_tangent(oct, &sign);
+											wr[0] = vec.x * base_weight;
+											wr[1] = vec.y * base_weight;
+											wr[2] = vec.z * base_weight;
+											wr[3] = sign * base_weight;
+										} else {
+											Vector2 oct(((int16_t *)rd)[0] / 32767.0, ((int16_t *)rd)[1] / 32767.0);
+											float sign;
+											Vector3 vec = VS::oct_to_tangent(oct, &sign);
+											wr[0] = vec.x * base_weight;
+											wr[1] = vec.y * base_weight;
+											wr[2] = vec.z * base_weight;
+											wr[3] = sign * base_weight;
+										}
 									} else {
-										wr[0] = rd[0] * base_weight;
-										wr[1] = rd[1] * base_weight;
-										wr[2] = rd[2] * base_weight;
-										wr[3] = rd[3] * base_weight;
+										if (s->format & VS::ARRAY_COMPRESS_TANGENT) {
+											wr[0] = (((int8_t *)rd)[0] / 127.0) * base_weight;
+											wr[1] = (((int8_t *)rd)[1] / 127.0) * base_weight;
+											wr[2] = (((int8_t *)rd)[2] / 127.0) * base_weight;
+											wr[3] = (((int8_t *)rd)[3] / 127.0) * base_weight;
+										} else {
+											wr[0] = rd[0] * base_weight;
+											wr[1] = rd[1] * base_weight;
+											wr[2] = rd[2] * base_weight;
+											wr[3] = rd[3] * base_weight;
+										}
 									}
 								} break;
 								case VS::ARRAY_COLOR: {
@@ -3882,6 +3921,7 @@ void RasterizerStorageGLES2::update_dirty_blend_shapes() {
 											wr[0] += Math::halfptr_to_float(&((uint16_t *)br)[0]) * weight;
 											wr[1] += Math::halfptr_to_float(&((uint16_t *)br)[1]) * weight;
 											wr[2] += Math::halfptr_to_float(&((uint16_t *)br)[2]) * weight;
+											wr[3] = 1.0f;
 										} else {
 											wr[0] += br[0] * weight;
 											wr[1] += br[1] * weight;
@@ -3889,27 +3929,63 @@ void RasterizerStorageGLES2::update_dirty_blend_shapes() {
 										}
 									} break;
 									case VS::ARRAY_NORMAL: {
-										if (s->format & VS::ARRAY_COMPRESS_NORMAL) {
-											wr[0] += (float(((int8_t *)br)[0]) / 127.0) * weight;
-											wr[1] += (float(((int8_t *)br)[1]) / 127.0) * weight;
-											wr[2] += (float(((int8_t *)br)[2]) / 127.0) * weight;
+										if (s->format & VS::ARRAY_FLAG_USE_OCTAHEDRAL_COMPRESSION) {
+											if (s->format & VS::ARRAY_COMPRESS_NORMAL && s->format & VS::ARRAY_FORMAT_TANGENT && s->format & VS::ARRAY_COMPRESS_TANGENT) {
+												Vector2 oct(((int8_t *)br)[0] / 127.0, ((int8_t *)br)[1] / 127.0);
+												Vector3 vec = VS::oct_to_norm(oct);
+												wr[0] += vec.x * weight;
+												wr[1] += vec.y * weight;
+												wr[2] += vec.z * weight;
+											} else {
+												Vector2 oct(((int16_t *)br)[0] / 32767.0, ((int16_t *)br)[1] / 32767.0);
+												Vector3 vec = VS::oct_to_norm(oct);
+												wr[0] += vec.x * weight;
+												wr[1] += vec.y * weight;
+												wr[2] += vec.z * weight;
+											}
 										} else {
-											wr[0] += br[0] * weight;
-											wr[1] += br[1] * weight;
-											wr[2] += br[2] * weight;
+											if (s->format & VS::ARRAY_COMPRESS_NORMAL) {
+												wr[0] += (float(((int8_t *)br)[0]) / 127.0) * weight;
+												wr[1] += (float(((int8_t *)br)[1]) / 127.0) * weight;
+												wr[2] += (float(((int8_t *)br)[2]) / 127.0) * weight;
+											} else {
+												wr[0] += br[0] * weight;
+												wr[1] += br[1] * weight;
+												wr[2] += br[2] * weight;
+											}
 										}
 									} break;
 									case VS::ARRAY_TANGENT: {
-										if (s->format & VS::ARRAY_COMPRESS_TANGENT) {
-											wr[0] += (float(((int8_t *)br)[0]) / 127.0) * weight;
-											wr[1] += (float(((int8_t *)br)[1]) / 127.0) * weight;
-											wr[2] += (float(((int8_t *)br)[2]) / 127.0) * weight;
-											wr[3] = (float(((int8_t *)br)[3]) / 127.0);
+										if (s->format & VS::ARRAY_FLAG_USE_OCTAHEDRAL_COMPRESSION) {
+											if (s->format & VS::ARRAY_COMPRESS_TANGENT && s->format & VS::ARRAY_FORMAT_NORMAL && s->format & VS::ARRAY_COMPRESS_NORMAL) {
+												Vector2 oct(((int8_t *)br)[0] / 127.0, ((int8_t *)br)[1] / 127.0);
+												float sign;
+												Vector3 vec = VS::oct_to_tangent(oct, &sign);
+												wr[0] += vec.x * weight;
+												wr[1] += vec.y * weight;
+												wr[2] += vec.z * weight;
+												wr[3] = sign * weight;
+											} else {
+												Vector2 oct(((int16_t *)rd)[0] / 32767.0, ((int16_t *)rd)[1] / 32767.0);
+												float sign;
+												Vector3 vec = VS::oct_to_tangent(oct, &sign);
+												wr[0] += vec.x * weight;
+												wr[1] += vec.y * weight;
+												wr[2] += vec.z * weight;
+												wr[3] = sign * weight;
+											}
 										} else {
-											wr[0] += br[0] * weight;
-											wr[1] += br[1] * weight;
-											wr[2] += br[2] * weight;
-											wr[3] = br[3];
+											if (s->format & VS::ARRAY_COMPRESS_TANGENT) {
+												wr[0] += (float(((int8_t *)br)[0]) / 127.0) * weight;
+												wr[1] += (float(((int8_t *)br)[1]) / 127.0) * weight;
+												wr[2] += (float(((int8_t *)br)[2]) / 127.0) * weight;
+												wr[3] = (float(((int8_t *)br)[3]) / 127.0);
+											} else {
+												wr[0] += br[0] * weight;
+												wr[1] += br[1] * weight;
+												wr[2] += br[2] * weight;
+												wr[3] = br[3];
+											}
 										}
 									} break;
 									case VS::ARRAY_COLOR: {
@@ -3968,7 +4044,7 @@ void RasterizerStorageGLES2::update_dirty_blend_shapes() {
 					s->blend_shape_buffer_size = buffer_size;
 					glBufferData(GL_ARRAY_BUFFER, buffer_size * sizeof(float), transform_buffer.read().ptr(), GL_DYNAMIC_DRAW);
 				} else {
-					buffer_orphan_and_upload(s->blend_shape_buffer_size, 0, buffer_size * sizeof(float), transform_buffer.read().ptr(), GL_ARRAY_BUFFER, true);
+					buffer_orphan_and_upload(s->blend_shape_buffer_size * sizeof(float), 0, buffer_size * sizeof(float), transform_buffer.read().ptr(), GL_ARRAY_BUFFER, true);
 				}
 				glBindBuffer(GL_ARRAY_BUFFER, 0);
 			}
@@ -3990,7 +4066,7 @@ void RasterizerStorageGLES2::_update_skeleton_transform_buffer(const PoolVector<
 		glBufferData(GL_ARRAY_BUFFER, buffer_size, p_data.read().ptr(), GL_DYNAMIC_DRAW);
 	} else {
 		// this may not be best, it could be better to use glBufferData in both cases.
-		buffer_orphan_and_upload(resources.skeleton_transform_buffer_size, 0, buffer_size, p_data.read().ptr(), GL_ARRAY_BUFFER, true);
+		buffer_orphan_and_upload(resources.skeleton_transform_buffer_size * sizeof(float), 0, buffer_size, p_data.read().ptr(), GL_ARRAY_BUFFER, true);
 	}
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -5270,6 +5346,7 @@ void RasterizerStorageGLES2::_render_target_clear(RenderTarget *rt) {
 
 		// clean up our texture
 		Texture *t = texture_owner.get(rt->external.texture);
+		t->tex_id = 0;
 		t->alloc_height = 0;
 		t->alloc_width = 0;
 		t->width = 0;
@@ -5434,6 +5511,7 @@ void RasterizerStorageGLES2::render_target_set_external_texture(RID p_render_tar
 
 			// clean up our texture
 			Texture *t = texture_owner.get(rt->external.texture);
+			t->tex_id = 0;
 			t->alloc_height = 0;
 			t->alloc_width = 0;
 			t->width = 0;
@@ -6183,6 +6261,13 @@ void RasterizerStorageGLES2::initialize() {
 	config.pvrtc_supported = config.extensions.has("GL_IMG_texture_compression_pvrtc") || config.extensions.has("WEBGL_compressed_texture_pvrtc");
 	config.support_npot_repeat_mipmap = config.extensions.has("GL_OES_texture_npot");
 
+	// If the desktop build is using S3TC, and you export / run from the IDE for android, if the device supports
+	// S3TC it will crash trying to load these textures, as they are not exported in the APK. This is a simple way
+	// to prevent Android devices trying to load S3TC, by faking lack of hardware support.
+#if defined(ANDROID_ENABLED) || defined(IPHONE_ENABLED)
+	config.s3tc_supported = false;
+#endif
+
 #ifdef JAVASCRIPT_ENABLED
 	// RenderBuffer internal format must be 16 bits in WebGL,
 	// but depth_texture should default to 32 always
@@ -6514,6 +6599,8 @@ void RasterizerStorageGLES2::initialize() {
 	GLOBAL_DEF_RST("rendering/quality/lightmapping/use_bicubic_sampling", true);
 	GLOBAL_DEF_RST("rendering/quality/lightmapping/use_bicubic_sampling.mobile", false);
 	config.use_lightmap_filter_bicubic = GLOBAL_GET("rendering/quality/lightmapping/use_bicubic_sampling");
+
+	config.use_physical_light_attenuation = GLOBAL_GET("rendering/quality/shading/use_physical_light_attenuation");
 
 	int orphan_mode = GLOBAL_GET("rendering/2d/opengl/legacy_orphan_buffers");
 	switch (orphan_mode) {

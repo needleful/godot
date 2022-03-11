@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -1486,7 +1486,7 @@ void Variant::set_named(const StringName &p_index, const Variant &p_value, bool 
 					v->set_hsv(v->get_h(), p_value._data._int, v->get_v(), v->a);
 					valid = true;
 				} else if (p_index == CoreStringNames::singleton->v) {
-					v->set_hsv(v->get_h(), v->get_v(), p_value._data._int, v->a);
+					v->set_hsv(v->get_h(), v->get_s(), p_value._data._int, v->a);
 					valid = true;
 				}
 			} else if (p_value.type == Variant::REAL) {
@@ -1529,14 +1529,14 @@ void Variant::set_named(const StringName &p_index, const Variant &p_value, bool 
 		} break;
 		case OBJECT: {
 			Object *obj = _OBJ_PTR(*this);
-#ifdef DEBUG_ENABLED
 			if (unlikely(!obj)) {
-				if (ScriptDebugger::get_singleton() && _get_obj().rc && !ObjectDB::get_instance(_get_obj().rc->instance_id)) {
+#ifdef DEBUG_ENABLED
+				if (_get_obj().rc) {
 					ERR_PRINT("Attempted set on a deleted object.");
 				}
+#endif
 				break;
 			}
-#endif
 			obj->set(p_index, p_value, &valid);
 
 		} break;
@@ -1684,17 +1684,17 @@ Variant Variant::get_named(const StringName &p_index, bool *r_valid) const {
 		} break;
 		case OBJECT: {
 			Object *obj = _OBJ_PTR(*this);
-#ifdef DEBUG_ENABLED
 			if (unlikely(!obj)) {
 				if (r_valid) {
 					*r_valid = false;
 				}
-				if (ScriptDebugger::get_singleton() && _get_obj().rc && !ObjectDB::get_instance(_get_obj().rc->instance_id)) {
+#ifdef DEBUG_ENABLED
+				if (_get_obj().rc) {
 					ERR_PRINT("Attempted get on a deleted object.");
 				}
+#endif
 				return Variant();
 			}
-#endif
 
 			return obj->get(p_index, r_valid);
 
@@ -2169,9 +2169,9 @@ void Variant::set(const Variant &p_index, const Variant &p_value, bool *r_valid)
 		case OBJECT: {
 			Object *obj = _OBJ_PTR(*this);
 			if (unlikely(!obj)) {
-#ifdef DEBUG_ENABLED
 				valid = false;
-				if (ScriptDebugger::get_singleton() && _get_obj().rc && !ObjectDB::get_instance(_get_obj().rc->instance_id)) {
+#ifdef DEBUG_ENABLED
+				if (_get_obj().rc) {
 					ERR_PRINT("Attempted set on a deleted object.");
 				}
 #endif
@@ -2520,9 +2520,9 @@ Variant Variant::get(const Variant &p_index, bool *r_valid) const {
 		case OBJECT: {
 			Object *obj = _OBJ_PTR(*this);
 			if (unlikely(!obj)) {
-#ifdef DEBUG_ENABLED
 				valid = false;
-				if (ScriptDebugger::get_singleton() && _get_obj().rc && !ObjectDB::get_instance(_get_obj().rc->instance_id)) {
+#ifdef DEBUG_ENABLED
+				if (_get_obj().rc) {
 					ERR_PRINT("Attempted get on a deleted object.");
 				}
 #endif
@@ -2578,11 +2578,11 @@ bool Variant::in(const Variant &p_index, bool *r_valid) const {
 		case OBJECT: {
 			Object *obj = _OBJ_PTR(*this);
 			if (unlikely(!obj)) {
-#ifdef DEBUG_ENABLED
 				if (r_valid) {
 					*r_valid = false;
 				}
-				if (ScriptDebugger::get_singleton() && _get_obj().rc && !ObjectDB::get_instance(_get_obj().rc->instance_id)) {
+#ifdef DEBUG_ENABLED
+				if (_get_obj().rc) {
 					ERR_PRINT("Attempted 'in' on a deleted object.");
 				}
 #endif
@@ -2832,7 +2832,7 @@ void Variant::get_property_list(List<PropertyInfo> *p_list) const {
 			Object *obj = _OBJ_PTR(*this);
 			if (unlikely(!obj)) {
 #ifdef DEBUG_ENABLED
-				if (ScriptDebugger::get_singleton() && _get_obj().rc && !ObjectDB::get_instance(_get_obj().rc->instance_id)) {
+				if (_get_obj().rc) {
 					ERR_PRINT("Attempted get property list on a deleted object.");
 				}
 #endif
@@ -2903,15 +2903,15 @@ bool Variant::iter_init(Variant &r_iter, bool &valid) const {
 		} break;
 		case OBJECT: {
 			Object *obj = _OBJ_PTR(*this);
-#ifdef DEBUG_ENABLED
 			if (unlikely(!obj)) {
 				valid = false;
-				if (ScriptDebugger::get_singleton() && _get_obj().rc && !ObjectDB::get_instance(_get_obj().rc->instance_id)) {
+#ifdef DEBUG_ENABLED
+				if (_get_obj().rc) {
 					ERR_PRINT("Attempted iteration start on a deleted object.");
 				}
+#endif
 				return false;
 			}
-#endif
 			Variant::CallError ce;
 			ce.error = Variant::CallError::CALL_OK;
 			Array ref;
@@ -3077,15 +3077,15 @@ bool Variant::iter_next(Variant &r_iter, bool &valid) const {
 		} break;
 		case OBJECT: {
 			Object *obj = _OBJ_PTR(*this);
-#ifdef DEBUG_ENABLED
 			if (unlikely(!obj)) {
 				valid = false;
-				if (ScriptDebugger::get_singleton() && _get_obj().rc && !ObjectDB::get_instance(_get_obj().rc->instance_id)) {
+#ifdef DEBUG_ENABLED
+				if (_get_obj().rc) {
 					ERR_PRINT("Attempted iteration check next on a deleted object.");
 				}
+#endif
 				return false;
 			}
-#endif
 			Variant::CallError ce;
 			ce.error = Variant::CallError::CALL_OK;
 			Array ref;
@@ -3233,15 +3233,15 @@ Variant Variant::iter_get(const Variant &r_iter, bool &r_valid) const {
 		} break;
 		case OBJECT: {
 			Object *obj = _OBJ_PTR(*this);
-#ifdef DEBUG_ENABLED
 			if (unlikely(!obj)) {
 				r_valid = false;
-				if (ScriptDebugger::get_singleton() && _get_obj().rc && !ObjectDB::get_instance(_get_obj().rc->instance_id)) {
+#ifdef DEBUG_ENABLED
+				if (_get_obj().rc) {
 					ERR_PRINT("Attempted iteration get next on a deleted object.");
 				}
+#endif
 				return Variant();
 			}
-#endif
 			Variant::CallError ce;
 			ce.error = Variant::CallError::CALL_OK;
 			const Variant *refp[] = { &r_iter };

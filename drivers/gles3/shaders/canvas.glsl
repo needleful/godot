@@ -253,28 +253,28 @@ VERTEX_SHADER_CODE
 		m = mat2x4(
 					texelFetch(skeleton_texture, tex_ofs, 0),
 					texelFetch(skeleton_texture, tex_ofs + ivec2(0, 1), 0)) *
-			bone_weights.x;
+				bone_weights.x;
 
 		tex_ofs = ivec2(bone_indicesi.y % 256, (bone_indicesi.y / 256) * 2);
 
 		m += mat2x4(
 					 texelFetch(skeleton_texture, tex_ofs, 0),
 					 texelFetch(skeleton_texture, tex_ofs + ivec2(0, 1), 0)) *
-			 bone_weights.y;
+				bone_weights.y;
 
 		tex_ofs = ivec2(bone_indicesi.z % 256, (bone_indicesi.z / 256) * 2);
 
 		m += mat2x4(
 					 texelFetch(skeleton_texture, tex_ofs, 0),
 					 texelFetch(skeleton_texture, tex_ofs + ivec2(0, 1), 0)) *
-			 bone_weights.z;
+				bone_weights.z;
 
 		tex_ofs = ivec2(bone_indicesi.w % 256, (bone_indicesi.w / 256) * 2);
 
 		m += mat2x4(
 					 texelFetch(skeleton_texture, tex_ofs, 0),
 					 texelFetch(skeleton_texture, tex_ofs + ivec2(0, 1), 0)) *
-			 bone_weights.w;
+				bone_weights.w;
 
 		mat4 bone_matrix = skeleton_transform * transpose(mat4(m[0], m[1], vec4(0.0, 0.0, 1.0, 0.0), vec4(0.0, 0.0, 0.0, 1.0))) * skeleton_transform_inverse;
 
@@ -855,6 +855,13 @@ FRAGMENT_SHADER_CODE
 
 //use lighting
 #endif
+
+#ifdef LINEAR_TO_SRGB
+	// regular Linear -> SRGB conversion
+	vec3 a = vec3(0.055);
+	color.rgb = mix((vec3(1.0) + a) * pow(color.rgb, vec3(1.0 / 2.4)) - a, 12.92 * color.rgb, lessThan(color.rgb, vec3(0.0031308)));
+#endif
+
 	//color.rgb *= color.a;
 	frag_color = color;
 }

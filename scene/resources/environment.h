@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -56,7 +56,8 @@ public:
 		TONE_MAPPER_LINEAR,
 		TONE_MAPPER_REINHARDT,
 		TONE_MAPPER_FILMIC,
-		TONE_MAPPER_ACES
+		TONE_MAPPER_ACES,
+		TONE_MAPPER_ACES_FITTED
 	};
 
 	enum GlowBlendMode {
@@ -145,6 +146,7 @@ private:
 	float glow_hdr_bleed_scale;
 	float glow_hdr_luminance_cap;
 	bool glow_bicubic_upscale;
+	bool glow_high_quality;
 
 	bool dof_blur_far_enabled;
 	float dof_blur_far_distance;
@@ -332,6 +334,9 @@ public:
 
 	void set_glow_bicubic_upscale(bool p_enable);
 	bool is_glow_bicubic_upscale_enabled() const;
+
+	void set_glow_high_quality(bool p_enable);
+	bool is_glow_high_quality_enabled() const;
 
 	void set_dof_blur_far_enabled(bool p_enable);
 	bool is_dof_blur_far_enabled() const;

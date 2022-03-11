@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -79,7 +79,7 @@ Size2 Tabs::get_minimum_size() const {
 		}
 	}
 
-	ms.width = 0; //TODO: should make this optional
+	ms.width = 0; // TODO: should make this optional.
 	return ms;
 }
 
@@ -89,7 +89,6 @@ void Tabs::_gui_input(const Ref<InputEvent> &p_event) {
 	if (mm.is_valid()) {
 		Point2 pos = mm->get_position();
 
-		highlight_arrow = -1;
 		if (buttons_visible) {
 			Ref<Texture> incr = get_icon("increment");
 			Ref<Texture> decr = get_icon("decrement");
@@ -97,14 +96,22 @@ void Tabs::_gui_input(const Ref<InputEvent> &p_event) {
 			int limit = get_size().width - incr->get_width() - decr->get_width();
 
 			if (pos.x > limit + decr->get_width()) {
-				highlight_arrow = 1;
+				if (highlight_arrow != 1) {
+					highlight_arrow = 1;
+					update();
+				}
 			} else if (pos.x > limit) {
-				highlight_arrow = 0;
+				if (highlight_arrow != 0) {
+					highlight_arrow = 0;
+					update();
+				}
+			} else if (highlight_arrow != -1) {
+				highlight_arrow = -1;
+				update();
 			}
 		}
 
 		_update_hover();
-		update();
 		return;
 	}
 
@@ -124,6 +131,7 @@ void Tabs::_gui_input(const Ref<InputEvent> &p_event) {
 			if (scrolling_enabled && buttons_visible) {
 				if (missing_right) {
 					offset++;
+					_ensure_no_over_offset(); // Avoid overreaching when scrolling fast.
 					update();
 				}
 			}
@@ -131,7 +139,7 @@ void Tabs::_gui_input(const Ref<InputEvent> &p_event) {
 
 		if (rb_pressing && !mb->is_pressed() && mb->get_button_index() == BUTTON_LEFT) {
 			if (rb_hover != -1) {
-				//pressed
+				// Right mouse button pressed.
 				emit_signal("right_button_pressed", rb_hover);
 			}
 
@@ -141,7 +149,7 @@ void Tabs::_gui_input(const Ref<InputEvent> &p_event) {
 
 		if (cb_pressing && !mb->is_pressed() && mb->get_button_index() == BUTTON_LEFT) {
 			if (cb_hover != -1) {
-				//pressed
+				// Close button pressed.
 				emit_signal("tab_close", cb_hover);
 			}
 
@@ -150,7 +158,7 @@ void Tabs::_gui_input(const Ref<InputEvent> &p_event) {
 		}
 
 		if (mb->is_pressed() && (mb->get_button_index() == BUTTON_LEFT || (select_with_rmb && mb->get_button_index() == BUTTON_RIGHT))) {
-			// clicks
+			// Clicks.
 			Point2 pos(mb->get_position().x, mb->get_position().y);
 
 			if (buttons_visible) {
@@ -174,19 +182,20 @@ void Tabs::_gui_input(const Ref<InputEvent> &p_event) {
 				}
 			}
 
-			int found = -1;
-			for (int i = 0; i < tabs.size(); i++) {
-				if (i < offset) {
-					continue;
-				}
+			if (tabs.empty()) {
+				// Return early if there are no actual tabs to handle input for.
+				return;
+			}
 
+			int found = -1;
+			for (int i = offset; i <= max_drawn_tab; i++) {
 				if (tabs[i].rb_rect.has_point(pos)) {
 					rb_pressing = true;
 					update();
 					return;
 				}
 
-				if (tabs[i].cb_rect.has_point(pos)) {
+				if (tabs[i].cb_rect.has_point(pos) && (cb_displaypolicy == CLOSE_BUTTON_SHOW_ALWAYS || (cb_displaypolicy == CLOSE_BUTTON_SHOW_ACTIVE_ONLY && i == current))) {
 					cb_pressing = true;
 					update();
 					return;
@@ -479,7 +488,7 @@ void Tabs::_update_hover() {
 	}
 
 	const Point2 &pos = get_local_mouse_position();
-	// test hovering to display right or close button
+	// Test hovering to display right or close button.
 	int hover_now = -1;
 	int hover_buttons = -1;
 	for (int i = 0; i < tabs.size(); i++) {
@@ -508,7 +517,7 @@ void Tabs::_update_hover() {
 		emit_signal("tab_hover", hover);
 	}
 
-	if (hover_buttons == -1) { // no hover
+	if (hover_buttons == -1) { // No hover.
 		rb_hover = hover_buttons;
 		cb_hover = hover_buttons;
 	}
@@ -683,7 +692,7 @@ bool Tabs::can_drop_data(const Point2 &p_point, const Variant &p_data) const {
 		if (from_path == to_path) {
 			return true;
 		} else if (get_tabs_rearrange_group() != -1) {
-			// drag and drop between other Tabs
+			// Drag and drop between other Tabs.
 			Node *from_node = get_node(from_path);
 			Tabs *from_tabs = Object::cast_to<Tabs>(from_node);
 			if (from_tabs && from_tabs->get_tabs_rearrange_group() == get_tabs_rearrange_group()) {
@@ -718,7 +727,7 @@ void Tabs::drop_data(const Point2 &p_point, const Variant &p_data) {
 			emit_signal("reposition_active_tab_request", hover_now);
 			set_current_tab(hover_now);
 		} else if (get_tabs_rearrange_group() != -1) {
-			// drag and drop between Tabs
+			// Drag and drop between Tabs.
 			Node *from_node = get_node(from_path);
 			Tabs *from_tabs = Object::cast_to<Tabs>(from_node);
 			if (from_tabs && from_tabs->get_tabs_rearrange_group() == get_tabs_rearrange_group()) {
@@ -742,11 +751,7 @@ void Tabs::drop_data(const Point2 &p_point, const Variant &p_data) {
 
 int Tabs::get_tab_idx_at_point(const Point2 &p_point) const {
 	int hover_now = -1;
-	for (int i = 0; i < tabs.size(); i++) {
-		if (i < offset) {
-			continue;
-		}
-
+	for (int i = offset; i <= max_drawn_tab; i++) {
 		Rect2 rect = get_tab_rect(i);
 		if (rect.has_point(p_point)) {
 			hover_now = i;

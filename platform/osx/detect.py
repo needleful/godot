@@ -58,14 +58,11 @@ def configure(env):
         elif env["optimize"] == "size":  # optimize for size
             env.Prepend(CCFLAGS=["-Os"])
 
-        env.Prepend(CPPDEFINES=["DEBUG_ENABLED"])
-
         if env["debug_symbols"]:
             env.Prepend(CCFLAGS=["-g2"])
 
     elif env["target"] == "debug":
         env.Prepend(CCFLAGS=["-g3"])
-        env.Prepend(CPPDEFINES=["DEBUG_ENABLED"])
         env.Prepend(LINKFLAGS=["-Xlinker", "-no_deduplicate"])
 
     ## Architecture
@@ -85,7 +82,7 @@ def configure(env):
         env.Append(CCFLAGS=["-arch", "arm64", "-mmacosx-version-min=10.15"])
         env.Append(LINKFLAGS=["-arch", "arm64", "-mmacosx-version-min=10.15"])
     else:
-        print("Building for macOS 10.9+, platform x86-64.")
+        print("Building for macOS 10.12+, platform x86-64.")
         env.Append(CCFLAGS=["-arch", "x86_64", "-mmacosx-version-min=10.12"])
         env.Append(LINKFLAGS=["-arch", "x86_64", "-mmacosx-version-min=10.12"])
 

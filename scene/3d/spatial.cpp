@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -46,7 +46,7 @@
  definition of invalidation: global is invalid
 
  1) If a node sets a LOCAL, it produces an invalidation of everything above
-    a) If above is invalid, don't keep invalidating upwards
+ .  a) If above is invalid, don't keep invalidating upwards
  2) If a node sets a GLOBAL, it is converted to LOCAL (and forces validation of everything pending below)
 
  drawback: setting/reading globals is useful and used very very often, and using affine inverses is slow
@@ -58,7 +58,7 @@
  definition of invalidation: NONE dirty, LOCAL dirty, GLOBAL dirty
 
  1) If a node sets a LOCAL, it must climb the tree and set it as GLOBAL dirty
-    a) marking GLOBALs as dirty up all the tree must be done always
+ .  a) marking GLOBALs as dirty up all the tree must be done always
  2) If a node sets a GLOBAL, it marks local as dirty, and that's all?
 
  //is clearing the dirty state correct in this case?
@@ -669,6 +669,7 @@ void Spatial::look_at(const Vector3 &p_target, const Vector3 &p_up) {
 
 void Spatial::look_at_from_position(const Vector3 &p_pos, const Vector3 &p_target, const Vector3 &p_up) {
 	ERR_FAIL_COND_MSG(p_pos == p_target, "Node origin and target are in the same position, look_at() failed.");
+	ERR_FAIL_COND_MSG(p_up == Vector3(), "The up vector can't be zero, look_at() failed.");
 	ERR_FAIL_COND_MSG(p_up.cross(p_target - p_pos) == Vector3(), "Up vector and direction between node origin and target are aligned, look_at() failed.");
 
 	Transform lookat;

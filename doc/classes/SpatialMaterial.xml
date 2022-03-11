@@ -64,13 +64,16 @@
 			Texture to multiply by [member albedo_color]. Used for basic texturing of objects.
 		</member>
 		<member name="anisotropy" type="float" setter="set_anisotropy" getter="get_anisotropy">
-			The strength of the anisotropy effect.
+			The strength of the anisotropy effect. This is multiplied by [member anisotropy_flowmap]'s alpha channel if a texture is defined there and the texture contains an alpha channel.
 		</member>
 		<member name="anisotropy_enabled" type="bool" setter="set_feature" getter="get_feature" default="false">
-			If [code]true[/code], anisotropy is enabled. Changes the shape of the specular blob and aligns it to tangent space. Mesh tangents are needed for this to work. If the mesh does not contain tangents the anisotropy effect will appear broken.
+			If [code]true[/code], anisotropy is enabled. Anisotropy changes the shape of the specular blob and aligns it to tangent space. This is useful for brushed aluminium and hair reflections.
+			[b]Note:[/b] Mesh tangents are needed for anisotropy to work. If the mesh does not contain tangents, the anisotropy effect will appear broken.
+			[b]Note:[/b] Material anisotropy should not to be confused with anisotropic texture filtering. Anisotropic texture filtering can be enabled by selecting a texture in the FileSystem dock, going to the Import dock, checking the [b]Anisotropic[/b] checkbox then clicking [b]Reimport[/b].
 		</member>
 		<member name="anisotropy_flowmap" type="Texture" setter="set_texture" getter="get_texture">
-			Texture that offsets the tangent map for anisotropy calculations.
+			Texture that offsets the tangent map for anisotropy calculations and optionally controls the anisotropy effect (if an alpha channel is present). The flowmap texture is expected to be a derivative map, with the red channel representing distortion on the X axis and green channel representing distortion on the Y axis. Values below 0.5 will result in negative distortion, whereas values above 0.5 will result in positive distortion.
+			If present, the texture's alpha channel will be used to multiply the strength of the [member anisotropy] effect. Fully opaque pixels will keep the anisotropy effect's original strength while fully transparent pixels will disable the anisotropy effect entirely. The flowmap texture's blue channel is ignored.
 		</member>
 		<member name="ao_enabled" type="bool" setter="set_feature" getter="get_feature" default="false">
 			If [code]true[/code], ambient occlusion is enabled. Ambient occlusion darkens areas based on the [member ao_texture].
@@ -139,7 +142,7 @@
 		</member>
 		<member name="detail_normal" type="Texture" setter="set_texture" getter="get_texture">
 			Texture that specifies the per-pixel normal of the detail overlay.
-			[b]Note:[/b] Godot expects the normal map to use X+, Y-, and Z+ coordinates. See [url=http://wiki.polycount.com/wiki/Normal_Map_Technical_Details#Common_Swizzle_Coordinates]this page[/url] for a comparison of normal map coordinates expected by popular engines.
+			[b]Note:[/b] Godot expects the normal map to use X+, Y+, and Z+ coordinates. See [url=http://wiki.polycount.com/wiki/Normal_Map_Technical_Details#Common_Swizzle_Coordinates]this page[/url] for a comparison of normal map coordinates expected by popular engines.
 		</member>
 		<member name="detail_uv_layer" type="int" setter="set_detail_uv" getter="get_detail_uv" enum="SpatialMaterial.DetailUV">
 			Specifies whether to use [code]UV[/code] or [code]UV2[/code] for the detail layer. See [enum DetailUV] for options.
@@ -199,7 +202,7 @@
 		</member>
 		<member name="flags_use_point_size" type="bool" setter="set_flag" getter="get_flag" default="false">
 			If [code]true[/code], render point size can be changed.
-			[b]Note:[/b] this is only effective for objects whose geometry is point-based rather than triangle-based. See also [member params_point_size].
+			[b]Note:[/b] This is only effective for objects whose geometry is point-based rather than triangle-based. See also [member params_point_size].
 		</member>
 		<member name="flags_use_shadow_to_opacity" type="bool" setter="set_flag" getter="get_flag" default="false">
 			If [code]true[/code], enables the "shadow to opacity" render mode where lighting modifies the alpha so shadowed areas are opaque and non-shadowed areas are transparent. Useful for overlaying shadows onto a camera feed in AR.
@@ -215,7 +218,7 @@
 		</member>
 		<member name="metallic_specular" type="float" setter="set_specular" getter="get_specular" default="0.5">
 			Sets the size of the specular lobe. The specular lobe is the bright spot that is reflected from light sources.
-			[b]Note:[/b] unlike [member metallic], this is not energy-conserving, so it should be left at [code]0.5[/code] in most cases. See also [member roughness].
+			[b]Note:[/b] Unlike [member metallic], this is not energy-conserving, so it should be left at [code]0.5[/code] in most cases. See also [member roughness].
 		</member>
 		<member name="metallic_texture" type="Texture" setter="set_texture" getter="get_texture">
 			Texture used to specify metallic for an object. This is multiplied by [member metallic].
@@ -230,8 +233,9 @@
 			The strength of the normal map's effect.
 		</member>
 		<member name="normal_texture" type="Texture" setter="set_texture" getter="get_texture">
-			Texture used to specify the normal at a given pixel. The [code]normal_texture[/code] only uses the red and green channels. The normal read from [code]normal_texture[/code] is oriented around the surface normal provided by the [Mesh].
-			[b]Note:[/b] Godot expects the normal map to use X+, Y-, and Z+ coordinates. See [url=http://wiki.polycount.com/wiki/Normal_Map_Technical_Details#Common_Swizzle_Coordinates]this page[/url] for a comparison of normal map coordinates expected by popular engines.
+			Texture used to specify the normal at a given pixel. The [code]normal_texture[/code] only uses the red and green channels; the blue and alpha channels are ignored. The normal read from [code]normal_texture[/code] is oriented around the surface normal provided by the [Mesh].
+			[b]Note:[/b] The mesh must have both normals and tangents defined in its vertex data. Otherwise, the normal map won't render correctly and will only appear to darken the whole surface. If creating geometry with [SurfaceTool], you can use [method SurfaceTool.generate_normals] and [method SurfaceTool.generate_tangents] to automatically generate normals and tangents respectively.
+			[b]Note:[/b] Godot expects the normal map to use X+, Y+, and Z+ coordinates. See [url=http://wiki.polycount.com/wiki/Normal_Map_Technical_Details#Common_Swizzle_Coordinates]this page[/url] for a comparison of normal map coordinates expected by popular engines.
 		</member>
 		<member name="params_alpha_scissor_threshold" type="float" setter="set_alpha_scissor_threshold" getter="get_alpha_scissor_threshold">
 			Threshold at which the alpha scissor will discard values.
@@ -290,16 +294,16 @@
 			If [code]true[/code], the proximity fade effect is enabled. The proximity fade effect fades out each pixel based on its distance to another object.
 		</member>
 		<member name="refraction_enabled" type="bool" setter="set_feature" getter="get_feature" default="false">
-			If [code]true[/code], the refraction effect is enabled. Distorts transparency based on light from behind the object.
+			If [code]true[/code], the refraction effect is enabled. Refraction distorts transparency based on light from behind the object. When using the GLES3 backend, the material's roughness value will affect the blurriness of the refraction. Higher roughness values will make the refraction look blurrier.
 		</member>
 		<member name="refraction_scale" type="float" setter="set_refraction" getter="get_refraction">
-			The strength of the refraction effect.
+			The strength of the refraction effect. Higher values result in a more distorted appearance for the refraction.
 		</member>
 		<member name="refraction_texture" type="Texture" setter="set_texture" getter="get_texture">
 			Texture that controls the strength of the refraction per-pixel. Multiplied by [member refraction_scale].
 		</member>
 		<member name="refraction_texture_channel" type="int" setter="set_refraction_texture_channel" getter="get_refraction_texture_channel" enum="SpatialMaterial.TextureChannel">
-			Specifies the channel of the [member ao_texture] in which the ambient occlusion information is stored. This is useful when you store the information for multiple effects in a single texture. For example if you stored metallic in the red channel, roughness in the blue, and ambient occlusion in the green you could reduce the number of textures you use.
+			Specifies the channel of the [member refraction_texture] in which the refraction information is stored. This is useful when you store the information for multiple effects in a single texture. For example if you stored metallic in the red channel, roughness in the blue, and ambient occlusion in the green you could reduce the number of textures you use.
 		</member>
 		<member name="rim" type="float" setter="set_rim" getter="get_rim">
 			Sets the strength of the rim lighting effect.

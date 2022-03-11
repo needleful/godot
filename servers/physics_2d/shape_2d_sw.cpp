@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -921,7 +921,7 @@ Variant ConcavePolygonShape2DSW::get_data() const {
 	return rsegments;
 }
 
-void ConcavePolygonShape2DSW::cull(const Rect2 &p_local_aabb, Callback p_callback, void *p_userdata) const {
+void ConcavePolygonShape2DSW::cull(const Rect2 &p_local_aabb, QueryCallback p_callback, void *p_userdata) const {
 	uint32_t *stack = (uint32_t *)alloca(sizeof(int) * bvh_depth);
 
 	enum {
@@ -969,7 +969,9 @@ void ConcavePolygonShape2DSW::cull(const Rect2 &p_local_aabb, Callback p_callbac
 
 						SegmentShape2DSW ss(a, b, (b - a).tangent().normalized());
 
-						p_callback(p_userdata, &ss);
+						if (p_callback(p_userdata, &ss)) {
+							return;
+						}
 						stack[level] = (VISIT_DONE_BIT << VISITED_BIT_SHIFT) | node;
 
 					} else {

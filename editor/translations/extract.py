@@ -35,8 +35,8 @@ unique_str = []
 unique_loc = {}
 main_po = """
 # LANGUAGE translation of the Godot Engine editor.
-# Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.
-# Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).
+# Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.
+# Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).
 # This file is distributed under the same license as the Godot source code.
 #
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
@@ -45,6 +45,8 @@ main_po = """
 msgid ""
 msgstr ""
 "Project-Id-Version: Godot Engine editor\\n"
+"Report-Msgid-Bugs-To: https://github.com/godotengine/godot\\n"
+"MIME-Version: 1.0\\n"
 "Content-Type: text/plain; charset=UTF-8\\n"
 "Content-Transfer-Encoding: 8-bit\\n"\n
 """

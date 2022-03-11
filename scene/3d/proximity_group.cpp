@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -34,9 +34,9 @@
 
 void ProximityGroup::_clear_groups() {
 	Map<StringName, uint32_t>::Element *E;
+	const int size = 16;
 
-	{
-		const int size = 16;
+	do {
 		StringName remove_list[size];
 		E = groups.front();
 		int num = 0;
@@ -50,11 +50,7 @@ void ProximityGroup::_clear_groups() {
 		for (int i = 0; i < num; i++) {
 			groups.erase(remove_list[i]);
 		}
-	}
-
-	if (E) {
-		_clear_groups(); // call until we go through the whole list
-	}
+	} while (E);
 }
 
 void ProximityGroup::_update_groups() {

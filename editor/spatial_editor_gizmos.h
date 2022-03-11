@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -68,6 +68,19 @@ public:
 	void redraw(EditorSpatialGizmo *p_gizmo);
 
 	AudioStreamPlayer3DSpatialGizmoPlugin();
+};
+
+class ListenerSpatialGizmoPlugin : public EditorSpatialGizmoPlugin {
+	GDCLASS(ListenerSpatialGizmoPlugin, EditorSpatialGizmoPlugin);
+
+public:
+	bool has_gizmo(Spatial *p_spatial);
+	String get_name() const;
+	int get_priority() const;
+
+	void redraw(EditorSpatialGizmo *p_gizmo);
+
+	ListenerSpatialGizmoPlugin();
 };
 
 class CameraSpatialGizmoPlugin : public EditorSpatialGizmoPlugin {

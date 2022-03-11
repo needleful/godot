@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -271,6 +271,7 @@ struct _VariantCall {
 	VCALL_LOCALMEM0R(String, to_lower);
 	VCALL_LOCALMEM1R(String, left);
 	VCALL_LOCALMEM1R(String, right);
+	VCALL_LOCALMEM1R(String, indent);
 	VCALL_LOCALMEM0R(String, dedent);
 	VCALL_LOCALMEM2R(String, strip_edges);
 	VCALL_LOCALMEM0R(String, strip_escapes);
@@ -291,6 +292,7 @@ struct _VariantCall {
 	VCALL_LOCALMEM0R(String, empty);
 	VCALL_LOCALMEM1R(String, humanize_size);
 	VCALL_LOCALMEM0R(String, is_abs_path);
+	VCALL_LOCALMEM0R(String, simplify_path);
 	VCALL_LOCALMEM0R(String, is_rel_path);
 	VCALL_LOCALMEM0R(String, get_base_dir);
 	VCALL_LOCALMEM0R(String, get_file);
@@ -558,6 +560,7 @@ struct _VariantCall {
 	VCALL_LOCALMEM1(Array, push_front);
 	VCALL_LOCALMEM0R(Array, pop_back);
 	VCALL_LOCALMEM0R(Array, pop_front);
+	VCALL_LOCALMEM1R(Array, pop_at);
 	VCALL_LOCALMEM1(Array, append);
 	VCALL_LOCALMEM1(Array, append_array);
 	VCALL_LOCALMEM1(Array, resize);
@@ -649,17 +652,17 @@ struct _VariantCall {
 
 	static void _call_PoolByteArray_decompress_dynamic(Variant &r_ret, Variant &p_self, const Variant **p_args) {
 		PoolByteArray *ba = reinterpret_cast<PoolByteArray *>(p_self._data._mem);
-		PoolByteArray *decompressed = memnew(PoolByteArray);
+		PoolByteArray decompressed;
 		int max_output_size = (int)(*p_args[0]);
 		Compression::Mode mode = (Compression::Mode)(int)(*p_args[1]);
 
-		decompressed->resize(1024);
-		int result = Compression::decompress_dynamic(decompressed, max_output_size, ba->read().ptr(), ba->size(), mode);
+		decompressed.resize(1024);
+		int result = Compression::decompress_dynamic(&decompressed, max_output_size, ba->read().ptr(), ba->size(), mode);
 
 		if (result == OK) {
 			r_ret = decompressed;
 		} else {
-			decompressed->resize(0);
+			decompressed.resize(0);
 			r_ret = decompressed;
 			ERR_FAIL_MSG("Decompression failed.");
 		}
@@ -1160,9 +1163,9 @@ void Variant::call_ptr(const StringName &p_method, const Variant **p_args, int p
 	if (type == Variant::OBJECT) {
 		//call object
 		Object *obj = _OBJ_PTR(*this);
-		if (!obj) {
+		if (unlikely(!obj)) {
 #ifdef DEBUG_ENABLED
-			if (ScriptDebugger::get_singleton() && _get_obj().rc && !ObjectDB::get_instance(_get_obj().rc->instance_id)) {
+			if (_get_obj().rc) {
 				ERR_PRINT("Attempted method call on a deleted object.");
 			}
 #endif
@@ -1372,9 +1375,9 @@ Variant Variant::construct(const Variant::Type p_type, const Variant **p_args, i
 bool Variant::has_method(const StringName &p_method) const {
 	if (type == OBJECT) {
 		Object *obj = _OBJ_PTR(*this);
-		if (!obj) {
+		if (unlikely(!obj)) {
 #ifdef DEBUG_ENABLED
-			if (ScriptDebugger::get_singleton() && _get_obj().rc && !ObjectDB::get_instance(_get_obj().rc->instance_id)) {
+			if (_get_obj().rc) {
 				ERR_PRINT("Attempted method check on a deleted object.");
 			}
 #endif
@@ -1436,12 +1439,11 @@ Variant::Type Variant::get_method_return_type(Variant::Type p_type, const String
 }
 
 Vector<Variant> Variant::get_method_default_arguments(Variant::Type p_type, const StringName &p_method) {
+	ERR_FAIL_INDEX_V(p_type, Variant::VARIANT_MAX, Vector<Variant>());
 	const _VariantCall::TypeFunc &tf = _VariantCall::type_funcs[p_type];
 
 	const Map<StringName, _VariantCall::FuncData>::Element *E = tf.functions.find(p_method);
-	if (!E) {
-		return Vector<Variant>();
-	}
+	ERR_FAIL_COND_V(!E, Vector<Variant>());
 
 	return E->get().default_args;
 }
@@ -1674,6 +1676,7 @@ void register_variant_methods() {
 	ADDFUNC0R(STRING, STRING, String, get_basename, varray());
 	ADDFUNC1R(STRING, STRING, String, plus_file, STRING, "file", varray());
 	ADDFUNC1R(STRING, INT, String, ord_at, INT, "at", varray());
+	ADDFUNC1R(STRING, STRING, String, indent, STRING, "prefix", varray());
 	ADDFUNC0R(STRING, STRING, String, dedent, varray());
 	ADDFUNC2(STRING, NIL, String, erase, INT, "position", INT, "chars", varray());
 	ADDFUNC0R(STRING, INT, String, hash, varray());
@@ -1686,6 +1689,7 @@ void register_variant_methods() {
 	ADDFUNC0R(STRING, BOOL, String, empty, varray());
 	ADDFUNC1R(STRING, STRING, String, humanize_size, INT, "size", varray());
 	ADDFUNC0R(STRING, BOOL, String, is_abs_path, varray());
+	ADDFUNC0R(STRING, STRING, String, simplify_path, varray());
 	ADDFUNC0R(STRING, BOOL, String, is_rel_path, varray());
 	ADDFUNC0R(STRING, STRING, String, get_base_dir, varray());
 	ADDFUNC0R(STRING, STRING, String, get_file, varray());
@@ -1890,6 +1894,7 @@ void register_variant_methods() {
 	ADDFUNC1R(ARRAY, BOOL, Array, has, NIL, "value", varray());
 	ADDFUNC0RNC(ARRAY, NIL, Array, pop_back, varray());
 	ADDFUNC0RNC(ARRAY, NIL, Array, pop_front, varray());
+	ADDFUNC1RNC(ARRAY, NIL, Array, pop_at, INT, "position", varray());
 	ADDFUNC0NC(ARRAY, NIL, Array, sort, varray());
 	ADDFUNC2NC(ARRAY, NIL, Array, sort_custom, OBJECT, "obj", STRING, "func", varray());
 	ADDFUNC0NC(ARRAY, NIL, Array, shuffle, varray());

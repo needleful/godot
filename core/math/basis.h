@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -323,7 +323,7 @@ Vector3 Basis::xform_inv(const Vector3 &p_vector) const {
 
 real_t Basis::determinant() const {
 	return elements[0][0] * (elements[1][1] * elements[2][2] - elements[2][1] * elements[1][2]) -
-		   elements[1][0] * (elements[0][1] * elements[2][2] - elements[2][1] * elements[0][2]) +
-		   elements[2][0] * (elements[0][1] * elements[1][2] - elements[1][1] * elements[0][2]);
+			elements[1][0] * (elements[0][1] * elements[2][2] - elements[2][1] * elements[0][2]) +
+			elements[2][0] * (elements[0][1] * elements[1][2] - elements[1][1] * elements[0][2]);
 }
 #endif // BASIS_H

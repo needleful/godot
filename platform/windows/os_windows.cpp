@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -28,9 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-// Must include Winsock before windows.h (included by os_windows.h)
-#include "drivers/unix/net_socket_posix.h"
-
 #include "os_windows.h"
 
 #include "core/io/marshalls.h"
@@ -38,6 +35,7 @@
 #include "core/version_generated.gen.h"
 #include "drivers/gles2/rasterizer_gles2.h"
 #include "drivers/gles3/rasterizer_gles3.h"
+#include "drivers/unix/net_socket_posix.h"
 #include "drivers/windows/dir_access_windows.h"
 #include "drivers/windows/file_access_windows.h"
 #include "joypad_windows.h"
@@ -95,7 +93,6 @@ static BOOL CALLBACK _MonitorEnumProcSize(HMONITOR hMonitor, HDC hdcMonitor, LPR
 	return TRUE;
 }
 
-#ifdef DEBUG_ENABLED
 static String format_error_message(DWORD id) {
 	LPWSTR messageBuffer = NULL;
 	size_t size = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -107,7 +104,6 @@ static String format_error_message(DWORD id) {
 
 	return msg;
 }
-#endif // DEBUG_ENABLED
 
 extern HINSTANCE godot_hinstance;
 
@@ -212,6 +208,7 @@ void OS_Windows::initialize_core() {
 	crash_handler.initialize();
 
 	last_button_state = 0;
+	restore_mouse_trails = 0;
 
 	//RedirectIOToConsole();
 	maximized = false;
@@ -1426,6 +1423,13 @@ Error OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int
 			video_mode.fullscreen=false;
 		}*/
 		pre_fs_valid = false;
+
+		// If the user has mouse trails enabled in windows, then sometimes the cursor disappears in fullscreen mode.
+		// Save number of trails so we can restore when exiting, then turn off mouse trails
+		SystemParametersInfoA(SPI_GETMOUSETRAILS, 0, &restore_mouse_trails, 0);
+		if (restore_mouse_trails > 1) {
+			SystemParametersInfoA(SPI_SETMOUSETRAILS, 0, 0, 0);
+		}
 	}
 
 	DWORD dwExStyle;
@@ -1770,6 +1774,10 @@ void OS_Windows::finalize() {
 	if (user_proc) {
 		SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)user_proc);
 	};
+
+	if (restore_mouse_trails > 1) {
+		SystemParametersInfoA(SPI_SETMOUSETRAILS, restore_mouse_trails, 0, 0);
+	}
 }
 
 void OS_Windows::finalize_core() {
@@ -2124,6 +2132,10 @@ void OS_Windows::set_window_fullscreen(bool p_enabled) {
 
 		MoveWindow(hWnd, pos.x, pos.y, size.width, size.height, TRUE);
 
+		SystemParametersInfoA(SPI_GETMOUSETRAILS, 0, &restore_mouse_trails, 0);
+		if (restore_mouse_trails > 1) {
+			SystemParametersInfoA(SPI_SETMOUSETRAILS, 0, 0, 0);
+		}
 	} else {
 		RECT rect;
 
@@ -2143,6 +2155,10 @@ void OS_Windows::set_window_fullscreen(bool p_enabled) {
 		MoveWindow(hWnd, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE);
 
 		pre_fs_valid = true;
+
+		if (restore_mouse_trails > 1) {
+			SystemParametersInfoA(SPI_SETMOUSETRAILS, restore_mouse_trails, 0, 0);
+		}
 	}
 }
 bool OS_Windows::is_window_fullscreen() const {
@@ -2213,11 +2229,25 @@ bool OS_Windows::is_window_focused() const {
 	return window_focused;
 }
 
+bool OS_Windows::_is_win11_terminal() const {
+	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	DWORD dwMode = 0;
+	if (GetConsoleMode(hStdOut, &dwMode)) {
+		return ((dwMode & ENABLE_VIRTUAL_TERMINAL_PROCESSING) == ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+	} else {
+		return false;
+	}
+}
+
 void OS_Windows::set_console_visible(bool p_enabled) {
 	if (console_visible == p_enabled)
 		return;
-	ShowWindow(GetConsoleWindow(), p_enabled ? SW_SHOW : SW_HIDE);
-	console_visible = p_enabled;
+
+	if (!_is_win11_terminal()) {
+		// GetConsoleWindow is not supported by the Windows Terminal.
+		ShowWindow(GetConsoleWindow(), p_enabled ? SW_SHOW : SW_HIDE);
+		console_visible = p_enabled;
+	}
 }
 
 bool OS_Windows::is_console_visible() const {
@@ -2823,7 +2853,13 @@ Error OS_Windows::execute(const String &p_path, const List<String> &p_arguments,
 		modstr.write[i] = cmdline[i];
 	}
 
-	int ret = CreateProcessW(NULL, modstr.ptrw(), NULL, NULL, 0, NORMAL_PRIORITY_CLASS & CREATE_NO_WINDOW, NULL, NULL, si_w, &pi.pi);
+	DWORD creation_flags = NORMAL_PRIORITY_CLASS & CREATE_NO_WINDOW;
+	if (p_path == get_executable_path() && GetConsoleWindow() != NULL && _is_win11_terminal()) {
+		// Open a new terminal as a workaround for Windows Terminal bug.
+		creation_flags |= CREATE_NEW_CONSOLE;
+	}
+
+	int ret = CreateProcessW(NULL, modstr.ptrw(), NULL, NULL, 0, creation_flags, NULL, NULL, si_w, &pi.pi);
 	ERR_FAIL_COND_V(ret == 0, ERR_CANT_FORK);
 
 	if (p_blocking) {
@@ -3063,8 +3099,27 @@ void OS_Windows::move_window_to_foreground() {
 }
 
 Error OS_Windows::shell_open(String p_uri) {
-	ShellExecuteW(NULL, NULL, p_uri.c_str(), NULL, NULL, SW_SHOWNORMAL);
-	return OK;
+	INT_PTR ret = (INT_PTR)ShellExecuteW(nullptr, nullptr, p_uri.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+	if (ret > 32) {
+		return OK;
+	} else {
+		switch (ret) {
+			case ERROR_FILE_NOT_FOUND:
+			case SE_ERR_DLLNOTFOUND:
+				return ERR_FILE_NOT_FOUND;
+			case ERROR_PATH_NOT_FOUND:
+				return ERR_FILE_BAD_PATH;
+			case ERROR_BAD_FORMAT:
+				return ERR_FILE_CORRUPT;
+			case SE_ERR_ACCESSDENIED:
+				return ERR_UNAUTHORIZED;
+			case 0:
+			case SE_ERR_OOM:
+				return ERR_OUT_OF_MEMORY;
+			default:
+				return FAILED;
+		}
+	}
 }
 
 String OS_Windows::get_locale() const {
@@ -3072,21 +3127,21 @@ String OS_Windows::get_locale() const {
 
 	LANGID langid = GetUserDefaultUILanguage();
 	String neutral;
-	int lang = langid & ((1 << 9) - 1);
-	int sublang = langid & ~((1 << 9) - 1);
+	int lang = PRIMARYLANGID(langid);
+	int sublang = SUBLANGID(langid);
 
 	while (wl->locale) {
 		if (wl->main_lang == lang && wl->sublang == SUBLANG_NEUTRAL)
 			neutral = wl->locale;
 
 		if (lang == wl->main_lang && sublang == wl->sublang)
-			return wl->locale;
+			return String(wl->locale).replace("-", "_");
 
 		wl++;
 	}
 
 	if (neutral != "")
-		return neutral;
+		return String(neutral).replace("-", "_");
 
 	return "en";
 }

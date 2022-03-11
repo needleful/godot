@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -33,6 +33,8 @@
 #include "collision_solver_sw.h"
 #include "core/project_settings.h"
 #include "physics_server_sw.h"
+
+#define TEST_MOTION_MIN_CONTACT_DEPTH_FACTOR 0.05
 
 _FORCE_INLINE_ static bool _can_collide_with(CollisionObjectSW *p_object, uint32_t p_collision_mask, bool p_collide_with_bodies, bool p_collide_with_areas) {
 	if (!(p_object->get_collision_layer() & p_collision_mask)) {
@@ -432,6 +434,8 @@ bool PhysicsDirectSpaceStateSW::rest_info(RID p_shape, const Transform &p_shape_
 	ShapeSW *shape = static_cast<PhysicsServerSW *>(PhysicsServer::get_singleton())->shape_owner.get(p_shape);
 	ERR_FAIL_COND_V(!shape, 0);
 
+	real_t min_contact_depth = p_margin * TEST_MOTION_MIN_CONTACT_DEPTH_FACTOR;
+
 	AABB aabb = p_shape_xform.xform(shape->get_aabb());
 	aabb = aabb.grow(p_margin);
 
@@ -441,7 +445,7 @@ bool PhysicsDirectSpaceStateSW::rest_info(RID p_shape, const Transform &p_shape_
 	rcd.best_len = 0;
 	rcd.best_object = nullptr;
 	rcd.best_shape = 0;
-	rcd.min_allowed_depth = space->test_motion_min_contact_depth;
+	rcd.min_allowed_depth = min_contact_depth;
 
 	for (int i = 0; i < amount; i++) {
 		if (!_can_collide_with(space->intersection_query_results[i], p_collision_mask, p_collide_with_bodies, p_collide_with_areas)) {
@@ -589,7 +593,7 @@ int SpaceSW::test_body_ray_separation(BodySW *p_body, const Transform &p_transfo
 
 	for (int i = 0; i < p_result_max; i++) {
 		//reset results
-		r_results[i].collision_depth = 0;
+		r_results[i].collision_depth = -1.0;
 	}
 
 	int rays_found = 0;
@@ -664,18 +668,28 @@ int SpaceSW::test_body_ray_separation(BodySW *p_body, const Transform &p_transfo
 								Vector3 a = sr[k * 2 + 0];
 								Vector3 b = sr[k * 2 + 1];
 
-								recover_motion += (b - a) / cbk.amount;
+								// Compute plane on b towards a.
+								Vector3 n = (a - b).normalized();
+								float d = n.dot(b);
 
-								float depth = a.distance_to(b);
+								// Compute depth on recovered motion.
+								float depth = n.dot(a + recover_motion) - d;
+
+								// Apply recovery without margin.
+								float separation_depth = depth - p_margin;
+								if (separation_depth > 0.0) {
+									// Only recover if there is penetration.
+									recover_motion -= n * separation_depth;
+								}
+
 								if (depth > result.collision_depth) {
 									result.collision_depth = depth;
 									result.collision_point = b;
-									result.collision_normal = (b - a).normalized();
+									result.collision_normal = -n;
 									result.collision_local_shape = j;
 									result.collider = col_obj->get_self();
 									result.collider_id = col_obj->get_instance_id();
 									result.collider_shape = shape_idx;
-									//result.collider_metadata = col_obj->get_shape_metadata(shape_idx);
 									if (col_obj->get_type() == CollisionObjectSW::TYPE_BODY) {
 										BodySW *body = (BodySW *)col_obj;
 
@@ -698,14 +712,6 @@ int SpaceSW::test_body_ray_separation(BodySW *p_body, const Transform &p_transfo
 
 			recover_attempts--;
 		} while (recover_attempts);
-	}
-
-	//optimize results (remove non colliding)
-	for (int i = 0; i < rays_found; i++) {
-		if (r_results[i].collision_depth == 0) {
-			rays_found--;
-			SWAP(r_results[i], r_results[rays_found]);
-		}
 	}
 
 	r_recover_motion = body_transform.origin - p_transform.origin;
@@ -752,6 +758,8 @@ bool SpaceSW::test_body_motion(BodySW *p_body, const Transform &p_from, const Ve
 	// Undo the currently transform the physics server is aware of and apply the provided one
 	body_aabb = p_from.xform(p_body->get_inv_transform().xform(body_aabb));
 	body_aabb = body_aabb.grow(p_margin);
+
+	real_t min_contact_depth = p_margin * TEST_MOTION_MIN_CONTACT_DEPTH_FACTOR;
 
 	float motion_length = p_motion.length();
 	Vector3 motion_normal = p_motion / motion_length;
@@ -815,8 +823,9 @@ bool SpaceSW::test_body_motion(BodySW *p_body, const Transform &p_from, const Ve
 				break;
 			}
 
-			Vector3 recover_motion;
+			recovered = true;
 
+			Vector3 recover_motion;
 			for (int i = 0; i < cbk.amount; i++) {
 				Vector3 a = sr[i * 2 + 0];
 				Vector3 b = sr[i * 2 + 1];
@@ -827,9 +836,9 @@ bool SpaceSW::test_body_motion(BodySW *p_body, const Transform &p_from, const Ve
 
 				// Compute depth on recovered motion.
 				float depth = n.dot(a + recover_motion) - d;
-				if (depth > 0.0) {
+				if (depth > min_contact_depth + CMP_EPSILON) {
 					// Only recover if there is penetration.
-					recover_motion -= n * depth * 0.4;
+					recover_motion -= n * (depth - min_contact_depth) * 0.4;
 				}
 			}
 
@@ -837,8 +846,6 @@ bool SpaceSW::test_body_motion(BodySW *p_body, const Transform &p_from, const Ve
 				collided = false;
 				break;
 			}
-
-			recovered = true;
 
 			body_transform.origin += recover_motion;
 			body_aabb.position += recover_motion;
@@ -991,7 +998,10 @@ bool SpaceSW::test_body_motion(BodySW *p_body, const Transform &p_from, const Ve
 		rcd.best_shape = 0;
 
 		// Allowed depth can't be lower than motion length, in order to handle contacts at low speed.
-		rcd.min_allowed_depth = MIN(motion_length, test_motion_min_contact_depth);
+		rcd.min_allowed_depth = MIN(motion_length, min_contact_depth);
+
+		body_aabb.position += p_motion * unsafe;
+		int amount = _cull_aabb_for_body(p_body, body_aabb);
 
 		int from_shape = best_shape != -1 ? best_shape : 0;
 		int to_shape = best_shape != -1 ? best_shape + 1 : p_body->get_shape_count();
@@ -1007,10 +1017,6 @@ bool SpaceSW::test_body_motion(BodySW *p_body, const Transform &p_from, const Ve
 			if (p_exclude_raycast_shapes && body_shape->get_type() == PhysicsServer::SHAPE_RAY) {
 				continue;
 			}
-
-			body_aabb.position += p_motion * unsafe;
-
-			int amount = _cull_aabb_for_body(p_body, body_aabb);
 
 			for (int i = 0; i < amount; i++) {
 				const CollisionObjectSW *col_obj = intersection_query_results[i];
@@ -1072,15 +1078,29 @@ bool SpaceSW::test_body_motion(BodySW *p_body, const Transform &p_from, const Ve
 	return collided;
 }
 
-void *SpaceSW::_broadphase_pair(CollisionObjectSW *A, int p_subindex_A, CollisionObjectSW *B, int p_subindex_B, void *p_self) {
-	if (!A->test_collision_mask(B)) {
+void *SpaceSW::_broadphase_pair(CollisionObjectSW *p_object_A, int p_subindex_A, CollisionObjectSW *p_object_B, int p_subindex_B, void *p_pair_data, void *p_self) {
+	bool valid_collision_pair = p_object_A->test_collision_mask(p_object_B);
+
+	if (p_pair_data) {
+		// Checking an existing pair.
+		if (valid_collision_pair) {
+			// Nothing to do, pair is still valid.
+			return p_pair_data;
+		} else {
+			// Logical collision not valid anymore, unpair.
+			_broadphase_unpair(p_object_A, p_subindex_A, p_object_B, p_subindex_B, p_pair_data, p_self);
+			return nullptr;
+		}
+	}
+
+	if (!valid_collision_pair) {
 		return nullptr;
 	}
 
-	CollisionObjectSW::Type type_A = A->get_type();
-	CollisionObjectSW::Type type_B = B->get_type();
+	CollisionObjectSW::Type type_A = p_object_A->get_type();
+	CollisionObjectSW::Type type_B = p_object_B->get_type();
 	if (type_A > type_B) {
-		SWAP(A, B);
+		SWAP(p_object_A, p_object_B);
 		SWAP(p_subindex_A, p_subindex_B);
 		SWAP(type_A, type_B);
 	}
@@ -1090,32 +1110,34 @@ void *SpaceSW::_broadphase_pair(CollisionObjectSW *A, int p_subindex_A, Collisio
 	self->collision_pairs++;
 
 	if (type_A == CollisionObjectSW::TYPE_AREA) {
-		AreaSW *area = static_cast<AreaSW *>(A);
+		AreaSW *area_a = static_cast<AreaSW *>(p_object_A);
 		if (type_B == CollisionObjectSW::TYPE_AREA) {
-			AreaSW *area_b = static_cast<AreaSW *>(B);
-			Area2PairSW *area2_pair = memnew(Area2PairSW(area_b, p_subindex_B, area, p_subindex_A));
+			AreaSW *area_b = static_cast<AreaSW *>(p_object_B);
+			Area2PairSW *area2_pair = memnew(Area2PairSW(area_b, p_subindex_B, area_a, p_subindex_A));
 			return area2_pair;
 		} else {
-			BodySW *body = static_cast<BodySW *>(B);
-			AreaPairSW *area_pair = memnew(AreaPairSW(body, p_subindex_B, area, p_subindex_A));
+			BodySW *body_b = static_cast<BodySW *>(p_object_B);
+			AreaPairSW *area_pair = memnew(AreaPairSW(body_b, p_subindex_B, area_a, p_subindex_A));
 			return area_pair;
 		}
 	} else {
-		BodyPairSW *b = memnew(BodyPairSW((BodySW *)A, p_subindex_A, (BodySW *)B, p_subindex_B));
-		return b;
+		BodySW *body_a = static_cast<BodySW *>(p_object_A);
+		BodySW *body_b = static_cast<BodySW *>(p_object_B);
+		BodyPairSW *body_pair = memnew(BodyPairSW(body_a, p_subindex_A, body_b, p_subindex_B));
+		return body_pair;
 	}
 
 	return nullptr;
 }
 
-void SpaceSW::_broadphase_unpair(CollisionObjectSW *A, int p_subindex_A, CollisionObjectSW *B, int p_subindex_B, void *p_data, void *p_self) {
-	if (!p_data) {
+void SpaceSW::_broadphase_unpair(CollisionObjectSW *p_object_A, int p_subindex_A, CollisionObjectSW *p_object_B, int p_subindex_B, void *p_pair_data, void *p_self) {
+	if (!p_pair_data) {
 		return;
 	}
 
 	SpaceSW *self = (SpaceSW *)p_self;
 	self->collision_pairs--;
-	ConstraintSW *c = (ConstraintSW *)p_data;
+	ConstraintSW *c = (ConstraintSW *)p_pair_data;
 	memdelete(c);
 }
 
@@ -1233,9 +1255,6 @@ void SpaceSW::set_param(PhysicsServer::SpaceParameter p_param, real_t p_value) {
 		case PhysicsServer::SPACE_PARAM_CONSTRAINT_DEFAULT_BIAS:
 			constraint_bias = p_value;
 			break;
-		case PhysicsServer::SPACE_PARAM_TEST_MOTION_MIN_CONTACT_DEPTH:
-			test_motion_min_contact_depth = p_value;
-			break;
 	}
 }
 
@@ -1257,8 +1276,6 @@ real_t SpaceSW::get_param(PhysicsServer::SpaceParameter p_param) const {
 			return body_angular_velocity_damp_ratio;
 		case PhysicsServer::SPACE_PARAM_CONSTRAINT_DEFAULT_BIAS:
 			return constraint_bias;
-		case PhysicsServer::SPACE_PARAM_TEST_MOTION_MIN_CONTACT_DEPTH:
-			return test_motion_min_contact_depth;
 	}
 	return 0;
 }
@@ -1289,7 +1306,6 @@ SpaceSW::SpaceSW() {
 	contact_recycle_radius = 0.01;
 	contact_max_separation = 0.05;
 	contact_max_allowed_penetration = 0.01;
-	test_motion_min_contact_depth = 0.00001;
 
 	constraint_bias = 0.01;
 	body_linear_velocity_sleep_threshold = GLOBAL_DEF("physics/3d/sleep_threshold_linear", 0.1);

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -85,9 +85,6 @@ SceneStringNames::SceneStringNames() {
 	iteration = StaticCString::create("iteration");
 	update = StaticCString::create("update");
 	updated = StaticCString::create("updated");
-
-	_get_gizmo_geometry = StaticCString::create("_get_gizmo_geometry");
-	_can_gizmo_scale = StaticCString::create("_can_gizmo_scale");
 
 	_physics_process = StaticCString::create("_physics_process");
 	_process = StaticCString::create("_process");

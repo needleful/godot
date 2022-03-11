@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -903,8 +903,8 @@ void RigidBody::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "angular_velocity"), "set_angular_velocity", "get_angular_velocity");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "angular_damp", PROPERTY_HINT_RANGE, "-1,100,0.001,or_greater"), "set_angular_damp", "get_angular_damp");
 
-	ADD_SIGNAL(MethodInfo("body_shape_entered", PropertyInfo(Variant::_RID, "body_rid"), PropertyInfo(Variant::OBJECT, "body", PROPERTY_HINT_RESOURCE_TYPE, "Node"), PropertyInfo(Variant::INT, "body_shape"), PropertyInfo(Variant::INT, "local_shape")));
-	ADD_SIGNAL(MethodInfo("body_shape_exited", PropertyInfo(Variant::_RID, "body_rid"), PropertyInfo(Variant::OBJECT, "body", PROPERTY_HINT_RESOURCE_TYPE, "Node"), PropertyInfo(Variant::INT, "body_shape"), PropertyInfo(Variant::INT, "local_shape")));
+	ADD_SIGNAL(MethodInfo("body_shape_entered", PropertyInfo(Variant::_RID, "body_rid"), PropertyInfo(Variant::OBJECT, "body", PROPERTY_HINT_RESOURCE_TYPE, "Node"), PropertyInfo(Variant::INT, "body_shape_index"), PropertyInfo(Variant::INT, "local_shape_index")));
+	ADD_SIGNAL(MethodInfo("body_shape_exited", PropertyInfo(Variant::_RID, "body_rid"), PropertyInfo(Variant::OBJECT, "body", PROPERTY_HINT_RESOURCE_TYPE, "Node"), PropertyInfo(Variant::INT, "body_shape_index"), PropertyInfo(Variant::INT, "local_shape_index")));
 	ADD_SIGNAL(MethodInfo("body_entered", PropertyInfo(Variant::OBJECT, "body", PROPERTY_HINT_RESOURCE_TYPE, "Node")));
 	ADD_SIGNAL(MethodInfo("body_exited", PropertyInfo(Variant::OBJECT, "body", PROPERTY_HINT_RESOURCE_TYPE, "Node")));
 	ADD_SIGNAL(MethodInfo("sleeping_state_changed"));
@@ -960,7 +960,8 @@ void RigidBody::_reload_physics_characteristics() {
 Ref<KinematicCollision> KinematicBody::_move(const Vector3 &p_motion, bool p_infinite_inertia, bool p_exclude_raycast_shapes, bool p_test_only) {
 	Collision col;
 	if (move_and_collide(p_motion, p_infinite_inertia, col, p_exclude_raycast_shapes, p_test_only)) {
-		if (motion_cache.is_null()) {
+		// Create a new instance when the cached reference is invalid or still in use in script.
+		if (motion_cache.is_null() || motion_cache->reference_get_count() > 1) {
 			motion_cache.instance();
 			motion_cache->owner = this;
 		}
@@ -1066,13 +1067,17 @@ Vector3 KinematicBody::_move_and_slide_internal(const Vector3 &p_linear_velocity
 	float delta = Engine::get_singleton()->is_in_physics_frame() ? get_physics_process_delta_time() : get_process_delta_time();
 
 	Vector3 current_floor_velocity = floor_velocity;
-	if ((on_floor || on_wall) && on_floor_body.is_valid()) {
+	if (on_floor && on_floor_body.is_valid()) {
 		// This approach makes sure there is less delay between the actual body velocity and the one we saved.
 		PhysicsDirectBodyState *bs = PhysicsServer::get_singleton()->body_get_direct_state(on_floor_body);
 		if (bs) {
 			Transform gt = get_global_transform();
 			Vector3 local_position = gt.origin - bs->get_transform().origin;
 			current_floor_velocity = bs->get_velocity_at_local_position(local_position);
+		} else {
+			// Body is removed or destroyed, invalidate floor.
+			current_floor_velocity = Vector3();
+			on_floor_body = RID();
 		}
 	}
 
@@ -1193,7 +1198,7 @@ Vector3 KinematicBody::_move_and_slide_internal(const Vector3 &p_linear_velocity
 		}
 	}
 
-	if (!on_floor && !on_wall) {
+	if (!on_floor) {
 		// Add last platform velocity when just left a moving platform.
 		return body_velocity + current_floor_velocity;
 	}
@@ -1223,8 +1228,6 @@ void KinematicBody::_set_collision_direction(const Collision &p_collision, const
 			on_ceiling = true;
 		} else {
 			on_wall = true;
-			on_floor_body = p_collision.collider_rid;
-			floor_velocity = p_collision.collider_vel;
 		}
 	}
 }
@@ -1244,6 +1247,11 @@ Vector3 KinematicBody::get_floor_normal() const {
 	return floor_normal;
 }
 
+real_t KinematicBody::get_floor_angle(const Vector3 &p_up_direction) const {
+	ERR_FAIL_COND_V(p_up_direction == Vector3(), 0);
+	return Math::acos(floor_normal.dot(p_up_direction));
+}
+
 Vector3 KinematicBody::get_floor_velocity() const {
 	return floor_velocity;
 }
@@ -1251,7 +1259,15 @@ Vector3 KinematicBody::get_floor_velocity() const {
 bool KinematicBody::test_move(const Transform &p_from, const Vector3 &p_motion, bool p_infinite_inertia) {
 	ERR_FAIL_COND_V(!is_inside_tree(), false);
 
-	return PhysicsServer::get_singleton()->body_test_motion(get_rid(), p_from, p_motion, p_infinite_inertia);
+	PhysicsServer::MotionResult result;
+	bool colliding = PhysicsServer::get_singleton()->body_test_motion(get_rid(), p_from, p_motion, p_infinite_inertia, &result);
+
+	if (colliding) {
+		// Don't report collision when the whole motion is done.
+		return (result.collision_safe_fraction < 1.0);
+	} else {
+		return false;
+	}
 }
 
 bool KinematicBody::separate_raycast_shapes(bool p_infinite_inertia, Collision &r_collision) {
@@ -1275,6 +1291,7 @@ bool KinematicBody::separate_raycast_shapes(bool p_infinite_inertia, Collision &
 
 	if (deepest != -1) {
 		r_collision.collider = sep_res[deepest].collider_id;
+		r_collision.collider_rid = sep_res[deepest].collider;
 		r_collision.collider_metadata = sep_res[deepest].collider_metadata;
 		r_collision.collider_shape = sep_res[deepest].collider_shape;
 		r_collision.collider_vel = sep_res[deepest].collider_velocity;
@@ -1291,6 +1308,11 @@ bool KinematicBody::separate_raycast_shapes(bool p_infinite_inertia, Collision &
 }
 
 void KinematicBody::set_axis_lock(PhysicsServer::BodyAxis p_axis, bool p_lock) {
+	if (p_lock) {
+		locked_axis |= p_axis;
+	} else {
+		locked_axis &= (~p_axis);
+	}
 	PhysicsServer::get_singleton()->body_set_axis_lock(get_rid(), p_axis, p_lock);
 }
 
@@ -1321,13 +1343,21 @@ Ref<KinematicCollision> KinematicBody::_get_slide_collision(int p_bounce) {
 		slide_colliders.resize(p_bounce + 1);
 	}
 
-	if (slide_colliders[p_bounce].is_null()) {
+	// Create a new instance when the cached reference is invalid or still in use in script.
+	if (slide_colliders[p_bounce].is_null() || slide_colliders[p_bounce]->reference_get_count() > 1) {
 		slide_colliders.write[p_bounce].instance();
 		slide_colliders.write[p_bounce]->owner = this;
 	}
 
 	slide_colliders.write[p_bounce]->collision = colliders[p_bounce];
 	return slide_colliders[p_bounce];
+}
+
+Ref<KinematicCollision> KinematicBody::_get_last_slide_collision() {
+	if (colliders.size() == 0) {
+		return Ref<KinematicCollision>();
+	}
+	return _get_slide_collision(colliders.size() - 1);
 }
 
 void KinematicBody::set_sync_to_physics(bool p_enable) {
@@ -1406,6 +1436,7 @@ void KinematicBody::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_on_ceiling"), &KinematicBody::is_on_ceiling);
 	ClassDB::bind_method(D_METHOD("is_on_wall"), &KinematicBody::is_on_wall);
 	ClassDB::bind_method(D_METHOD("get_floor_normal"), &KinematicBody::get_floor_normal);
+	ClassDB::bind_method(D_METHOD("get_floor_angle", "up_direction"), &KinematicBody::get_floor_angle, DEFVAL(Vector3(0.0, 1.0, 0.0)));
 	ClassDB::bind_method(D_METHOD("get_floor_velocity"), &KinematicBody::get_floor_velocity);
 
 	ClassDB::bind_method(D_METHOD("set_axis_lock", "axis", "lock"), &KinematicBody::set_axis_lock);
@@ -1416,12 +1447,17 @@ void KinematicBody::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_slide_count"), &KinematicBody::get_slide_count);
 	ClassDB::bind_method(D_METHOD("get_slide_collision", "slide_idx"), &KinematicBody::_get_slide_collision);
+	ClassDB::bind_method(D_METHOD("get_last_slide_collision"), &KinematicBody::_get_last_slide_collision);
 
 	ClassDB::bind_method(D_METHOD("set_sync_to_physics", "enable"), &KinematicBody::set_sync_to_physics);
 	ClassDB::bind_method(D_METHOD("is_sync_to_physics_enabled"), &KinematicBody::is_sync_to_physics_enabled);
 
 	ClassDB::bind_method(D_METHOD("_direct_state_changed"), &KinematicBody::_direct_state_changed);
 
+	ADD_GROUP("Axis Lock", "axis_lock_");
+	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "axis_lock_motion_x"), "set_axis_lock", "get_axis_lock", PhysicsServer::BODY_AXIS_LINEAR_X);
+	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "axis_lock_motion_y"), "set_axis_lock", "get_axis_lock", PhysicsServer::BODY_AXIS_LINEAR_Y);
+	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "axis_lock_motion_z"), "set_axis_lock", "get_axis_lock", PhysicsServer::BODY_AXIS_LINEAR_Z);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "move_lock_x", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR), "set_axis_lock", "get_axis_lock", PhysicsServer::BODY_AXIS_LINEAR_X);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "move_lock_y", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR), "set_axis_lock", "get_axis_lock", PhysicsServer::BODY_AXIS_LINEAR_Y);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "move_lock_z", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR), "set_axis_lock", "get_axis_lock", PhysicsServer::BODY_AXIS_LINEAR_Z);
@@ -1451,6 +1487,7 @@ KinematicBody::~KinematicBody() {
 		}
 	}
 }
+
 ///////////////////////////////////////
 
 Vector3 KinematicCollision::get_position() const {
@@ -1465,6 +1502,12 @@ Vector3 KinematicCollision::get_travel() const {
 Vector3 KinematicCollision::get_remainder() const {
 	return collision.remainder;
 }
+
+real_t KinematicCollision::get_angle(const Vector3 &p_up_direction) const {
+	ERR_FAIL_COND_V(p_up_direction == Vector3(), 0);
+	return collision.get_angle(p_up_direction);
+}
+
 Object *KinematicCollision::get_local_shape() const {
 	if (!owner) {
 		return nullptr;
@@ -1513,6 +1556,7 @@ void KinematicCollision::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_normal"), &KinematicCollision::get_normal);
 	ClassDB::bind_method(D_METHOD("get_travel"), &KinematicCollision::get_travel);
 	ClassDB::bind_method(D_METHOD("get_remainder"), &KinematicCollision::get_remainder);
+	ClassDB::bind_method(D_METHOD("get_angle", "up_direction"), &KinematicCollision::get_angle, DEFVAL(Vector3(0.0, 1.0, 0.0)));
 	ClassDB::bind_method(D_METHOD("get_local_shape"), &KinematicCollision::get_local_shape);
 	ClassDB::bind_method(D_METHOD("get_collider"), &KinematicCollision::get_collider);
 	ClassDB::bind_method(D_METHOD("get_collider_id"), &KinematicCollision::get_collider_id);

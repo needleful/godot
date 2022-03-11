@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -61,7 +61,7 @@ void EditorVCSInterface::_bind_methods() {
 }
 
 bool EditorVCSInterface::_initialize(String p_project_root_path) {
-	WARN_PRINT("Selected VCS addon does not implement an initialization function. This warning will be suppressed.")
+	WARN_PRINT("Selected VCS addon does not implement an initialization function. This warning will be suppressed.");
 	return true;
 }
 

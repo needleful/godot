@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -152,11 +152,11 @@ public:
 
 	//! Test limit
 	/*!
-    - free means upper < lower,
-    - locked means upper == lower
-    - limited means upper > lower
-    - limitIndex: first 3 are linear, next 3 are angular
-    */
+	 * - free means upper < lower,
+	 * - locked means upper == lower
+	 * - limited means upper > lower
+	 * - limitIndex: first 3 are linear, next 3 are angular
+	 */
 	inline bool isLimited(int limitIndex) {
 		return (m_upperLimit[limitIndex] >= m_lowerLimit[limitIndex]);
 	}
@@ -239,25 +239,15 @@ public:
 	virtual bool setup(real_t p_timestep);
 	virtual void solve(real_t p_timestep);
 
-	//! Calcs global transform of the offsets
-	/*!
-	Calcs the global transform for the joint offset for body A an B, and also calcs the agle differences between the bodies.
-	\sa Generic6DOFJointSW.getCalculatedTransformA , Generic6DOFJointSW.getCalculatedTransformB, Generic6DOFJointSW.calculateAngleInfo
-	*/
+	// Calcs the global transform for the joint offset for body A an B, and also calcs the angle differences between the bodies.
 	void calculateTransforms();
 
-	//! Gets the global transform of the offset for body A
-	/*!
-    \sa Generic6DOFJointSW.getFrameOffsetA, Generic6DOFJointSW.getFrameOffsetB, Generic6DOFJointSW.calculateAngleInfo.
-    */
+	// Gets the global transform of the offset for body A. */
 	const Transform &getCalculatedTransformA() const {
 		return m_calculatedTransformA;
 	}
 
-	//! Gets the global transform of the offset for body B
-	/*!
-    \sa Generic6DOFJointSW.getFrameOffsetA, Generic6DOFJointSW.getFrameOffsetB, Generic6DOFJointSW.calculateAngleInfo.
-    */
+	// Gets the global transform of the offset for body B.
 	const Transform &getCalculatedTransformB() const {
 		return m_calculatedTransformB;
 	}
@@ -344,11 +334,11 @@ public:
 
 	//! Test limit
 	/*!
-    - free means upper < lower,
-    - locked means upper == lower
-    - limited means upper > lower
-    - limitIndex: first 3 are linear, next 3 are angular
-    */
+	 * - free means upper < lower,
+	 * - locked means upper == lower
+	 * - limited means upper > lower
+	 * - limitIndex: first 3 are linear, next 3 are angular
+	 */
 	bool isLimited(int limitIndex) {
 		if (limitIndex < 3) {
 			return m_linearLimits.isLimited(limitIndex);

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -517,7 +517,7 @@ public:
 
 	BIND6(environment_set_dof_blur_near, RID, bool, float, float, float, EnvironmentDOFBlurQuality)
 	BIND6(environment_set_dof_blur_far, RID, bool, float, float, float, EnvironmentDOFBlurQuality)
-	BIND11(environment_set_glow, RID, bool, int, float, float, float, EnvironmentGlowBlendMode, float, float, float, bool)
+	BIND12(environment_set_glow, RID, bool, int, float, float, float, EnvironmentGlowBlendMode, float, float, float, bool, bool)
 
 	BIND9(environment_set_tonemap, RID, EnvironmentToneMapper, float, float, bool, float, float, float, float)
 
@@ -594,11 +594,11 @@ public:
 	BIND5(room_set_bound, RID, ObjectID, const Vector<Plane> &, const AABB &, const Vector<Vector3> &)
 	BIND2(room_prepare, RID, int32_t)
 	BIND1(rooms_and_portals_clear, RID)
-	BIND1(rooms_unload, RID)
+	BIND2(rooms_unload, RID, String)
 	BIND8(rooms_finalize, RID, bool, bool, bool, bool, String, bool, bool)
 	BIND4(rooms_override_camera, RID, bool, const Vector3 &, const Vector<Plane> *)
 	BIND2(rooms_set_active, RID, bool)
-	BIND2(rooms_set_params, RID, int)
+	BIND3(rooms_set_params, RID, int, real_t)
 	BIND3(rooms_set_debug_feature, RID, RoomsDebugFeature, bool)
 	BIND2(rooms_update_gameplay_monitor, RID, const Vector<Vector3> &)
 

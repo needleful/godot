@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -209,7 +209,7 @@ void EditorProperty::_notification(int p_what) {
 
 		Color color;
 		if (draw_red) {
-			color = get_color("error_color");
+			color = get_color("warning_color");
 		} else {
 			color = get_color("property_color");
 		}
@@ -1271,10 +1271,7 @@ void EditorInspector::remove_inspector_plugin(const Ref<EditorInspectorPlugin> &
 	for (int i = idx; i < inspector_plugin_count - 1; i++) {
 		inspector_plugins[i] = inspector_plugins[i + 1];
 	}
-
-	if (idx == inspector_plugin_count - 1) {
-		inspector_plugins[idx] = Ref<EditorInspectorPlugin>();
-	}
+	inspector_plugins[inspector_plugin_count - 1] = Ref<EditorInspectorPlugin>();
 
 	inspector_plugin_count--;
 }
@@ -1488,7 +1485,7 @@ void EditorInspector::update_tree() {
 					DocData *dd = EditorHelp::get_doc_data();
 					Map<String, DocData::ClassDoc>::Element *E = dd->class_list.find(type2);
 					if (E) {
-						descr = E->get().brief_description;
+						descr = DTR(E->get().brief_description);
 					}
 					class_descr_cache[type2] = descr;
 				}
@@ -1645,7 +1642,7 @@ void EditorInspector::update_tree() {
 				while (F && descr == String()) {
 					for (int i = 0; i < F->get().properties.size(); i++) {
 						if (F->get().properties[i].name == propname.operator String()) {
-							descr = F->get().properties[i].description.strip_edges();
+							descr = DTR(F->get().properties[i].description);
 							break;
 						}
 					}
@@ -1655,7 +1652,7 @@ void EditorInspector::update_tree() {
 						// Likely a theme property.
 						for (int i = 0; i < F->get().theme_properties.size(); i++) {
 							if (F->get().theme_properties[i].name == slices[1]) {
-								descr = F->get().theme_properties[i].description.strip_edges();
+								descr = DTR(F->get().theme_properties[i].description);
 								break;
 							}
 						}

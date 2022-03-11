@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -98,7 +98,7 @@ public:
 	static bool _portal_plane_convention;
 
 private:
-	// updates world coords when the tranform changes, and updates the visual server
+	// updates world coords when the transform changes, and updates the visual server
 	void portal_update();
 
 	void set_linked_room_internal(const NodePath &link_path);
@@ -110,7 +110,7 @@ private:
 	void _sanitize_points();
 	void _update_aabb();
 	static Vector3 _vec2to3(const Vector2 &p_pt) { return Vector3(p_pt.x, p_pt.y, 0.0); }
-	void _sort_verts_clockwise(bool portal_plane_convention, Vector<Vector3> &r_verts);
+	void _sort_verts_clockwise(const Vector3 &p_portal_normal, Vector<Vector3> &r_verts);
 	Plane _plane_from_points_newell(const Vector<Vector3> &p_pts);
 	void resolve_links(const LocalVector<Room *, int32_t> &p_rooms, const RID &p_from_room_rid);
 	void _changed();

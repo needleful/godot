@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -70,8 +70,8 @@ Dictionary Control::_edit_get_state() const {
 
 void Control::_edit_set_state(const Dictionary &p_state) {
 	ERR_FAIL_COND((p_state.size() <= 0) ||
-				  !p_state.has("rotation") || !p_state.has("scale") ||
-				  !p_state.has("pivot") || !p_state.has("anchors") || !p_state.has("margins"));
+			!p_state.has("rotation") || !p_state.has("scale") ||
+			!p_state.has("pivot") || !p_state.has("anchors") || !p_state.has("margins"));
 	Dictionary state = p_state;
 
 	set_rotation(state["rotation"]);
@@ -102,11 +102,11 @@ void Control::_edit_set_position(const Point2 &p_position) {
 	// Unlikely to happen. TODO: enclose all _edit_ functions into TOOLS_ENABLED
 	set_position(p_position);
 #endif
-};
+}
 
 Point2 Control::_edit_get_position() const {
 	return get_position();
-};
+}
 
 void Control::_edit_set_scale(const Size2 &p_scale) {
 	set_scale(p_scale);
@@ -471,6 +471,8 @@ void Control::_notification(int p_notification) {
 			_size_changed();
 		} break;
 		case NOTIFICATION_EXIT_TREE: {
+			ERR_FAIL_COND(!get_viewport());
+			release_focus();
 			get_viewport()->_gui_remove_control(this);
 
 		} break;
@@ -525,7 +527,9 @@ void Control::_notification(int p_notification) {
 					data.SI = get_viewport()->_gui_add_subwindow_control(this);
 				} else {
 					//is a regular root control
-					data.RI = get_viewport()->_gui_add_root_control(this);
+					Viewport *viewport = get_viewport();
+					ERR_FAIL_COND(!viewport);
+					data.RI = viewport->_gui_add_root_control(this);
 				}
 
 				data.parent_canvas_item = get_parent_item();
@@ -534,17 +538,11 @@ void Control::_notification(int p_notification) {
 					data.parent_canvas_item->connect("item_rect_changed", this, "_size_changed");
 				} else {
 					//connect viewport
-					get_viewport()->connect("size_changed", this, "_size_changed");
+					Viewport *viewport = get_viewport();
+					ERR_FAIL_COND(!viewport);
+					viewport->connect("size_changed", this, "_size_changed");
 				}
 			}
-
-			/*
-			if (data.theme.is_null() && data.parent && data.parent->data.theme_owner) {
-				data.theme_owner=data.parent->data.theme_owner;
-				notification(NOTIFICATION_THEME_CHANGED);
-			}
-			*/
-
 		} break;
 		case NOTIFICATION_EXIT_CANVAS: {
 			if (data.parent_canvas_item) {
@@ -552,7 +550,9 @@ void Control::_notification(int p_notification) {
 				data.parent_canvas_item = nullptr;
 			} else if (!is_set_as_toplevel()) {
 				//disconnect viewport
-				get_viewport()->disconnect("size_changed", this, "_size_changed");
+				Viewport *viewport = get_viewport();
+				ERR_FAIL_COND(!viewport);
+				viewport->disconnect("size_changed", this, "_size_changed");
 			}
 
 			if (data.MI) {
@@ -581,7 +581,7 @@ void Control::_notification(int p_notification) {
 
 		} break;
 		case NOTIFICATION_MOVED_IN_PARENT: {
-			// some parents need to know the order of the childrens to draw (like TabContainer)
+			// some parents need to know the order of the children to draw (like TabContainer)
 			// update if necessary
 			if (data.parent) {
 				data.parent->update();
@@ -669,10 +669,6 @@ bool Control::has_point(const Point2 &p_point) const {
 			return ret;
 		}
 	}
-	/*if (has_stylebox("mask")) {
-		Ref<StyleBox> mask = get_stylebox("mask");
-		return mask->test_mask(p_point,Rect2(Point2(),get_size()));
-	}*/
 	return Rect2(Point2(), get_size()).has_point(p_point);
 }
 
@@ -1297,6 +1293,37 @@ bool Control::has_constant(const StringName &p_name, const StringName &p_theme_t
 		}
 	}
 	return Theme::get_default()->has_constant(p_name, type);
+}
+
+Ref<Font> Control::get_theme_default_font() const {
+	// First, look through each control or window node in the branch, until no valid parent can be found.
+	// Only nodes with a theme resource attached are considered.
+	// For each theme resource see if their assigned theme has the default value defined and valid.
+	Control *theme_owner = data.theme_owner;
+
+	while (theme_owner) {
+		if (theme_owner && theme_owner->data.theme->has_default_theme_font()) {
+			return theme_owner->data.theme->get_default_theme_font();
+		}
+
+		Node *parent = theme_owner->get_parent();
+		Control *parent_c = Object::cast_to<Control>(parent);
+		if (parent_c) {
+			theme_owner = parent_c->data.theme_owner;
+		} else {
+			theme_owner = nullptr;
+		}
+	}
+
+	// Secondly, check the project-defined Theme resource.
+	if (Theme::get_project_default().is_valid()) {
+		if (Theme::get_project_default()->has_default_theme_font()) {
+			return Theme::get_project_default()->get_default_theme_font();
+		}
+	}
+
+	// Lastly, fall back on the default Theme.
+	return Theme::get_default()->get_default_theme_font();
 }
 
 Rect2 Control::get_parent_anchorable_rect() const {
@@ -2528,16 +2555,6 @@ void Control::warp_mouse(const Point2 &p_to_pos) {
 }
 
 bool Control::is_text_field() const {
-	/*
-    if (get_script_instance()) {
-        Variant v=p_point;
-        const Variant *p[2]={&v,&p_data};
-        Variant::CallError ce;
-        Variant ret = get_script_instance()->call("is_text_field",p,2,ce);
-        if (ce.error==Variant::CallError::CALL_OK)
-            return ret;
-    }
-  */
 	return false;
 }
 
@@ -2793,6 +2810,8 @@ void Control::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("has_color", "name", "theme_type"), &Control::has_color, DEFVAL(""));
 	ClassDB::bind_method(D_METHOD("has_constant", "name", "theme_type"), &Control::has_constant, DEFVAL(""));
 
+	ClassDB::bind_method(D_METHOD("get_theme_default_font"), &Control::get_theme_default_font);
+
 	ClassDB::bind_method(D_METHOD("get_parent_control"), &Control::get_parent_control);
 
 	ClassDB::bind_method(D_METHOD("set_h_grow_direction", "direction"), &Control::set_h_grow_direction);
@@ -2991,6 +3010,7 @@ void Control::_bind_methods() {
 
 	BIND_VMETHOD(MethodInfo(Variant::BOOL, "has_point", PropertyInfo(Variant::VECTOR2, "point")));
 }
+
 Control::Control() {
 	data.parent = nullptr;
 

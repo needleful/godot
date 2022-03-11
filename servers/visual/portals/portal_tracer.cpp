@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -270,7 +270,7 @@ int PortalTracer::trace_globals(const LocalVector<Plane> &p_planes, VSInstance *
 		// If we are overriding the camera there is a potential problem in the editor:
 		// gizmos BEHIND the override camera will not be drawn.
 		// As this should be editor only and performance is not critical, we will just disable
-		// frustum culling for global objects when the camera is overriden.
+		// frustum culling for global objects when the camera is overridden.
 		for (uint32_t n = 0; n < num_globals; n++) {
 			const PortalRenderer::Moving &moving = _portal_renderer->get_moving_global(n);
 
@@ -490,7 +490,7 @@ void PortalTracer::trace_recursive(const TraceParams &p_params, int p_depth, int
 				// note that this loses the far clipping plane .. but that shouldn't be important usually?
 				// (maybe we might need to account for this in future .. look for issues)
 				if (overall_res != VSPortal::ClipResult::CLIP_INSIDE) {
-					// if it WASNT totally inside the existing frustum, we also need to add any existing planes
+					// if it WASN'T totally inside the existing frustum, we also need to add any existing planes
 					// that cut the portal.
 					for (uint32_t n = 0; n < partial_planes.size(); n++) {
 						new_planes.push_back(p_planes[partial_planes[n]]);
@@ -544,7 +544,7 @@ int PortalTracer::occlusion_cull(PortalRenderer &p_portal_renderer, const Vector
 		local_planes[n] = p_convex[n];
 	}
 
-	_occlusion_culler.prepare_generic(p_portal_renderer, p_portal_renderer.get_occluders_active_list(), p_point, local_planes, nullptr);
+	_occlusion_culler.prepare_generic(p_portal_renderer, p_portal_renderer.get_occluders_active_list(), p_point, local_planes);
 
 	// cull each instance
 	int count = p_num_results;

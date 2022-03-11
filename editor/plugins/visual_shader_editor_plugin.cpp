@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -1663,10 +1663,7 @@ void VisualShaderEditor::_show_members_dialog(bool at_mouse_pos) {
 
 void VisualShaderEditor::_sbox_input(const Ref<InputEvent> &p_ie) {
 	Ref<InputEventKey> ie = p_ie;
-	if (ie.is_valid() && (ie->get_scancode() == KEY_UP ||
-								 ie->get_scancode() == KEY_DOWN ||
-								 ie->get_scancode() == KEY_ENTER ||
-								 ie->get_scancode() == KEY_KP_ENTER)) {
+	if (ie.is_valid() && (ie->get_scancode() == KEY_UP || ie->get_scancode() == KEY_DOWN || ie->get_scancode() == KEY_ENTER || ie->get_scancode() == KEY_KP_ENTER)) {
 		members->call("_gui_input", ie);
 		node_filter->accept_event();
 	}

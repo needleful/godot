@@ -8,8 +8,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -135,7 +135,7 @@ private:
 		Octant *parent;
 		Octant *children[8];
 
-		int children_count; // cache for amount of childrens (fast check for removal)
+		int children_count; // cache for amount of children (fast check for removal)
 		int parent_index; // cache for parent index (fast check for removal)
 
 		List<Element *, AL> pairable_elements;
@@ -445,6 +445,7 @@ public:
 	bool is_pairable(OctreeElementID p_id) const;
 	T *get(OctreeElementID p_id) const;
 	int get_subindex(OctreeElementID p_id) const;
+	AABB get_aabb(OctreeElementID p_id) const;
 
 	int cull_convex(const Vector<Plane> &p_convex, T **p_result_array, int p_result_max, uint32_t p_mask = 0xFFFFFFFF);
 	int cull_aabb(const AABB &p_aabb, T **p_result_array, int p_result_max, int *p_subindex_array = nullptr, uint32_t p_mask = 0xFFFFFFFF);
@@ -496,6 +497,12 @@ OCTREE_FUNC(int)::get_subindex(OctreeElementID p_id) const {
 	const typename ElementMap::Element *E = element_map.find(p_id);
 	ERR_FAIL_COND_V(!E, -1);
 	return E->get().subindex;
+}
+
+OCTREE_FUNC(AABB)::get_aabb(OctreeElementID p_id) const {
+	const typename ElementMap::Element *E = element_map.find(p_id);
+	ERR_FAIL_COND_V(!E, AABB());
+	return E->get().aabb;
 }
 
 #define OCTREE_DIVISOR 4

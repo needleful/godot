@@ -9,8 +9,8 @@
 		[SceneTree] is the default [MainLoop] implementation used by scenes, and is thus in charge of the game loop.
 	</description>
 	<tutorials>
-		<link>https://docs.godotengine.org/en/3.4/getting_started/step_by_step/scene_tree.html</link>
-		<link>https://docs.godotengine.org/en/3.4/tutorials/viewports/multiple_resolutions.html</link>
+		<link>https://docs.godotengine.org/en/3.4/tutorials/scripting/scene_tree.html</link>
+		<link>https://docs.godotengine.org/en/3.4/tutorials/rendering/multiple_resolutions.html</link>
 	</tutorials>
 	<methods>
 		<method name="call_group" qualifiers="vararg">
@@ -18,8 +18,9 @@
 			<argument index="0" name="group" type="String" />
 			<argument index="1" name="method" type="String" />
 			<description>
-				Calls [code]method[/code] on each member of the given group. You can pass arguments to [code]method[/code] by specifying them at the end of the method call.
+				Calls [code]method[/code] on each member of the given group. You can pass arguments to [code]method[/code] by specifying them at the end of the method call. This method is equivalent of calling [method call_group_flags] with [constant GROUP_CALL_DEFAULT] flag.
 				[b]Note:[/b] [code]method[/code] may only have 5 arguments at most (7 arguments passed to this method in total).
+				[b]Note:[/b] Due to design limitations, [method call_group] will fail silently if one of the arguments is [code]null[/code].
 				[b]Note:[/b] [method call_group] will always call methods with an one-frame delay, in a way similar to [method Object.call_deferred]. To call methods immediately, use [method call_group_flags] with the [constant GROUP_CALL_REALTIME] flag.
 			</description>
 		</method>
@@ -31,7 +32,11 @@
 			<description>
 				Calls [code]method[/code] on each member of the given group, respecting the given [enum GroupCallFlags]. You can pass arguments to [code]method[/code] by specifying them at the end of the method call.
 				[b]Note:[/b] [code]method[/code] may only have 5 arguments at most (8 arguments passed to this method in total).
-				[b]Note:[/b] Group call flags are used to control the method calling behavior. If the [constant GROUP_CALL_REALTIME] flag is present in the [code]flags[/code] argument, methods will be called immediately. If this flag isn't present in [code]flags[/code], methods will be called with a one-frame delay in a way similar to [method call_group].
+				[b]Note:[/b] Due to design limitations, [method call_group_flags] will fail silently if one of the arguments is [code]null[/code].
+				[codeblock]
+				# Call the method immediately and in reverse order.
+				get_tree().call_group_flags(SceneTree.GROUP_CALL_REALTIME | SceneTree.GROUP_CALL_REVERSE, "bases", "destroy")
+				[/codeblock]
 			</description>
 		</method>
 		<method name="change_scene">
@@ -215,9 +220,9 @@
 			<argument index="0" name="mode" type="int" enum="SceneTree.StretchMode" />
 			<argument index="1" name="aspect" type="int" enum="SceneTree.StretchAspect" />
 			<argument index="2" name="minsize" type="Vector2" />
-			<argument index="3" name="shrink" type="float" default="1" />
+			<argument index="3" name="scale" type="float" default="1" />
 			<description>
-				Configures screen stretching to the given [enum StretchMode], [enum StretchAspect], minimum size and [code]shrink[/code] ratio.
+				Configures screen stretching to the given [enum StretchMode], [enum StretchAspect], minimum size and [code]scale[/code].
 			</description>
 		</method>
 	</methods>
@@ -246,7 +251,7 @@
 		</member>
 		<member name="paused" type="bool" setter="set_pause" getter="is_paused" default="false">
 			If [code]true[/code], the [SceneTree] is paused. Doing so will have the following behavior:
-			- 2D and 3D physics will be stopped.
+			- 2D and 3D physics will be stopped. This includes signals and collision detection.
 			- [method Node._process], [method Node._physics_process] and [method Node._input] will not be called anymore in nodes.
 		</member>
 		<member name="refuse_new_network_connections" type="bool" setter="set_refuse_new_network_connections" getter="is_refusing_new_network_connections" default="false">
@@ -256,7 +261,9 @@
 			The [SceneTree]'s root [Viewport].
 		</member>
 		<member name="use_font_oversampling" type="bool" setter="set_use_font_oversampling" getter="is_using_font_oversampling" default="false">
-			If [code]true[/code], font oversampling is used.
+			If [code]true[/code], font oversampling is enabled. This means that [DynamicFont]s will be rendered at higher or lower size than configured based on the viewport's scaling ratio. For example, in a viewport scaled with a factor 1.5, a font configured with size 14 would be rendered with size 21 ([code]14 * 1.5[/code]).
+			[b]Note:[/b] Font oversampling is only used if the viewport stretch mode is [constant STRETCH_MODE_VIEWPORT], and if the stretch aspect mode is different from [constant STRETCH_ASPECT_IGNORE].
+			[b]Note:[/b] This property is set automatically for the active [SceneTree] when the project starts based on the configuration of [code]rendering/quality/dynamic_fonts/use_oversampling[/code] in [ProjectSettings]. The property can however be overridden at runtime as needed.
 		</member>
 	</members>
 	<signals>

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -123,7 +123,7 @@ void VehicleWheel::_update(PhysicsDirectBodyState *s) {
 		Vector3 relpos = m_raycastInfo.m_contactPointWS - s->get_transform().origin;
 
 		chassis_velocity_at_contactPoint = s->get_linear_velocity() +
-										   (s->get_angular_velocity()).cross(relpos); // * mPos);
+				(s->get_angular_velocity()).cross(relpos); // * mPos);
 
 		real_t projVel = m_raycastInfo.m_contactNormalWS.dot(chassis_velocity_at_contactPoint);
 		if (project >= real_t(-0.1)) {
@@ -267,7 +267,7 @@ void VehicleWheel::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_steering"), &VehicleWheel::get_steering);
 
 	ADD_GROUP("Per-Wheel Motion", "");
-	ADD_PROPERTY(PropertyInfo(Variant::REAL, "engine_force", PROPERTY_HINT_RANGE, "0.00,1024.0,0.01,or_greater"), "set_engine_force", "get_engine_force");
+	ADD_PROPERTY(PropertyInfo(Variant::REAL, "engine_force", PROPERTY_HINT_RANGE, "-1024,1024.0,0.01,or_greater"), "set_engine_force", "get_engine_force");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "brake", PROPERTY_HINT_RANGE, "0.0,1.0,0.01"), "set_brake", "get_brake");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "steering", PROPERTY_HINT_RANGE, "-180,180.0,0.01"), "set_steering", "get_steering");
 	ADD_GROUP("VehicleBody Motion", "");
@@ -460,7 +460,7 @@ real_t VehicleBody::_ray_cast(int p_idx, PhysicsDirectBodyState *s) {
 		//chassis_velocity_at_contactPoint = getRigidBody()->getVelocityInLocalPoint(relpos);
 
 		chassis_velocity_at_contactPoint = s->get_linear_velocity() +
-										   (s->get_angular_velocity()).cross(wheel.m_raycastInfo.m_contactPointWS - s->get_transform().origin); // * mPos);
+				(s->get_angular_velocity()).cross(wheel.m_raycastInfo.m_contactPointWS - s->get_transform().origin); // * mPos);
 
 		real_t projVel = wheel.m_raycastInfo.m_contactNormalWS.dot(chassis_velocity_at_contactPoint);
 
@@ -788,7 +788,7 @@ void VehicleBody::_update_friction(PhysicsDirectBodyState *s) {
 			VehicleWheel &wheelInfo = *wheels[wheel];
 
 			Vector3 rel_pos = wheelInfo.m_raycastInfo.m_contactPointWS -
-							  s->get_transform().origin;
+					s->get_transform().origin;
 
 			if (m_forwardImpulse[wheel] != real_t(0.)) {
 				s->apply_impulse(rel_pos, m_forwardWS[wheel] * (m_forwardImpulse[wheel]));
@@ -935,7 +935,7 @@ void VehicleBody::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_steering"), &VehicleBody::get_steering);
 
 	ADD_GROUP("Motion", "");
-	ADD_PROPERTY(PropertyInfo(Variant::REAL, "engine_force", PROPERTY_HINT_RANGE, "0.00,1024.0,0.01,or_greater"), "set_engine_force", "get_engine_force");
+	ADD_PROPERTY(PropertyInfo(Variant::REAL, "engine_force", PROPERTY_HINT_RANGE, "-1024,1024.0,0.01,or_greater"), "set_engine_force", "get_engine_force");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "brake", PROPERTY_HINT_RANGE, "0.0,1.0,0.01"), "set_brake", "get_brake");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "steering", PROPERTY_HINT_RANGE, "-180,180.0,0.01"), "set_steering", "get_steering");
 }

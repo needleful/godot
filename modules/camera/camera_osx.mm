@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -33,6 +33,7 @@
 
 #include "camera_osx.h"
 #include "servers/camera/camera_feed.h"
+
 #import <AVFoundation/AVFoundation.h>
 
 //////////////////////////////////////////////////////////////////////////
@@ -230,7 +231,7 @@ void CameraFeedOSX::set_device(AVCaptureDevice *p_device) {
 
 	// get some info
 	NSString *device_name = p_device.localizedName;
-	name = device_name.UTF8String;
+	name = String::utf8(device_name.UTF8String);
 	position = CameraFeed::FEED_UNSPECIFIED;
 	if ([p_device position] == AVCaptureDevicePositionBack) {
 		position = CameraFeed::FEED_BACK;
@@ -253,10 +254,25 @@ CameraFeedOSX::~CameraFeedOSX() {
 
 bool CameraFeedOSX::activate_feed() {
 	if (capture_session) {
-		// already recording!
+		// Already recording!
 	} else {
-		// start camera capture
-		capture_session = [[MyCaptureSession alloc] initForFeed:this andDevice:device];
+		// Start camera capture, check permission.
+		if (@available(macOS 10.14, *)) {
+			AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
+			if (status == AVAuthorizationStatusAuthorized) {
+				capture_session = [[MyCaptureSession alloc] initForFeed:this andDevice:device];
+			} else if (status == AVAuthorizationStatusNotDetermined) {
+				// Request permission.
+				[AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo
+										 completionHandler:^(BOOL granted) {
+											 if (granted) {
+												 capture_session = [[MyCaptureSession alloc] initForFeed:this andDevice:device];
+											 }
+										 }];
+			}
+		} else {
+			capture_session = [[MyCaptureSession alloc] initForFeed:this andDevice:device];
+		}
 	};
 
 	return true;

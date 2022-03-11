@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -81,6 +81,7 @@ public:
 	// 0 is an invalid ID
 	virtual ID create(CollisionObject2DSW *p_object_, int p_subindex = 0, const Rect2 &p_aabb = Rect2(), bool p_static = false);
 	virtual void move(ID p_id, const Rect2 &p_aabb);
+	virtual void recheck_pairs(ID p_id);
 	virtual void set_static(ID p_id, bool p_static);
 	virtual void remove(ID p_id);
 

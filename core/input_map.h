@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -39,8 +39,8 @@ class InputMap : public Object {
 
 public:
 	/**
-	* A special value used to signify that a given Action can be triggered by any device
-	*/
+	 * A special value used to signify that a given Action can be triggered by any device
+	 */
 	static int ALL_DEVICES;
 
 	struct Action {
@@ -58,7 +58,6 @@ private:
 
 	Array _get_action_list(const StringName &p_action);
 	Array _get_actions();
-	String _suggest_actions(const StringName &p_action) const;
 
 protected:
 	static void _bind_methods();
@@ -85,6 +84,8 @@ public:
 	const Map<StringName, Action> &get_action_map() const;
 	void load_from_globals();
 	void load_default();
+
+	String suggest_actions(const StringName &p_action) const;
 
 	InputMap();
 };

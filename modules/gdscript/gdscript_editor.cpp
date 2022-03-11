@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -1188,8 +1188,8 @@ static bool _guess_identifier_type(GDScriptCompletionContext &p_context, const S
 			}
 		}
 
-		for (const List<GDScriptParser::Node *>::Element *E = blk->statements.front(); E; E = E->next()) {
-			const GDScriptParser::Node *expr = E->get();
+		for (int z = 0; z < blk->statements.size(); z++) {
+			const GDScriptParser::Node *expr = blk->statements[z];
 			if (expr->line > p_context.line || expr->type != GDScriptParser::Node::TYPE_OPERATOR) {
 				continue;
 			}
@@ -1511,6 +1511,12 @@ static bool _guess_identifier_type_from_base(GDScriptCompletionContext &p_contex
 				ClassDB::get_property_list(class_name, &props);
 				for (const List<PropertyInfo>::Element *E = props.front(); E; E = E->next()) {
 					const PropertyInfo &prop = E->get();
+
+					// Ignore groups and categories in code completion.
+					if (prop.usage & (PROPERTY_USAGE_GROUP | PROPERTY_USAGE_CATEGORY)) {
+						continue;
+					}
+
 					if (prop.name == p_identifier) {
 						StringName getter = ClassDB::get_property_getter(class_name, p_identifier);
 						if (getter != StringName()) {

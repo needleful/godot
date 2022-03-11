@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -472,10 +472,11 @@ public:
 
 class ConcaveShape2DSW : public Shape2DSW {
 public:
-	virtual bool is_concave() const { return true; }
-	typedef void (*Callback)(void *p_userdata, Shape2DSW *p_convex);
+	// Returns true to stop the query.
+	typedef bool (*QueryCallback)(void *p_userdata, Shape2DSW *p_convex);
 
-	virtual void cull(const Rect2 &p_local_aabb, Callback p_callback, void *p_userdata) const = 0;
+	virtual bool is_concave() const { return true; }
+	virtual void cull(const Rect2 &p_local_aabb, QueryCallback p_callback, void *p_userdata) const = 0;
 };
 
 class ConcavePolygonShape2DSW : public ConcaveShape2DSW {
@@ -525,7 +526,7 @@ public:
 	virtual void set_data(const Variant &p_data);
 	virtual Variant get_data() const;
 
-	virtual void cull(const Rect2 &p_local_aabb, Callback p_callback, void *p_userdata) const;
+	virtual void cull(const Rect2 &p_local_aabb, QueryCallback p_callback, void *p_userdata) const;
 
 	DEFAULT_PROJECT_RANGE_CAST
 };

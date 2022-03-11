@@ -259,19 +259,19 @@ bvec4 isnan(highp vec4 x) {
 #if defined(TRUNC_USED)
 
 highp float trunc(highp float x) {
-	return x < 0 ? -floor(-x) : floor(x);
+	return x < 0.0 ? -floor(-x) : floor(x);
 }
 
 highp vec2 trunc(highp vec2 x) {
-	return vec2(x.x < 0 ? -floor(-x.x) : floor(x.x), x.y < 0 ? -floor(-x.y) : floor(x.y));
+	return vec2(x.x < 0.0 ? -floor(-x.x) : floor(x.x), x.y < 0.0 ? -floor(-x.y) : floor(x.y));
 }
 
 highp vec3 trunc(highp vec3 x) {
-	return vec3(x.x < 0 ? -floor(-x.x) : floor(x.x), x.y < 0 ? -floor(-x.y) : floor(x.y), x.z < 0 ? -floor(-x.z) : floor(x.z));
+	return vec3(x.x < 0.0 ? -floor(-x.x) : floor(x.x), x.y < 0.0 ? -floor(-x.y) : floor(x.y), x.z < 0.0 ? -floor(-x.z) : floor(x.z));
 }
 
 highp vec4 trunc(highp vec4 x) {
-	return vec4(x.x < 0 ? -floor(-x.x) : floor(x.x), x.y < 0 ? -floor(-x.y) : floor(x.y), x.z < 0 ? -floor(-x.z) : floor(x.z), x.w < 0 ? -floor(-x.w) : floor(x.w));
+	return vec4(x.x < 0.0 ? -floor(-x.x) : floor(x.x), x.y < 0.0 ? -floor(-x.y) : floor(x.y), x.z < 0.0 ? -floor(-x.z) : floor(x.z), x.w < 0.0 ? -floor(-x.w) : floor(x.w));
 }
 
 #endif
@@ -317,7 +317,7 @@ highp mat3 inverse(highp mat3 m) {
 	return mat3(c01, (-m[2].z * m[0].y + m[0].z * m[2].y), (m[1].z * m[0].y - m[0].z * m[1].y),
 				   c11, (m[2].z * m[0].x - m[0].z * m[2].x), (-m[1].z * m[0].x + m[0].z * m[1].x),
 				   c21, (-m[2].y * m[0].x + m[0].y * m[2].x), (m[1].y * m[0].x - m[0].y * m[1].x)) *
-		   d;
+			d;
 }
 
 highp mat4 inverse(highp mat4 m) {

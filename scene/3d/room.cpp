@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -259,7 +259,7 @@ void Room::_changed(bool p_regenerate_bounds) {
 	if (p_regenerate_bounds) {
 		rm->_room_regenerate_bound(this);
 	}
-	rm->_rooms_changed();
+	rm->_rooms_changed("changed Room " + get_name());
 #endif
 }
 

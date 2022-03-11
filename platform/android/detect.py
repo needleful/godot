@@ -156,7 +156,7 @@ def configure(env):
         abi_subpath = "i686-linux-android"
         arch_subpath = "x86"
         env["x86_libtheora_opt_gcc"] = True
-    if env["android_arch"] == "x86_64":
+    elif env["android_arch"] == "x86_64":
         if get_platform(env["ndk_platform"]) < 21:
             print(
                 "WARNING: android_arch=x86_64 is not supported by ndk_platform lower than android-21; setting ndk_platform=android-21"
@@ -202,12 +202,10 @@ def configure(env):
         env.Append(CPPDEFINES=["NDEBUG"])
         if can_vectorize:
             env.Append(CCFLAGS=["-ftree-vectorize"])
-        if env["target"] == "release_debug":
-            env.Append(CPPDEFINES=["DEBUG_ENABLED"])
     elif env["target"] == "debug":
         env.Append(LINKFLAGS=["-O0"])
         env.Append(CCFLAGS=["-O0", "-g", "-fno-limit-debug-info"])
-        env.Append(CPPDEFINES=["_DEBUG", "DEBUG_ENABLED"])
+        env.Append(CPPDEFINES=["_DEBUG"])
         env.Append(CPPFLAGS=["-UNDEBUG"])
 
     # Compiler configuration

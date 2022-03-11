@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -641,7 +641,7 @@ void RasterizerCanvasBaseGLES2::_draw_gui_primitive(int p_points, const Vector2 
 		stride += 1;
 	}
 
-	RAST_DEV_DEBUG_ASSERT(p_points <= 4);
+	DEV_ASSERT(p_points <= 4);
 	float buffer_data[(2 + 2 + 4 + 1) * 4];
 
 	for (int i = 0; i < p_points; i++) {
@@ -708,7 +708,7 @@ void RasterizerCanvasBaseGLES2::_copy_screen(const Rect2 &p_rect) {
 		return;
 	}
 
-	ERR_FAIL_COND_MSG(storage->frame.current_rt->copy_screen_effect.color == 0, "Can't use screen texture copying in a render target configured without copy buffers.");
+	ERR_FAIL_COND_MSG(storage->frame.current_rt->copy_screen_effect.color == 0, "Can't use screen texture copying in a render target configured without copy buffers. To resolve this, change the viewport's Usage property to \"2D\" or \"3D\" instead of \"2D Without Sampling\" or \"3D Without Effects\" respectively.");
 
 	glDisable(GL_BLEND);
 
@@ -838,10 +838,9 @@ void RasterizerCanvasBaseGLES2::canvas_light_shadow_buffer_update(RID p_buffer, 
 
 			if (transformed_cull_cache != VS::CANVAS_OCCLUDER_POLYGON_CULL_DISABLED &&
 					(p_light_xform.basis_determinant() * instance->xform_cache.basis_determinant()) < 0) {
-				transformed_cull_cache =
-						transformed_cull_cache == VS::CANVAS_OCCLUDER_POLYGON_CULL_CLOCKWISE ?
-								  VS::CANVAS_OCCLUDER_POLYGON_CULL_COUNTER_CLOCKWISE :
-								  VS::CANVAS_OCCLUDER_POLYGON_CULL_CLOCKWISE;
+				transformed_cull_cache = (transformed_cull_cache == VS::CANVAS_OCCLUDER_POLYGON_CULL_CLOCKWISE)
+						? VS::CANVAS_OCCLUDER_POLYGON_CULL_COUNTER_CLOCKWISE
+						: VS::CANVAS_OCCLUDER_POLYGON_CULL_CLOCKWISE;
 			}
 
 			if (cull != transformed_cull_cache) {

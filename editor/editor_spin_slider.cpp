@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -185,6 +185,67 @@ void EditorSpinSlider::_grabber_gui_input(const Ref<InputEvent> &p_event) {
 		float grabbing_ofs = (grabber->get_transform().xform(mm->get_position()).x - grabbing_from) / float(grabber_range) / scale_x;
 		set_as_ratio(grabbing_ratio + grabbing_ofs);
 		update();
+	}
+}
+
+void EditorSpinSlider::_value_input_gui_input(const Ref<InputEvent> &p_event) {
+	Ref<InputEventKey> k = p_event;
+	if (k.is_valid() && k->is_pressed()) {
+		double step = get_step();
+		double real_step = step;
+		if (step < 1) {
+			double divisor = 1.0 / get_step();
+
+			if (trunc(divisor) == divisor) {
+				step = 1.0;
+			}
+		}
+
+#ifdef APPLE_STYLE_KEYS
+		if (k->get_command()) {
+#else
+		if (k->get_control()) {
+#endif
+			step *= 100.0;
+		} else if (k->get_shift()) {
+			step *= 10.0;
+#ifdef APPLE_STYLE_KEYS
+		} else if (k->get_metakey()) {
+#else
+		} else if (k->get_alt()) {
+#endif
+			step *= 0.1;
+		}
+
+		uint32_t code = k->get_scancode();
+		switch (code) {
+			case KEY_UP: {
+				_evaluate_input_text();
+
+				double last_value = get_value();
+				set_value(last_value + step);
+				double new_value = get_value();
+
+				if (new_value < CLAMP(last_value + step, get_min(), get_max())) {
+					set_value(last_value + real_step);
+				}
+
+				value_input->set_text(get_text_value());
+			} break;
+			case KEY_DOWN: {
+				_evaluate_input_text();
+
+				double last_value = get_value();
+				set_value(last_value - step);
+				double new_value = get_value();
+
+				if (new_value > CLAMP(last_value - step, get_min(), get_max())) {
+					set_value(last_value - real_step);
+				}
+
+				value_input->set_text(get_text_value());
+			} break;
+		}
 	}
 }
 
@@ -467,9 +528,9 @@ void EditorSpinSlider::_focus_entered() {
 	value_input->set_text(get_text_value());
 	value_input->set_position(gr.position);
 	value_input->set_size(gr.size);
-	value_input->call_deferred("show_modal");
-	value_input->call_deferred("grab_focus");
-	value_input->call_deferred("select_all");
+	value_input->show_modal();
+	value_input->select_all();
+	value_input->call_deferred("grab_focus"); // deferred to avoid losing focus
 	value_input->set_focus_next(find_next_valid_focus()->get_path());
 	value_input->set_focus_previous(find_prev_valid_focus()->get_path());
 }
@@ -485,6 +546,7 @@ void EditorSpinSlider::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_flat"), &EditorSpinSlider::is_flat);
 
 	ClassDB::bind_method(D_METHOD("_gui_input"), &EditorSpinSlider::_gui_input);
+	ClassDB::bind_method(D_METHOD("_value_input_gui_input", "event"), &EditorSpinSlider::_value_input_gui_input);
 	ClassDB::bind_method(D_METHOD("_grabber_mouse_entered"), &EditorSpinSlider::_grabber_mouse_entered);
 	ClassDB::bind_method(D_METHOD("_grabber_mouse_exited"), &EditorSpinSlider::_grabber_mouse_exited);
 	ClassDB::bind_method(D_METHOD("_grabber_gui_input"), &EditorSpinSlider::_grabber_gui_input);
@@ -526,6 +588,7 @@ EditorSpinSlider::EditorSpinSlider() {
 	value_input->connect("modal_closed", this, "_value_input_closed");
 	value_input->connect("text_entered", this, "_value_input_entered");
 	value_input->connect("focus_exited", this, "_value_focus_exited");
+	value_input->connect("gui_input", this, "_value_input_gui_input");
 	value_input_just_closed = false;
 	hide_slider = false;
 	read_only = false;

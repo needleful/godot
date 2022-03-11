@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -138,16 +138,18 @@ bool ConeTwistJointSW::setup(real_t p_timestep) {
 		plane_space(normal[0], normal[1], normal[2]);
 
 		for (int i = 0; i < 3; i++) {
-			memnew_placement(&m_jac[i], JacobianEntrySW(
-												A->get_principal_inertia_axes().transposed(),
-												B->get_principal_inertia_axes().transposed(),
-												pivotAInW - A->get_transform().origin - A->get_center_of_mass(),
-												pivotBInW - B->get_transform().origin - B->get_center_of_mass(),
-												normal[i],
-												A->get_inv_inertia(),
-												A->get_inv_mass(),
-												B->get_inv_inertia(),
-												B->get_inv_mass()));
+			memnew_placement(
+					&m_jac[i],
+					JacobianEntrySW(
+							A->get_principal_inertia_axes().transposed(),
+							B->get_principal_inertia_axes().transposed(),
+							pivotAInW - A->get_transform().origin - A->get_center_of_mass(),
+							pivotBInW - B->get_transform().origin - B->get_center_of_mass(),
+							normal[i],
+							A->get_inv_inertia(),
+							A->get_inv_mass(),
+							B->get_inv_inertia(),
+							B->get_inv_mass()));
 		}
 	}
 
@@ -201,8 +203,7 @@ bool ConeTwistJointSW::setup(real_t p_timestep) {
 		real_t swingAxisSign = (b2Axis1.dot(b1Axis1) >= 0.0f) ? 1.0f : -1.0f;
 		m_swingAxis *= swingAxisSign;
 
-		m_kSwing = real_t(1.) / (A->compute_angular_impulse_denominator(m_swingAxis) +
-										B->compute_angular_impulse_denominator(m_swingAxis));
+		m_kSwing = real_t(1.) / (A->compute_angular_impulse_denominator(m_swingAxis) + B->compute_angular_impulse_denominator(m_swingAxis));
 	}
 
 	// Twist limits
@@ -221,8 +222,7 @@ bool ConeTwistJointSW::setup(real_t p_timestep) {
 			m_twistAxis.normalize();
 			m_twistAxis *= -1.0f;
 
-			m_kTwist = real_t(1.) / (A->compute_angular_impulse_denominator(m_twistAxis) +
-											B->compute_angular_impulse_denominator(m_twistAxis));
+			m_kTwist = real_t(1.) / (A->compute_angular_impulse_denominator(m_twistAxis) + B->compute_angular_impulse_denominator(m_twistAxis));
 
 		} else if (twist > m_twistSpan * lockedFreeFactor) {
 			m_twistCorrection = (twist - m_twistSpan);
@@ -231,8 +231,7 @@ bool ConeTwistJointSW::setup(real_t p_timestep) {
 			m_twistAxis = (b2Axis1 + b1Axis1) * 0.5f;
 			m_twistAxis.normalize();
 
-			m_kTwist = real_t(1.) / (A->compute_angular_impulse_denominator(m_twistAxis) +
-											B->compute_angular_impulse_denominator(m_twistAxis));
+			m_kTwist = real_t(1.) / (A->compute_angular_impulse_denominator(m_twistAxis) + B->compute_angular_impulse_denominator(m_twistAxis));
 		}
 	}
 

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -149,7 +149,7 @@ Vector2 Transform2D::xform(const Vector2 &p_vec) const {
 	return Vector2(
 				   tdotx(p_vec),
 				   tdoty(p_vec)) +
-		   elements[2];
+			elements[2];
 }
 Vector2 Transform2D::xform_inv(const Vector2 &p_vec) const {
 	Vector2 v = p_vec - elements[2];

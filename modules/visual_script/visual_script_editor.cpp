@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -3799,7 +3799,7 @@ void VisualScriptEditor::connect_seq(Ref<VisualScriptNode> vnode_old, Ref<Visual
 		undo_redo->add_do_method(script.ptr(), "sequence_connect", func, port_action_node, pass_port, new_id);
 		undo_redo->add_undo_method(script.ptr(), "sequence_disconnect", func, port_action_node, pass_port, new_id);
 	} else if (vnode_old->get_output_value_port_info(port_action_output).name == String("return") &&
-			   !script->get_output_sequence_ports_connected(func, port_action_node).has(return_port)) {
+			!script->get_output_sequence_ports_connected(func, port_action_node).has(return_port)) {
 		undo_redo->add_do_method(script.ptr(), "sequence_connect", func, port_action_node, return_port, new_id);
 		undo_redo->add_undo_method(script.ptr(), "sequence_disconnect", func, port_action_node, return_port, new_id);
 	} else {

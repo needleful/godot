@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -54,18 +54,22 @@ void FileDialog::_notification(int p_what) {
 
 		Color font_color = get_color("font_color", "ToolButton");
 		Color font_color_hover = get_color("font_color_hover", "ToolButton");
+		Color font_color_focus = get_color("font_color_focus", "ToolButton");
 		Color font_color_pressed = get_color("font_color_pressed", "ToolButton");
 
 		dir_up->add_color_override("icon_color_normal", font_color);
 		dir_up->add_color_override("icon_color_hover", font_color_hover);
+		dir_up->add_color_override("font_color_focus", font_color_focus);
 		dir_up->add_color_override("icon_color_pressed", font_color_pressed);
 
 		refresh->add_color_override("icon_color_normal", font_color);
 		refresh->add_color_override("icon_color_hover", font_color_hover);
+		refresh->add_color_override("font_color_focus", font_color_focus);
 		refresh->add_color_override("icon_color_pressed", font_color_pressed);
 
 		show_hidden->add_color_override("icon_color_normal", font_color);
 		show_hidden->add_color_override("icon_color_hover", font_color_hover);
+		show_hidden->add_color_override("font_color_focus", font_color_focus);
 		show_hidden->add_color_override("icon_color_pressed", font_color_pressed);
 
 	} else if (p_what == NOTIFICATION_POPUP_HIDE) {
@@ -302,7 +306,7 @@ bool FileDialog::_is_open_should_be_disabled() {
 
 	// Opening a file, but selected a folder? Forbidden.
 	return ((mode == MODE_OPEN_FILE || mode == MODE_OPEN_FILES) && d["dir"]) || // Flipped case, also forbidden.
-		   (mode == MODE_OPEN_DIR && !d["dir"]);
+			(mode == MODE_OPEN_DIR && !d["dir"]);
 }
 
 void FileDialog::_go_up() {
@@ -563,6 +567,7 @@ void FileDialog::clear_filters() {
 	invalidate();
 }
 void FileDialog::add_filter(const String &p_filter) {
+	ERR_FAIL_COND_MSG(p_filter.begins_with("."), "Filter must be \"filename.extension\", can't start with dot.");
 	filters.push_back(p_filter);
 	update_filters();
 	invalidate();

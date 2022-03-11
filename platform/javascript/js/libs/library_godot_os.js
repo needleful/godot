@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -328,3 +328,43 @@ const GodotOS = {
 
 autoAddDeps(GodotOS, '$GodotOS');
 mergeInto(LibraryManager.library, GodotOS);
+
+/*
+ * Godot event listeners.
+ * Keeps track of registered event listeners so it can remove them on shutdown.
+ */
+const GodotEventListeners = {
+	$GodotEventListeners__deps: ['$GodotOS'],
+	$GodotEventListeners__postset: 'GodotOS.atexit(function(resolve, reject) { GodotEventListeners.clear(); resolve(); });',
+	$GodotEventListeners: {
+		handlers: [],
+
+		has: function (target, event, method, capture) {
+			return GodotEventListeners.handlers.findIndex(function (e) {
+				return e.target === target && e.event === event && e.method === method && e.capture === capture;
+			}) !== -1;
+		},
+
+		add: function (target, event, method, capture) {
+			if (GodotEventListeners.has(target, event, method, capture)) {
+				return;
+			}
+			function Handler(p_target, p_event, p_method, p_capture) {
+				this.target = p_target;
+				this.event = p_event;
+				this.method = p_method;
+				this.capture = p_capture;
+			}
+			GodotEventListeners.handlers.push(new Handler(target, event, method, capture));
+			target.addEventListener(event, method, capture);
+		},
+
+		clear: function () {
+			GodotEventListeners.handlers.forEach(function (h) {
+				h.target.removeEventListener(h.event, h.method, h.capture);
+			});
+			GodotEventListeners.handlers.length = 0;
+		},
+	},
+};
+mergeInto(LibraryManager.library, GodotEventListeners);

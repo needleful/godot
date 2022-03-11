@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -60,13 +60,14 @@ void CollisionObject::_notification(int p_what) {
 				PhysicsServer::get_singleton()->body_set_state(rid, PhysicsServer::BODY_STATE_TRANSFORM, get_global_transform());
 			}
 
-			RID space = get_world()->get_space();
+			Ref<World> world_ref = get_world();
+			ERR_FAIL_COND(!world_ref.is_valid());
+			RID space = world_ref->get_space();
 			if (area) {
 				PhysicsServer::get_singleton()->area_set_space(rid, space);
 			} else {
 				PhysicsServer::get_singleton()->body_set_space(rid, space);
 			}
-
 			_update_pickable();
 			//get space
 		} break;
@@ -362,7 +363,7 @@ uint32_t CollisionObject::create_shape_owner(Object *p_owner) {
 		id = shapes.back()->key() + 1;
 	}
 
-	sd.owner = p_owner;
+	sd.owner_id = p_owner ? p_owner->get_instance_id() : 0;
 
 	shapes[id] = sd;
 
@@ -441,7 +442,7 @@ Transform CollisionObject::shape_owner_get_transform(uint32_t p_owner) const {
 Object *CollisionObject::shape_owner_get_owner(uint32_t p_owner) const {
 	ERR_FAIL_COND_V(!shapes.has(p_owner), nullptr);
 
-	return shapes[p_owner].owner;
+	return ObjectDB::get_instance(shapes[p_owner].owner_id);
 }
 
 void CollisionObject::shape_owner_add_shape(uint32_t p_owner, const Ref<Shape> &p_shape) {
@@ -525,7 +526,7 @@ void CollisionObject::shape_owner_clear_shapes(uint32_t p_owner) {
 }
 
 uint32_t CollisionObject::shape_find_owner(int p_shape_index) const {
-	ERR_FAIL_INDEX_V(p_shape_index, total_subshapes, 0);
+	ERR_FAIL_INDEX_V(p_shape_index, total_subshapes, UINT32_MAX);
 
 	for (const Map<uint32_t, ShapeData>::Element *E = shapes.front(); E; E = E->next()) {
 		for (int i = 0; i < E->get().shapes.size(); i++) {
@@ -536,7 +537,7 @@ uint32_t CollisionObject::shape_find_owner(int p_shape_index) const {
 	}
 
 	//in theory it should be unreachable
-	return 0;
+	ERR_FAIL_V_MSG(UINT32_MAX, "Can't find owner for shape index " + itos(p_shape_index) + ".");
 }
 
 CollisionObject::CollisionObject(RID p_rid, bool p_area) {

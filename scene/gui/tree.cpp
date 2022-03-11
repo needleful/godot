@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -1206,21 +1206,27 @@ int Tree::draw_item(const Point2i &p_pos, const Point2 &p_draw_ofs, const Size2 
 				}
 			}
 
-			if (drop_mode_flags && drop_mode_over == p_item) {
+			if (drop_mode_flags && drop_mode_over) {
 				Rect2 r = cell_rect;
-				bool has_parent = p_item->get_children() != nullptr;
-
-				if (drop_mode_section == -1 || has_parent || drop_mode_section == 0) {
-					VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(r.position.x, r.position.y, r.size.x, 1), cache.drop_position_color);
-				}
-
-				if (drop_mode_section == 0) {
-					VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(r.position.x, r.position.y, 1, r.size.y), cache.drop_position_color);
-					VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(r.position.x + r.size.x - 1, r.position.y, 1, r.size.y), cache.drop_position_color);
-				}
-
-				if ((drop_mode_section == 1 && !has_parent) || drop_mode_section == 0) {
-					VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(r.position.x, r.position.y + r.size.y, r.size.x, 1), cache.drop_position_color);
+				if (drop_mode_over == p_item) {
+					if (drop_mode_section == 0 || drop_mode_section == -1) {
+						// Line above.
+						VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(r.position.x, r.position.y, r.size.x, 1), cache.drop_position_color);
+					}
+					if (drop_mode_section == 0) {
+						// Side lines.
+						VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(r.position.x, r.position.y, 1, r.size.y), cache.drop_position_color);
+						VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(r.position.x + r.size.x - 1, r.position.y, 1, r.size.y), cache.drop_position_color);
+					}
+					if (drop_mode_section == 0 || (drop_mode_section == 1 && (!p_item->get_children() || p_item->is_collapsed()))) {
+						// Line below.
+						VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(r.position.x, r.position.y + r.size.y, r.size.x, 1), cache.drop_position_color);
+					}
+				} else if (drop_mode_over == p_item->get_parent()) {
+					if (drop_mode_section == 1 && !p_item->get_prev() /* && !drop_mode_over->is_collapsed() */) { // The drop_mode_over shouldn't ever be collapsed in here, otherwise we would be drawing a child of a collapsed item.
+						// Line above.
+						VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(r.position.x, r.position.y, r.size.x, 1), cache.drop_position_color);
+					}
 				}
 			}
 
@@ -1398,7 +1404,10 @@ int Tree::draw_item(const Point2i &p_pos, const Point2 &p_draw_ofs, const Size2 
 				arrow = cache.arrow;
 			}
 
-			arrow->draw(ci, p_pos + p_draw_ofs + Point2i(0, (label_h - arrow->get_height()) / 2) - cache.offset);
+			Point2 apos = p_pos + Point2i(0, (label_h - arrow->get_height()) / 2) - cache.offset + p_draw_ofs;
+			apos.x += cache.item_margin - arrow->get_width();
+
+			arrow->draw(ci, apos);
 		}
 	}
 
@@ -2786,7 +2795,9 @@ int Tree::_get_title_button_height() const {
 
 void Tree::_notification(int p_what) {
 	if (p_what == NOTIFICATION_FOCUS_ENTER) {
-		focus_in_id = get_tree()->get_event_count();
+		if (get_tree()) {
+			focus_in_id = get_tree()->get_event_count();
+		}
 	}
 	if (p_what == NOTIFICATION_MOUSE_EXIT) {
 		if (cache.hover_type != Cache::CLICK_NONE) {

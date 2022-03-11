@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -70,18 +70,18 @@ static bool _is_hex_symbol(CharType c) {
 
 static bool _is_pair_right_symbol(CharType c) {
 	return c == '"' ||
-		   c == '\'' ||
-		   c == ')' ||
-		   c == ']' ||
-		   c == '}';
+			c == '\'' ||
+			c == ')' ||
+			c == ']' ||
+			c == '}';
 }
 
 static bool _is_pair_left_symbol(CharType c) {
 	return c == '"' ||
-		   c == '\'' ||
-		   c == '(' ||
-		   c == '[' ||
-		   c == '{';
+			c == '\'' ||
+			c == '(' ||
+			c == '[' ||
+			c == '{';
 }
 
 static bool _is_pair_symbol(CharType c) {
@@ -382,6 +382,7 @@ void TextEdit::_update_scrollbars() {
 		cursor.line_ofs = 0;
 		cursor.wrap_ofs = 0;
 		v_scroll->set_value(0);
+		v_scroll->set_max(0);
 		v_scroll->hide();
 	}
 
@@ -399,6 +400,7 @@ void TextEdit::_update_scrollbars() {
 	} else {
 		cursor.x_ofs = 0;
 		h_scroll->set_value(0);
+		h_scroll->set_max(0);
 		h_scroll->hide();
 	}
 
@@ -526,6 +528,33 @@ void TextEdit::_update_selection_mode_line() {
 	update();
 
 	click_select_held->start();
+}
+
+void TextEdit::_update_minimap_hover() {
+	const Point2 mp = get_local_mouse_position();
+	const int xmargin_end = get_size().width - cache.style_normal->get_margin(MARGIN_RIGHT);
+
+	const bool hovering_sidebar = mp.x > xmargin_end - minimap_width && mp.x < xmargin_end;
+	if (!hovering_sidebar) {
+		if (hovering_minimap) {
+			// Only redraw if the hovering status changed.
+			hovering_minimap = false;
+			update();
+		}
+
+		// Return early to avoid running the operations below when not needed.
+		return;
+	}
+
+	int row;
+	_get_minimap_mouse_row(Point2i(mp.x, mp.y), row);
+
+	const bool new_hovering_minimap = row >= get_first_visible_line() && row <= get_last_full_visible_line();
+	if (new_hovering_minimap != hovering_minimap) {
+		// Only redraw if the hovering status changed.
+		hovering_minimap = new_hovering_minimap;
+		update();
+	}
 }
 
 void TextEdit::_update_minimap_click() {
@@ -895,7 +924,7 @@ void TextEdit::_notification(int p_what) {
 			int draw_amount = visible_rows + (smooth_scroll_enabled ? 1 : 0);
 			draw_amount += times_line_wraps(first_visible_line + 1);
 
-			// minimap
+			// Draw minimap.
 			if (draw_minimap) {
 				int minimap_visible_lines = _get_minimap_visible_rows();
 				int minimap_line_height = (minimap_char_size.y + minimap_line_spacing);
@@ -916,8 +945,19 @@ void TextEdit::_notification(int p_what) {
 				}
 				int minimap_draw_amount = minimap_visible_lines + times_line_wraps(minimap_line + 1);
 
-				// draw the minimap
-				Color viewport_color = (cache.background_color.get_v() < 0.5) ? Color(1, 1, 1, 0.1) : Color(0, 0, 0, 0.1);
+				// Draw the minimap.
+
+				// Add visual feedback when dragging or hovering the the visible area rectangle.
+				float viewport_alpha;
+				if (dragging_minimap) {
+					viewport_alpha = 0.25;
+				} else if (hovering_minimap) {
+					viewport_alpha = 0.175;
+				} else {
+					viewport_alpha = 0.1;
+				}
+
+				const Color viewport_color = (cache.background_color.get_v() < 0.5) ? Color(1, 1, 1, viewport_alpha) : Color(0, 0, 0, viewport_alpha);
 				VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2((xmargin_end + 2), viewport_offset_y, cache.minimap_width, viewport_height), viewport_color);
 				for (int i = 0; i < minimap_draw_amount; i++) {
 					minimap_line++;
@@ -1053,7 +1093,8 @@ void TextEdit::_notification(int p_what) {
 				bottom_limit_y -= cache.style_normal->get_margin(MARGIN_TOP);
 			}
 
-			// draw main text
+			// Draw main text.
+			line_drawing_cache.clear();
 			int line = first_visible_line;
 			for (int i = 0; i < draw_amount; i++) {
 				line++;
@@ -1074,6 +1115,7 @@ void TextEdit::_notification(int p_what) {
 				}
 
 				const String &fullstr = text[line];
+				LineDrawingCache cache_entry;
 
 				Map<int, HighlighterInfo> color_map;
 				if (syntax_coloring) {
@@ -1087,6 +1129,7 @@ void TextEdit::_notification(int p_what) {
 				Vector<String> wrap_rows = get_wrap_rows_text(line);
 				int line_wrap_amount = times_line_wraps(line);
 				int last_wrap_column = 0;
+				int wrap_column_offset = 0;
 
 				for (int line_wrap_index = 0; line_wrap_index < line_wrap_amount + 1; line_wrap_index++) {
 					if (line_wrap_index != 0) {
@@ -1180,6 +1223,8 @@ void TextEdit::_notification(int p_what) {
 
 					if (line_wrap_index == 0) {
 						// Only do these if we are on the first wrapped part of a line.
+
+						cache_entry.y_offset = ofs_y;
 
 						if (text.is_breakpoint(line) && !draw_breakpoint_gutter) {
 #ifdef TOOLS_ENABLED
@@ -1280,6 +1325,9 @@ void TextEdit::_notification(int p_what) {
 							cache.font->draw(ci, Point2(cache.style_normal->get_margin(MARGIN_LEFT) + cache.breakpoint_gutter_width + cache.info_gutter_width + ofs_x, yofs + cache.font->get_ascent()), fc, text.is_safe(line) ? cache.safe_line_number_color : cache.line_number_color);
 						}
 					}
+
+					int first_visible_char = str.length();
+					int last_visible_char = 0;
 
 					// Loop through characters in one line.
 					int j = 0;
@@ -1504,6 +1552,13 @@ void TextEdit::_notification(int p_what) {
 								int yofs = (get_row_height() - cache.space_icon->get_height()) / 2;
 								cache.space_icon->draw(ci, Point2(char_ofs + char_margin + ofs_x, ofs_y + yofs), in_selection && override_selected_font_color ? cache.font_color_selected : color);
 							}
+
+							if (first_visible_char > j) {
+								first_visible_char = j;
+							}
+							if (last_visible_char < j) {
+								last_visible_char = j;
+							}
 						}
 
 						char_ofs += char_w;
@@ -1577,7 +1632,14 @@ void TextEdit::_notification(int p_what) {
 							}
 						}
 					}
+
+					cache_entry.first_visible_char.push_back(wrap_column_offset + first_visible_char);
+					cache_entry.last_visible_char.push_back(wrap_column_offset + last_visible_char);
+
+					wrap_column_offset += str.length();
 				}
+
+				line_drawing_cache[line] = cache_entry;
 			}
 
 			bool completion_below = false;
@@ -2016,7 +2078,7 @@ void TextEdit::backspace_at_cursor() {
 		}
 	}
 
-	cursor_set_line(prev_line, true, true);
+	cursor_set_line(prev_line, false, true);
 	cursor_set_column(prev_column);
 }
 
@@ -2586,6 +2648,10 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 			}
 		}
 
+		if (draw_minimap && !dragging_selection) {
+			_update_minimap_hover();
+		}
+
 		if (mm->get_button_mask() & BUTTON_MASK_LEFT && get_viewport()->gui_get_drag_data() == Variant()) { // Ignore if dragging.
 			_reset_caret_blink_timer();
 
@@ -2891,7 +2957,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 				selection.active = false;
 				update();
 				_remove_text(selection.from_line, selection.from_column, selection.to_line, selection.to_column);
-				cursor_set_line(selection.from_line, true, false);
+				cursor_set_line(selection.from_line, false, false);
 				cursor_set_column(selection.from_column);
 				update();
 			}
@@ -4240,7 +4306,7 @@ void TextEdit::_insert_text_at_cursor(const String &p_text) {
 	int new_column, new_line;
 	_insert_text(cursor.line, cursor.column, p_text, &new_line, &new_column);
 	_update_scrollbars();
-	cursor_set_line(new_line);
+	cursor_set_line(new_line, false);
 	cursor_set_column(new_column);
 
 	update();
@@ -4740,6 +4806,57 @@ int TextEdit::get_row_height() const {
 	return cache.font->get_height() + cache.line_spacing;
 }
 
+/* Line and character position. */
+Point2 TextEdit::get_pos_at_line_column(int p_line, int p_column) const {
+	Rect2i rect = get_rect_at_line_column(p_line, p_column);
+	return rect.position + Vector2i(0, get_line_height());
+}
+
+Rect2 TextEdit::get_rect_at_line_column(int p_line, int p_column) const {
+	ERR_FAIL_INDEX_V(p_line, text.size(), Rect2i(-1, -1, 0, 0));
+	ERR_FAIL_COND_V(p_column < 0, Rect2i(-1, -1, 0, 0));
+	ERR_FAIL_COND_V(p_column > text[p_line].length(), Rect2i(-1, -1, 0, 0));
+
+	if (line_drawing_cache.size() == 0 || !line_drawing_cache.has(p_line)) {
+		// Line is not in the cache, which means it's outside of the viewing area.
+		return Rect2i(-1, -1, 0, 0);
+	}
+	LineDrawingCache cache_entry = line_drawing_cache[p_line];
+
+	int wrap_index = get_line_wrap_index_at_col(p_line, p_column);
+	if (wrap_index >= cache_entry.first_visible_char.size()) {
+		// Line seems to be wrapped beyond the viewable area.
+		return Rect2i(-1, -1, 0, 0);
+	}
+
+	int first_visible_char = cache_entry.first_visible_char[wrap_index];
+	int last_visible_char = cache_entry.last_visible_char[wrap_index];
+	if (p_column < first_visible_char || p_column > last_visible_char) {
+		// Character is outside of the viewing area, no point calculating its position.
+		return Rect2i(-1, -1, 0, 0);
+	}
+
+	Point2i pos, size;
+	pos.y = cache_entry.y_offset + get_line_height() * wrap_index;
+	pos.x = get_total_gutter_width() + cache.style_normal->get_margin(MARGIN_LEFT) - get_h_scroll();
+
+	int start_x = get_column_x_offset_for_line(p_column, p_line);
+	pos.x += start_x;
+
+	String line = text[p_line];
+	size.x = cache.font->get_char_size(line[p_column]).width;
+	size.y = get_line_height();
+
+	return Rect2i(pos, size);
+}
+
+Point2 TextEdit::get_line_column_at_pos(const Point2 &p_pos) const {
+	int row, col;
+	_get_mouse_pos(p_pos, row, col);
+
+	return Point2i(col, row);
+}
+
 int TextEdit::get_char_pos_for_line(int p_px, int p_line, int p_wrap_index) const {
 	ERR_FAIL_INDEX_V(p_line, text.size(), 0);
 
@@ -4836,7 +4953,7 @@ int TextEdit::get_column_x_offset(int p_char, String p_str) const {
 
 void TextEdit::insert_text_at_cursor(const String &p_text) {
 	if (selection.active) {
-		cursor_set_line(selection.from_line);
+		cursor_set_line(selection.from_line, false);
 		cursor_set_column(selection.from_column);
 
 		_remove_text(selection.from_line, selection.from_column, selection.to_line, selection.to_column);
@@ -5295,7 +5412,7 @@ void TextEdit::cut() {
 		OS::get_singleton()->set_clipboard(clipboard);
 
 		_remove_text(selection.from_line, selection.from_column, selection.to_line, selection.to_column);
-		cursor_set_line(selection.from_line); // Set afterwards else it causes the view to be offset.
+		cursor_set_line(selection.from_line, false); // Set afterwards else it causes the view to be offset.
 		cursor_set_column(selection.from_column);
 
 		selection.active = false;
@@ -5327,7 +5444,7 @@ void TextEdit::paste() {
 		selection.active = false;
 		selection.selecting_mode = Selection::MODE_NONE;
 		_remove_text(selection.from_line, selection.from_column, selection.to_line, selection.to_column);
-		cursor_set_line(selection.from_line);
+		cursor_set_line(selection.from_line, false);
 		cursor_set_column(selection.from_column);
 
 	} else if (!cut_copy_line.empty() && cut_copy_line == clipboard) {
@@ -6182,11 +6299,11 @@ void TextEdit::undo() {
 
 	_update_scrollbars();
 	if (undo_stack_pos->get().type == TextOperation::TYPE_REMOVE) {
-		cursor_set_line(undo_stack_pos->get().to_line);
+		cursor_set_line(undo_stack_pos->get().to_line, false);
 		cursor_set_column(undo_stack_pos->get().to_column);
 		_cancel_code_hint();
 	} else {
-		cursor_set_line(undo_stack_pos->get().from_line);
+		cursor_set_line(undo_stack_pos->get().from_line, false);
 		cursor_set_column(undo_stack_pos->get().from_column);
 	}
 	update();
@@ -6218,7 +6335,7 @@ void TextEdit::redo() {
 	}
 
 	_update_scrollbars();
-	cursor_set_line(undo_stack_pos->get().to_line);
+	cursor_set_line(undo_stack_pos->get().to_line, false);
 	cursor_set_column(undo_stack_pos->get().to_column);
 	undo_stack_pos = undo_stack_pos->next();
 	update();
@@ -6759,6 +6876,7 @@ String TextEdit::get_word_at_pos(const Vector2 &p_pos) const {
 }
 
 String TextEdit::get_tooltip(const Point2 &p_pos) const {
+	Object *tooltip_obj = ObjectDB::get_instance(tooltip_obj_id);
 	if (!tooltip_obj) {
 		return Control::get_tooltip(p_pos);
 	}
@@ -6780,7 +6898,8 @@ String TextEdit::get_tooltip(const Point2 &p_pos) const {
 }
 
 void TextEdit::set_tooltip_request_func(Object *p_obj, const StringName &p_function, const Variant &p_udata) {
-	tooltip_obj = p_obj;
+	ERR_FAIL_NULL(p_obj);
+	tooltip_obj_id = p_obj->get_instance_id();
 	tooltip_func = p_function;
 	tooltip_ud = p_udata;
 }
@@ -6907,6 +7026,10 @@ void TextEdit::set_info_gutter_width(int p_gutter_width) {
 
 int TextEdit::get_info_gutter_width() const {
 	return info_gutter_width;
+}
+
+int TextEdit::get_total_gutter_width() const {
+	return cache.line_number_w + cache.breakpoint_gutter_width + cache.fold_gutter_width + cache.info_gutter_width;
 }
 
 void TextEdit::set_draw_minimap(bool p_draw) {
@@ -7036,6 +7159,30 @@ PopupMenu *TextEdit::get_menu() const {
 	return menu;
 }
 
+int TextEdit::get_line_width(int p_line, int p_wrap_index) const {
+	ERR_FAIL_INDEX_V(p_line, text.size(), 0);
+
+	if (p_wrap_index >= 0 && line_wraps(p_line)) {
+		Vector<String> rows = get_wrap_rows_text(p_line);
+		ERR_FAIL_INDEX_V(p_wrap_index, rows.size(), 0);
+
+		int w = 0;
+		int len = rows[p_wrap_index].length();
+		const CharType *str = rows[p_wrap_index].c_str();
+		for (int i = 0; i < len; i++) {
+			w += text.get_char_width(str[i], str[i + 1], w);
+		}
+
+		return w;
+	}
+
+	return text.get_line_width(p_line);
+}
+
+int TextEdit::get_line_height() const {
+	return get_row_height();
+}
+
 void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_gui_input"), &TextEdit::_gui_input);
 	ClassDB::bind_method(D_METHOD("_scroll_moved"), &TextEdit::_scroll_moved);
@@ -7066,6 +7213,13 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_text"), &TextEdit::get_text);
 	ClassDB::bind_method(D_METHOD("get_line", "line"), &TextEdit::get_line);
 	ClassDB::bind_method(D_METHOD("set_line", "line", "new_text"), &TextEdit::set_line);
+	ClassDB::bind_method(D_METHOD("get_line_wrapped_text", "line"), &TextEdit::get_wrap_rows_text);
+
+	ClassDB::bind_method(D_METHOD("get_line_width", "line", "wrap_index"), &TextEdit::get_line_width, DEFVAL(-1));
+	ClassDB::bind_method(D_METHOD("get_line_height"), &TextEdit::get_line_height);
+
+	ClassDB::bind_method(D_METHOD("is_line_wrapped", "line"), &TextEdit::line_wraps);
+	ClassDB::bind_method(D_METHOD("get_line_wrap_count", "line"), &TextEdit::times_line_wraps);
 
 	ClassDB::bind_method(D_METHOD("center_viewport_to_cursor"), &TextEdit::center_viewport_to_cursor);
 	ClassDB::bind_method(D_METHOD("cursor_set_column", "column", "adjust_viewport"), &TextEdit::cursor_set_column, DEFVAL(true));
@@ -7082,6 +7236,11 @@ void TextEdit::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_right_click_moves_caret", "enable"), &TextEdit::set_right_click_moves_caret);
 	ClassDB::bind_method(D_METHOD("is_right_click_moving_caret"), &TextEdit::is_right_click_moving_caret);
+
+	/* Line and character position. */
+	ClassDB::bind_method(D_METHOD("get_pos_at_line_column", "line", "column"), &TextEdit::get_pos_at_line_column);
+	ClassDB::bind_method(D_METHOD("get_rect_at_line_column", "line", "column"), &TextEdit::get_rect_at_line_column);
+	ClassDB::bind_method(D_METHOD("get_line_column_at_pos", "position"), &TextEdit::get_line_column_at_pos);
 
 	ClassDB::bind_method(D_METHOD("set_readonly", "enable"), &TextEdit::set_readonly);
 	ClassDB::bind_method(D_METHOD("is_readonly"), &TextEdit::is_readonly);
@@ -7132,10 +7291,13 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_drawing_tabs"), &TextEdit::is_drawing_tabs);
 	ClassDB::bind_method(D_METHOD("set_draw_spaces"), &TextEdit::set_draw_spaces);
 	ClassDB::bind_method(D_METHOD("is_drawing_spaces"), &TextEdit::is_drawing_spaces);
+	ClassDB::bind_method(D_METHOD("set_bookmark_gutter_enabled", "enable"), &TextEdit::set_bookmark_gutter_enabled);
+	ClassDB::bind_method(D_METHOD("is_bookmark_gutter_enabled"), &TextEdit::is_bookmark_gutter_enabled);
 	ClassDB::bind_method(D_METHOD("set_breakpoint_gutter_enabled", "enable"), &TextEdit::set_breakpoint_gutter_enabled);
 	ClassDB::bind_method(D_METHOD("is_breakpoint_gutter_enabled"), &TextEdit::is_breakpoint_gutter_enabled);
 	ClassDB::bind_method(D_METHOD("set_draw_fold_gutter"), &TextEdit::set_draw_fold_gutter);
 	ClassDB::bind_method(D_METHOD("is_drawing_fold_gutter"), &TextEdit::is_drawing_fold_gutter);
+	ClassDB::bind_method(D_METHOD("get_total_gutter_width"), &TextEdit::get_total_gutter_width);
 
 	ClassDB::bind_method(D_METHOD("set_hiding_enabled", "enable"), &TextEdit::set_hiding_enabled);
 	ClassDB::bind_method(D_METHOD("is_hiding_enabled"), &TextEdit::is_hiding_enabled);
@@ -7193,6 +7355,7 @@ void TextEdit::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "show_line_numbers"), "set_show_line_numbers", "is_show_line_numbers_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "draw_tabs"), "set_draw_tabs", "is_drawing_tabs");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "draw_spaces"), "set_draw_spaces", "is_drawing_spaces");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "bookmark_gutter"), "set_bookmark_gutter_enabled", "is_bookmark_gutter_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "breakpoint_gutter"), "set_breakpoint_gutter_enabled", "is_breakpoint_gutter_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "fold_gutter"), "set_draw_fold_gutter", "is_drawing_fold_gutter");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "highlight_all_occurrences"), "set_highlight_all_occurrences", "is_highlight_all_occurrences_enabled");
@@ -7326,7 +7489,7 @@ TextEdit::TextEdit() {
 	completion_enabled = false;
 	completion_active = false;
 	completion_line_ofs = 0;
-	tooltip_obj = nullptr;
+	tooltip_obj_id = ObjectID();
 	line_numbers = false;
 	line_numbers_zero_padded = false;
 	line_length_guidelines = false;
@@ -7352,6 +7515,7 @@ TextEdit::TextEdit() {
 	smooth_scroll_enabled = false;
 	scrolling = false;
 	minimap_clicked = false;
+	hovering_minimap = false;
 	dragging_minimap = false;
 	can_drag_minimap = false;
 	minimap_scroll_ratio = 0;

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -887,8 +887,8 @@ int MultiplayerAPI::get_outgoing_bandwidth_usage() {
 int MultiplayerAPI::_get_bandwidth_usage(const Vector<BandwidthFrame> &p_buffer, int p_pointer) {
 	int total_bandwidth = 0;
 
-	uint32_t timestamp = OS::get_singleton()->get_ticks_msec();
-	uint32_t final_timestamp = timestamp - 1000;
+	uint64_t timestamp = OS::get_singleton()->get_ticks_msec();
+	uint64_t final_timestamp = timestamp - 1000;
 
 	int i = (p_pointer + p_buffer.size() - 1) % p_buffer.size();
 

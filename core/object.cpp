@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -351,13 +351,13 @@ bool Object::Connection::operator<(const Connection &p_conn) const {
 			if (target == p_conn.target) {
 				return method < p_conn.method;
 			} else {
-				return target < p_conn.target;
+				return target->get_instance_id() < p_conn.target->get_instance_id();
 			}
 		} else {
 			return signal < p_conn.signal;
 		}
 	} else {
-		return source < p_conn.source;
+		return source->get_instance_id() < p_conn.source->get_instance_id();
 	}
 }
 Object::Connection::Connection(const Variant &p_variant) {
@@ -961,7 +961,6 @@ void Object::cancel_delete() {
 	_predelete_ok = true;
 }
 
-#ifdef DEBUG_ENABLED
 ObjectRC *Object::_use_rc() {
 	// The RC object is lazily created the first time it's requested;
 	// that way, there's no need to allocate and release it at all if this Object
@@ -989,7 +988,6 @@ ObjectRC *Object::_use_rc() {
 		rc = _rc.load(std::memory_order_acquire);
 	}
 }
-#endif
 
 void Object::set_script_and_instance(const RefPtr &p_script, ScriptInstance *p_instance) {
 	//this function is not meant to be used in any of these ways
@@ -1528,9 +1526,10 @@ void Object::_disconnect(const StringName &p_signal, Object *p_to_object, const 
 	Signal *s = signal_map.getptr(p_signal);
 	if (!s) {
 		bool signal_is_valid = ClassDB::has_signal(get_class_name(), p_signal) ||
-							   (!script.is_null() && Ref<Script>(script)->has_script_signal(p_signal));
-		ERR_FAIL_COND_MSG(signal_is_valid, vformat("Attempt to disconnect a nonexistent connection to signal '%s' in %s, with target '%s' in %s.",
-												   p_signal, to_string(), p_to_method, p_to_object->to_string()));
+				(!script.is_null() && Ref<Script>(script)->has_script_signal(p_signal));
+		ERR_FAIL_COND_MSG(signal_is_valid,
+				vformat("Attempt to disconnect a nonexistent connection to signal '%s' in %s, with target '%s' in %s.",
+						p_signal, to_string(), p_to_method, p_to_object->to_string()));
 	}
 	ERR_FAIL_COND_MSG(!s, vformat("Disconnecting nonexistent signal '%s' in %s.", p_signal, to_string()));
 
@@ -1542,7 +1541,7 @@ void Object::_disconnect(const StringName &p_signal, Object *p_to_object, const 
 
 	if (!p_force) {
 		slot->reference_count--; // by default is zero, if it was not referenced it will go below it
-		if (slot->reference_count >= 0) {
+		if (slot->reference_count > 0) {
 			return;
 		}
 	}
@@ -1927,9 +1926,7 @@ Object::Object() {
 	_emitting = false;
 	memset(_script_instance_bindings, 0, sizeof(void *) * MAX_SCRIPT_INSTANCE_BINDINGS);
 	script_instance = nullptr;
-#ifdef DEBUG_ENABLED
 	_rc.store(nullptr, std::memory_order_release);
-#endif
 #ifdef TOOLS_ENABLED
 
 	_edited = false;
@@ -1942,14 +1939,12 @@ Object::Object() {
 }
 
 Object::~Object() {
-#ifdef DEBUG_ENABLED
 	ObjectRC *rc = _rc.load(std::memory_order_acquire);
 	if (rc) {
 		if (rc->invalidate()) {
 			memdelete(rc);
 		}
 	}
-#endif
 
 	if (script_instance) {
 		memdelete(script_instance);

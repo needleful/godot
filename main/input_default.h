@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -39,6 +39,7 @@ class InputDefault : public Input {
 
 	int mouse_button_mask;
 
+	Set<int> physical_keys_pressed;
 	Set<int> keys_pressed;
 	Set<int> joy_buttons_pressed;
 	Map<int, float> _joy_axis;
@@ -221,6 +222,7 @@ protected:
 
 public:
 	virtual bool is_key_pressed(int p_scancode) const;
+	virtual bool is_physical_key_pressed(int p_scancode) const;
 	virtual bool is_mouse_button_pressed(int p_button) const;
 	virtual bool is_joy_button_pressed(int p_device, int p_button) const;
 	virtual bool is_action_pressed(const StringName &p_action, bool p_exact = false) const;
@@ -252,10 +254,10 @@ public:
 
 	virtual void parse_input_event(const Ref<InputEvent> &p_event);
 
-	void set_gravity(const Vector3 &p_gravity);
-	void set_accelerometer(const Vector3 &p_accel);
-	void set_magnetometer(const Vector3 &p_magnetometer);
-	void set_gyroscope(const Vector3 &p_gyroscope);
+	virtual void set_gravity(const Vector3 &p_gravity);
+	virtual void set_accelerometer(const Vector3 &p_accel);
+	virtual void set_magnetometer(const Vector3 &p_magnetometer);
+	virtual void set_gyroscope(const Vector3 &p_gyroscope);
 	void set_joy_axis(int p_device, int p_axis, float p_value);
 
 	virtual void start_joy_vibration(int p_device, float p_weak_magnitude, float p_strong_magnitude, float p_duration = 0);

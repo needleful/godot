@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -36,7 +36,7 @@
 #include "editor_scale.h"
 #include "editor_settings.h"
 
-#include "modules/modules_enabled.gen.h"
+#include "modules/modules_enabled.gen.h" // For svg.
 #ifdef MODULE_SVG_ENABLED
 #include "modules/svg/image_loader_svg.h"
 #endif
@@ -380,6 +380,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 
 	const Color font_color = mono_color.linear_interpolate(base_color, 0.25);
 	const Color font_color_hl = mono_color.linear_interpolate(base_color, 0.15);
+	const Color font_color_focus = mono_color.linear_interpolate(base_color, 0.15);
 	const Color font_color_disabled = Color(mono_color.r, mono_color.g, mono_color.b, 0.3);
 	const Color font_color_readonly = Color(mono_color.r, mono_color.g, mono_color.b, 0.65);
 	const Color font_color_selection = accent_color * Color(1, 1, 1, 0.4);
@@ -614,8 +615,10 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 
 	theme->set_color("font_color", "MenuButton", font_color);
 	theme->set_color("font_color_hover", "MenuButton", font_color_hl);
+	theme->set_color("font_color_focus", "MenuButton", font_color_focus);
 	theme->set_color("font_color", "ToolButton", font_color);
 	theme->set_color("font_color_hover", "ToolButton", font_color_hl);
+	theme->set_color("font_color_focus", "ToolButton", font_color_focus);
 	theme->set_color("font_color_pressed", "ToolButton", accent_color);
 
 	theme->set_stylebox("MenuHover", "EditorStyles", style_menu_hover_border);
@@ -629,6 +632,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 
 	theme->set_color("font_color", "Button", font_color);
 	theme->set_color("font_color_hover", "Button", font_color_hl);
+	theme->set_color("font_color_focus", "Button", font_color_focus);
 	theme->set_color("font_color_pressed", "Button", accent_color);
 	theme->set_color("font_color_disabled", "Button", font_color_disabled);
 	theme->set_color("icon_color_hover", "Button", icon_color_hover);
@@ -643,6 +647,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 
 	theme->set_color("font_color", "OptionButton", font_color);
 	theme->set_color("font_color_hover", "OptionButton", font_color_hl);
+	theme->set_color("font_color_focus", "OptionButton", font_color_focus);
 	theme->set_color("font_color_pressed", "OptionButton", accent_color);
 	theme->set_color("font_color_disabled", "OptionButton", font_color_disabled);
 	theme->set_color("icon_color_hover", "OptionButton", icon_color_hover);
@@ -664,6 +669,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 
 	theme->set_color("font_color", "CheckButton", font_color);
 	theme->set_color("font_color_hover", "CheckButton", font_color_hl);
+	theme->set_color("font_color_focus", "CheckButton", font_color_focus);
 	theme->set_color("font_color_pressed", "CheckButton", accent_color);
 	theme->set_color("font_color_disabled", "CheckButton", font_color_disabled);
 	theme->set_color("icon_color_hover", "CheckButton", icon_color_hover);
@@ -689,6 +695,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 
 	theme->set_color("font_color", "CheckBox", font_color);
 	theme->set_color("font_color_hover", "CheckBox", font_color_hl);
+	theme->set_color("font_color_focus", "CheckBox", font_color_focus);
 	theme->set_color("font_color_pressed", "CheckBox", accent_color);
 	theme->set_color("font_color_disabled", "CheckBox", font_color_disabled);
 	theme->set_color("icon_color_hover", "CheckBox", icon_color_hover);
@@ -769,7 +776,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_stylebox("bg_selected", "EditorProperty", style_property_bg);
 	theme->set_stylebox("bg", "EditorProperty", Ref<StyleBoxEmpty>(memnew(StyleBoxEmpty)));
 	theme->set_constant("vseparation", "EditorProperty", (extra_spacing + default_margin_size) * EDSCALE);
-	theme->set_color("error_color", "EditorProperty", error_color);
+	theme->set_color("warning_color", "EditorProperty", warning_color);
 	theme->set_color("property_color", "EditorProperty", property_color);
 
 	theme->set_constant("inspector_margin", "Editor", 8 * EDSCALE);
@@ -1037,8 +1044,10 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 
 	theme->set_icon("increment", "HScrollBar", empty_icon);
 	theme->set_icon("increment_highlight", "HScrollBar", empty_icon);
+	theme->set_icon("increment_pressed", "HScrollBar", empty_icon);
 	theme->set_icon("decrement", "HScrollBar", empty_icon);
 	theme->set_icon("decrement_highlight", "HScrollBar", empty_icon);
+	theme->set_icon("decrement_pressed", "HScrollBar", empty_icon);
 
 	// VScrollBar
 	theme->set_stylebox("scroll", "VScrollBar", make_stylebox(theme->get_icon("GuiScrollBg", "EditorIcons"), 5, 5, 5, 5, 0, 0, 0, 0));
@@ -1049,8 +1058,10 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 
 	theme->set_icon("increment", "VScrollBar", empty_icon);
 	theme->set_icon("increment_highlight", "VScrollBar", empty_icon);
+	theme->set_icon("increment_pressed", "VScrollBar", empty_icon);
 	theme->set_icon("decrement", "VScrollBar", empty_icon);
 	theme->set_icon("decrement_highlight", "VScrollBar", empty_icon);
+	theme->set_icon("decrement_pressed", "VScrollBar", empty_icon);
 
 	// HSlider
 	theme->set_icon("grabber_highlight", "HSlider", theme->get_icon("GuiSliderGrabberHl", "EditorIcons"));
@@ -1093,6 +1104,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_stylebox("focus", "LinkButton", style_empty);
 	theme->set_color("font_color", "LinkButton", font_color);
 	theme->set_color("font_color_hover", "LinkButton", font_color_hl);
+	theme->set_color("font_color_focus", "LinkButton", font_color_focus);
 	theme->set_color("font_color_pressed", "LinkButton", accent_color);
 	theme->set_color("font_color_disabled", "LinkButton", font_color_disabled);
 

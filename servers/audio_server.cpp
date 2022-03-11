@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -189,6 +189,7 @@ int AudioDriverManager::get_driver_count() {
 void AudioDriverManager::initialize(int p_driver) {
 	GLOBAL_DEF_RST("audio/enable_audio_input", false);
 	GLOBAL_DEF_RST("audio/mix_rate", DEFAULT_MIX_RATE);
+	GLOBAL_DEF_RST("audio/mix_rate.web", 0); // Safer default output_latency for web (use browser default).
 	GLOBAL_DEF_RST("audio/output_latency", DEFAULT_OUTPUT_LATENCY);
 	GLOBAL_DEF_RST("audio/output_latency.web", 50); // Safer default output_latency for web.
 

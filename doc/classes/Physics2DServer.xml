@@ -348,7 +348,7 @@
 			<return type="Physics2DDirectBodyState" />
 			<argument index="0" name="body" type="RID" />
 			<description>
-				Returns the [Physics2DDirectBodyState] of the body.
+				Returns the [Physics2DDirectBodyState] of the body. Returns [code]null[/code] if the body is destroyed or removed from the physics space.
 			</description>
 		</method>
 		<method name="body_get_max_contacts_reported" qualifiers="const">
@@ -831,8 +831,6 @@
 		</constant>
 		<constant name="SPACE_PARAM_CONSTRAINT_DEFAULT_BIAS" value="6" enum="SpaceParameter">
 			Constant to set/get the default solver bias for all physics constraints. A solver bias is a factor controlling how much two objects "rebound", after violating a constraint, to avoid leaving them in that state because of numerical imprecision.
-		</constant>
-		<constant name="SPACE_PARAM_TEST_MOTION_MIN_CONTACT_DEPTH" value="7" enum="SpaceParameter">
 		</constant>
 		<constant name="SHAPE_LINE" value="0" enum="ShapeType">
 			This is the constant for creating line shapes. A line shape is an infinite line with an origin point, and a normal. Thus, it can be used for front/behind checks.

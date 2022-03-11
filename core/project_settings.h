@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -41,6 +41,7 @@ class ProjectSettings : public Object {
 
 public:
 	typedef Map<String, Variant> CustomMap;
+	static const String PROJECT_DATA_DIR_NAME_SUFFIX;
 
 	enum {
 		//properties that are not for built in values begin from this value, so builtin ones are displayed first
@@ -56,6 +57,10 @@ protected:
 		bool hide_from_editor;
 		bool overridden;
 		bool restart_if_changed;
+#ifdef DEBUG_METHODS_ENABLED
+		bool ignore_value_in_docs = false;
+#endif
+
 		VariantContainer() :
 				order(0),
 				persist(false),
@@ -86,6 +91,8 @@ protected:
 
 	Set<String> custom_features;
 	Map<StringName, StringName> feature_overrides;
+
+	String project_data_dir_name;
 
 	bool _set(const StringName &p_name, const Variant &p_value);
 	bool _get(const StringName &p_name, Variant &r_ret) const;
@@ -124,9 +131,14 @@ public:
 
 	void set_initial_value(const String &p_name, const Variant &p_value);
 	void set_restart_if_changed(const String &p_name, bool p_restart);
+	void set_ignore_value_in_docs(const String &p_name, bool p_ignore);
+	bool get_ignore_value_in_docs(const String &p_name) const;
+
 	bool property_can_revert(const String &p_name);
 	Variant property_get_revert(const String &p_name);
 
+	String get_project_data_dir_name() const;
+	String get_project_data_path() const;
 	String get_resource_path() const;
 
 	static ProjectSettings *get_singleton();
@@ -161,10 +173,12 @@ public:
 };
 
 //not a macro any longer
-Variant _GLOBAL_DEF(const String &p_var, const Variant &p_default, bool p_restart_if_changed = false);
+Variant _GLOBAL_DEF(const String &p_var, const Variant &p_default, bool p_restart_if_changed = false, bool p_ignore_value_in_docs = false);
 Variant _GLOBAL_DEF_ALIAS(const String &p_var, const String &p_old_name, const Variant &p_default, bool p_restart_if_changed = false);
 #define GLOBAL_DEF(m_var, m_value) _GLOBAL_DEF(m_var, m_value)
 #define GLOBAL_DEF_RST(m_var, m_value) _GLOBAL_DEF(m_var, m_value, true)
+#define GLOBAL_DEF_NOVAL(m_var, m_value) _GLOBAL_DEF(m_var, m_value, false, true)
+#define GLOBAL_DEF_RST_NOVAL(m_var, m_value) _GLOBAL_DEF(m_var, m_value, true, true)
 #define GLOBAL_DEF_ALIAS(m_var, m_old_name, m_value) _GLOBAL_DEF_ALIAS(m_var, m_old_name, m_value)
 #define GLOBAL_DEF_ALIAS_RST(m_var, m_old_name, m_value) _GLOBAL_DEF(m_var, m_old_name, m_value, true)
 #define GLOBAL_GET(m_var) ProjectSettings::get_singleton()->get(m_var)

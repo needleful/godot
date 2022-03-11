@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -320,6 +320,7 @@ RigidBodyBullet::~RigidBodyBullet() {
 
 void RigidBodyBullet::init_kinematic_utilities() {
 	kinematic_utilities = memnew(KinematicUtilities(this));
+	reload_kinematic_shapes();
 }
 
 void RigidBodyBullet::destroy_kinematic_utilities() {
@@ -330,7 +331,7 @@ void RigidBodyBullet::destroy_kinematic_utilities() {
 }
 
 void RigidBodyBullet::main_shape_changed() {
-	CRASH_COND(!get_main_shape())
+	CRASH_COND(!get_main_shape());
 	btBody->setCollisionShape(get_main_shape());
 	set_continuous_collision_detection(is_continuous_collision_detection_enabled()); // Reset
 }

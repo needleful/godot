@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -2236,8 +2236,8 @@ EditorPropertyRID::EditorPropertyRID() {
 
 ////////////// RESOURCE //////////////////////
 
-void EditorPropertyResource::_resource_selected(const RES &p_resource) {
-	if (use_sub_inspector) {
+void EditorPropertyResource::_resource_selected(const RES &p_resource, bool p_edit) {
+	if (!p_edit && _can_use_sub_inspector(p_resource)) {
 		bool unfold = !get_edited_object()->editor_is_section_unfolded(get_edited_property());
 		get_edited_object()->editor_set_section_unfold(get_edited_property(), unfold);
 		update_property();
@@ -2399,6 +2399,20 @@ void EditorPropertyResource::_viewport_selected(const NodePath &p_path) {
 	update_property();
 }
 
+bool EditorPropertyResource::_can_use_sub_inspector(const RES &p_resource) {
+	bool use_editor = false;
+	if (p_resource.is_valid()) {
+		for (int i = 0; i < EditorNode::get_editor_data().get_editor_plugin_count(); i++) {
+			EditorPlugin *ep = EditorNode::get_editor_data().get_editor_plugin(i);
+			if (ep->handles((Resource *)p_resource.ptr())) {
+				use_editor = true;
+			}
+		}
+	}
+
+	return !use_editor && use_sub_inspector;
+}
+
 void EditorPropertyResource::setup(Object *p_object, const String &p_path, const String &p_base_type) {
 	if (resource_picker) {
 		resource_picker->disconnect("resource_selected", this, "_resource_selected");
@@ -2433,7 +2447,7 @@ void EditorPropertyResource::setup(Object *p_object, const String &p_path, const
 void EditorPropertyResource::update_property() {
 	RES res = get_edited_object()->get(get_edited_property());
 
-	if (use_sub_inspector) {
+	if (_can_use_sub_inspector(res)) {
 		if (res.is_valid() != resource_picker->is_toggle_mode()) {
 			resource_picker->set_toggle_mode(res.is_valid());
 		}
@@ -2461,23 +2475,6 @@ void EditorPropertyResource::update_property() {
 
 				sub_inspector_vbox->add_child(sub_inspector);
 				resource_picker->set_toggle_pressed(true);
-
-				bool use_editor = false;
-				for (int i = 0; i < EditorNode::get_editor_data().get_editor_plugin_count(); i++) {
-					EditorPlugin *ep = EditorNode::get_editor_data().get_editor_plugin(i);
-					if (ep->handles(res.ptr())) {
-						use_editor = true;
-					}
-				}
-
-				if (use_editor) {
-					// Open editor directly and hide other such editors which are currently open.
-					_open_editor_pressed();
-					if (is_inside_tree()) {
-						get_tree()->call_deferred("call_group", "_editor_resource_properties", "_fold_other_editors", this);
-					}
-					opened_editor = true;
-				}
 
 				_update_property_bg();
 			}
@@ -2619,18 +2616,20 @@ bool EditorInspectorDefaultPlugin::parse_property(Object *p_object, Variant::Typ
 				int min = 0, max = 65535, step = 1;
 				bool greater = true, lesser = true;
 
-				if (p_hint == PROPERTY_HINT_RANGE && p_hint_text.get_slice_count(",") >= 2) {
-					greater = false; //if using ranged, assume false by default
+				Vector<String> slices = p_hint_text.split(",");
+				if (p_hint == PROPERTY_HINT_RANGE && slices.size() >= 2) {
+					greater = false; // If using ranged, assume false by default.
 					lesser = false;
-					min = p_hint_text.get_slice(",", 0).to_int();
-					max = p_hint_text.get_slice(",", 1).to_int();
+					min = slices[0].to_int();
+					max = slices[1].to_int();
 
-					if (p_hint_text.get_slice_count(",") >= 3) {
-						step = p_hint_text.get_slice(",", 2).to_int();
+					if (slices.size() >= 3 && slices[2].is_valid_integer()) {
+						// Step is optional, could be something else if not a number.
+						step = slices[2].to_int();
 					}
 
-					for (int i = 2; i < p_hint_text.get_slice_count(","); i++) {
-						String slice = p_hint_text.get_slice(",", i).strip_edges();
+					for (int i = 2; i < slices.size(); i++) {
+						String slice = slices[i].strip_edges();
 						if (slice == "or_greater") {
 							greater = true;
 						}
@@ -2671,18 +2670,23 @@ bool EditorInspectorDefaultPlugin::parse_property(Object *p_object, Variant::Typ
 				bool exp_range = false;
 				bool greater = true, lesser = true;
 
-				if ((p_hint == PROPERTY_HINT_RANGE || p_hint == PROPERTY_HINT_EXP_RANGE) && p_hint_text.get_slice_count(",") >= 2) {
-					greater = false; //if using ranged, assume false by default
+				Vector<String> slices = p_hint_text.split(",");
+				if ((p_hint == PROPERTY_HINT_RANGE || p_hint == PROPERTY_HINT_EXP_RANGE) && slices.size() >= 2) {
+					greater = false; // If using ranged, assume false by default.
 					lesser = false;
-					min = p_hint_text.get_slice(",", 0).to_double();
-					max = p_hint_text.get_slice(",", 1).to_double();
-					if (p_hint_text.get_slice_count(",") >= 3) {
-						step = p_hint_text.get_slice(",", 2).to_double();
+					min = slices[0].to_double();
+					max = slices[1].to_double();
+
+					if (slices.size() >= 3 && slices[2].is_valid_float()) {
+						// Step is optional, could be something else if not a number.
+						step = slices[2].to_double();
 					}
+
 					hide_slider = false;
 					exp_range = p_hint == PROPERTY_HINT_EXP_RANGE;
-					for (int i = 2; i < p_hint_text.get_slice_count(","); i++) {
-						String slice = p_hint_text.get_slice(",", i).strip_edges();
+
+					for (int i = 2; i < slices.size(); i++) {
+						String slice = slices[i].strip_edges();
 						if (slice == "or_greater") {
 							greater = true;
 						}
@@ -2722,13 +2726,13 @@ bool EditorInspectorDefaultPlugin::parse_property(Object *p_object, Variant::Typ
 				}
 				add_property_editor(p_path, editor);
 			} else if (p_hint == PROPERTY_HINT_METHOD_OF_VARIANT_TYPE ||
-					   p_hint == PROPERTY_HINT_METHOD_OF_BASE_TYPE ||
-					   p_hint == PROPERTY_HINT_METHOD_OF_INSTANCE ||
-					   p_hint == PROPERTY_HINT_METHOD_OF_SCRIPT ||
-					   p_hint == PROPERTY_HINT_PROPERTY_OF_VARIANT_TYPE ||
-					   p_hint == PROPERTY_HINT_PROPERTY_OF_BASE_TYPE ||
-					   p_hint == PROPERTY_HINT_PROPERTY_OF_INSTANCE ||
-					   p_hint == PROPERTY_HINT_PROPERTY_OF_SCRIPT) {
+					p_hint == PROPERTY_HINT_METHOD_OF_BASE_TYPE ||
+					p_hint == PROPERTY_HINT_METHOD_OF_INSTANCE ||
+					p_hint == PROPERTY_HINT_METHOD_OF_SCRIPT ||
+					p_hint == PROPERTY_HINT_PROPERTY_OF_VARIANT_TYPE ||
+					p_hint == PROPERTY_HINT_PROPERTY_OF_BASE_TYPE ||
+					p_hint == PROPERTY_HINT_PROPERTY_OF_INSTANCE ||
+					p_hint == PROPERTY_HINT_PROPERTY_OF_SCRIPT) {
 				EditorPropertyMember *editor = memnew(EditorPropertyMember);
 
 				EditorPropertyMember::Type type = EditorPropertyMember::MEMBER_METHOD_OF_BASE_TYPE;

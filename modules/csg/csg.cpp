@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -156,8 +156,8 @@ inline bool is_point_in_triangle(const Vector3 &p_point, const Vector3 p_vertice
 
 inline static bool is_triangle_degenerate(const Vector2 p_vertices[3], real_t p_vertex_snap2) {
 	real_t det = p_vertices[0].x * p_vertices[1].y - p_vertices[0].x * p_vertices[2].y +
-				 p_vertices[0].y * p_vertices[2].x - p_vertices[0].y * p_vertices[1].x +
-				 p_vertices[1].x * p_vertices[2].y - p_vertices[1].y * p_vertices[2].x;
+			p_vertices[0].y * p_vertices[2].x - p_vertices[0].y * p_vertices[1].x +
+			p_vertices[1].x * p_vertices[2].y - p_vertices[1].y * p_vertices[2].x;
 
 	return det < p_vertex_snap2;
 }
@@ -408,7 +408,7 @@ void CSGBrushOperation::merge_brushes(Operation p_operation, const CSGBrush &p_b
 
 		} break;
 
-		case OPERATION_SUBSTRACTION: {
+		case OPERATION_SUBTRACTION: {
 			int face_count = 0;
 
 			for (int i = 0; i < mesh_merge.faces.size(); i++) {

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -75,16 +75,15 @@ subject to the following restrictions:
 // -- GODOT end --
 
 #ifdef DEBUG_ENABLED
-#define CHULL_ASSERT(m_cond)                                    \
-	do {                                                        \
-		if (unlikely(!(m_cond))) {                              \
-			ERR_PRINT("Assertion \"" _STR(m_cond) "\" failed.") \
-		}                                                       \
-	} while (0)
+#define CHULL_ASSERT(m_cond)                                 \
+	if (unlikely(!(m_cond))) {                               \
+		ERR_PRINT("Assertion \"" _STR(m_cond) "\" failed."); \
+	} else                                                   \
+		((void)0)
 #else
 #define CHULL_ASSERT(m_cond) \
 	do {                     \
-	} while (0)
+	} while (false)
 #endif
 
 #if defined(DEBUG_CONVEX_HULL) || defined(SHOW_ITERATIONS)
@@ -265,8 +264,7 @@ public:
 		}
 
 		int32_t get_sign() const {
-			return ((int64_t)high < 0) ? -1 : (high || low) ? 1 :
-																0;
+			return ((int64_t)high < 0) ? -1 : ((high || low) ? 1 : 0);
 		}
 
 		bool operator<(const Int128 &b) const {
@@ -737,8 +735,6 @@ int32_t ConvexHullInternal::Rational64::compare(const Rational64 &b) const {
 		return 0;
 	}
 
-	//	return (numerator * b.denominator > b.numerator * denominator) ? sign : (numerator * b.denominator < b.numerator * denominator) ? -sign : 0;
-
 #ifdef USE_X86_64_ASM
 
 	int32_t result;
@@ -759,10 +755,9 @@ int32_t ConvexHullInternal::Rational64::compare(const Rational64 &b) const {
 			: "=&b"(result), [tmp] "=&r"(tmp), "=a"(dummy)
 			: "a"(denominator), [bn] "g"(b.numerator), [tn] "g"(numerator), [bd] "g"(b.denominator)
 			: "%rdx", "cc");
-	return result ? result ^ sign // if sign is +1, only bit 0 of result is inverted, which does not change the sign of result (and cannot result in zero)
-					// if sign is -1, all bits of result are inverted, which changes the sign of result (and again cannot result in zero)
-					:
-					  0;
+	// if sign is +1, only bit 0 of result is inverted, which does not change the sign of result (and cannot result in zero)
+	// if sign is -1, all bits of result are inverted, which changes the sign of result (and again cannot result in zero)
+	return result ? result ^ sign : 0;
 
 #else
 
@@ -795,8 +790,7 @@ int32_t ConvexHullInternal::Rational128::compare(const Rational128 &b) const {
 int32_t ConvexHullInternal::Rational128::compare(int64_t b) const {
 	if (is_int_64) {
 		int64_t a = sign * (int64_t)numerator.low;
-		return (a > b) ? 1 : (a < b) ? -1 :
-										 0;
+		return (a > b) ? 1 : ((a < b) ? -1 : 0);
 	}
 	if (b > 0) {
 		if (sign <= 0) {
@@ -1047,8 +1041,8 @@ void ConvexHullInternal::compute_internal(int32_t p_start, int32_t p_end, Interm
 
 				return;
 			}
+			FALLTHROUGH;
 		}
-		// lint -fallthrough
 		case 1: {
 			Vertex *v = original_vertices[p_start];
 			v->edges = nullptr;
@@ -1448,8 +1442,7 @@ void ConvexHullInternal::merge(IntermediateHull &p_h0, IntermediateHull &p_h1) {
 			c1->edges = e;
 			return;
 		} else {
-			int32_t cmp = !min0 ? 1 : !min1 ? -1 :
-												min_cot0.compare(min_cot1);
+			int32_t cmp = !min0 ? 1 : (!min1 ? -1 : min_cot0.compare(min_cot1));
 #ifdef DEBUG_CONVEX_HULL
 			printf("    -> Result %d\n", cmp);
 #endif
@@ -2268,10 +2261,21 @@ Error ConvexHullComputer::convex_hull(const Vector3 *p_points, int32_t p_point_c
 
 	r_mesh.vertices = ch.vertices;
 
-	r_mesh.edges.resize(ch.edges.size());
+	// Copy the edges over. There's two "half-edges" for every edge, so we pick only one of them.
+	r_mesh.edges.resize(ch.edges.size() / 2);
+	uint32_t edges_copied = 0;
 	for (uint32_t i = 0; i < ch.edges.size(); i++) {
-		r_mesh.edges.write[i].a = (&ch.edges[i])->get_source_vertex();
-		r_mesh.edges.write[i].b = (&ch.edges[i])->get_target_vertex();
+		uint32_t a = (&ch.edges[i])->get_source_vertex();
+		uint32_t b = (&ch.edges[i])->get_target_vertex();
+		if (a < b) { // Copy only the "canonical" edge. For the reverse edge, this will be false.
+			ERR_BREAK(edges_copied >= (uint32_t)r_mesh.edges.size());
+			r_mesh.edges.write[edges_copied].a = a;
+			r_mesh.edges.write[edges_copied].b = b;
+			edges_copied++;
+		}
+	}
+	if (edges_copied != (uint32_t)r_mesh.edges.size()) {
+		ERR_PRINT("Invalid edge count.");
 	}
 
 	r_mesh.faces.resize(ch.faces.size());

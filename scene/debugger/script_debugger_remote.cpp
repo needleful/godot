@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -101,7 +101,7 @@ void ScriptDebuggerRemote::_put_variable(const String &p_name, const Variant &p_
 	packet_peer_stream->put_var(p_name);
 
 	Variant var = p_variable;
-	if (p_variable.get_type() == Variant::OBJECT && !ObjectDB::instance_validate(p_variable)) {
+	if (p_variable.get_type() == Variant::OBJECT && p_variable.operator Object *() == nullptr) {
 		var = Variant();
 	}
 
@@ -1197,6 +1197,7 @@ ScriptDebuggerRemote::ScriptDebuggerRemote() :
 		max_errors_per_second(GLOBAL_GET("network/limits/debugger_stdout/max_errors_per_second")),
 		max_warnings_per_second(GLOBAL_GET("network/limits/debugger_stdout/max_warnings_per_second")),
 		n_errors_dropped(0),
+		n_warnings_dropped(0),
 		max_cps(GLOBAL_GET("network/limits/debugger_stdout/max_chars_per_second")),
 		char_count(0),
 		err_count(0),

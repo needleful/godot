@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -39,9 +39,11 @@
 #include "core/project_settings.h"
 
 #ifdef TOOLS_ENABLED
+#include "core/os/keyboard.h"
 #include "editor/bindings_generator.h"
 #include "editor/csharp_project.h"
 #include "editor/editor_node.h"
+#include "editor/editor_settings.h"
 #include "editor/node_dock.h"
 #endif
 
@@ -291,22 +293,22 @@ void CSharpLanguage::get_reserved_words(List<String> *p_words) const {
 
 bool CSharpLanguage::is_control_flow_keyword(String p_keyword) const {
 	return p_keyword == "break" ||
-		   p_keyword == "case" ||
-		   p_keyword == "catch" ||
-		   p_keyword == "continue" ||
-		   p_keyword == "default" ||
-		   p_keyword == "do" ||
-		   p_keyword == "else" ||
-		   p_keyword == "finally" ||
-		   p_keyword == "for" ||
-		   p_keyword == "foreach" ||
-		   p_keyword == "goto" ||
-		   p_keyword == "if" ||
-		   p_keyword == "return" ||
-		   p_keyword == "switch" ||
-		   p_keyword == "throw" ||
-		   p_keyword == "try" ||
-		   p_keyword == "while";
+			p_keyword == "case" ||
+			p_keyword == "catch" ||
+			p_keyword == "continue" ||
+			p_keyword == "default" ||
+			p_keyword == "do" ||
+			p_keyword == "else" ||
+			p_keyword == "finally" ||
+			p_keyword == "for" ||
+			p_keyword == "foreach" ||
+			p_keyword == "goto" ||
+			p_keyword == "if" ||
+			p_keyword == "return" ||
+			p_keyword == "switch" ||
+			p_keyword == "throw" ||
+			p_keyword == "try" ||
+			p_keyword == "while";
 }
 
 void CSharpLanguage::get_comment_delimiters(List<String> *p_delimiters) const {
@@ -1178,6 +1180,7 @@ void CSharpLanguage::_editor_init_callback() {
 
 	// Enable it as a plugin
 	EditorNode::add_editor_plugin(godotsharp_editor);
+	ED_SHORTCUT("mono/build_solution", TTR("Build Solution"), KEY_MASK_ALT | KEY_B);
 	godotsharp_editor->enable_plugin();
 
 	get_singleton()->godotsharp_editor = godotsharp_editor;
@@ -1567,9 +1570,19 @@ void CSharpInstance::get_properties_state_for_reloading(List<Pair<StringName, Va
 
 		ManagedType managedType;
 
-		GDMonoField *field = script->script_class->get_field(state_pair.first);
-		if (!field)
+		GDMonoField *field = nullptr;
+		GDMonoClass *top = script->script_class;
+		while (top && top != script->native) {
+			field = top->get_field(state_pair.first);
+			if (field) {
+				break;
+			}
+
+			top = top->get_parent_class();
+		}
+		if (!field) {
 			continue; // Properties ignored. We get the property baking fields instead.
+		}
 
 		managedType = field->get_type();
 
@@ -1582,8 +1595,9 @@ void CSharpInstance::get_properties_state_for_reloading(List<Pair<StringName, Va
 }
 
 void CSharpInstance::get_property_list(List<PropertyInfo> *p_properties) const {
-	for (Map<StringName, PropertyInfo>::Element *E = script->member_info.front(); E; E = E->next()) {
-		p_properties->push_back(E->value());
+	List<PropertyInfo> props;
+	for (OrderedHashMap<StringName, PropertyInfo>::ConstElement E = script->member_info.front(); E; E = E.next()) {
+		props.push_front(E.value());
 	}
 
 	// Call _get_property_list
@@ -1605,15 +1619,19 @@ void CSharpInstance::get_property_list(List<PropertyInfo> *p_properties) const {
 
 			if (ret) {
 				Array array = Array(GDMonoMarshal::mono_object_to_variant(ret));
-				for (int i = 0, size = array.size(); i < size; i++)
-					p_properties->push_back(PropertyInfo::from_dict(array.get(i)));
-				return;
+				for (int i = 0, size = array.size(); i < size; i++) {
+					props.push_back(PropertyInfo::from_dict(array.get(i)));
+				}
 			}
 
 			break;
 		}
 
 		top = top->get_parent_class();
+	}
+
+	for (List<PropertyInfo>::Element *E = props.front(); E; E = E->next()) {
+		p_properties->push_back(E->get());
 	}
 }
 
@@ -1628,6 +1646,29 @@ Variant::Type CSharpInstance::get_property_type(const StringName &p_name, bool *
 		*r_is_valid = false;
 
 	return Variant::NIL;
+}
+
+void CSharpInstance::get_method_list(List<MethodInfo> *p_list) const {
+	if (!script->is_valid() || !script->script_class) {
+		return;
+	}
+
+	GD_MONO_SCOPE_THREAD_ATTACH;
+
+	// TODO: We're filtering out constructors but there may be other methods unsuitable for explicit calls.
+	GDMonoClass *top = script->script_class;
+
+	while (top && top != script->native) {
+		const Vector<GDMonoMethod *> &methods = top->get_all_methods();
+		for (int i = 0; i < methods.size(); ++i) {
+			MethodInfo minfo = methods[i]->get_method_info();
+			if (minfo.name != CACHED_STRING_NAME(dotctor)) {
+				p_list->push_back(minfo);
+			}
+		}
+
+		top = top->get_parent_class();
+	}
 }
 
 bool CSharpInstance::has_method(const StringName &p_method) const {
@@ -1650,8 +1691,7 @@ bool CSharpInstance::has_method(const StringName &p_method) const {
 }
 
 Variant CSharpInstance::call(const StringName &p_method, const Variant **p_args, int p_argcount, Variant::CallError &r_error) {
-	if (!script.is_valid())
-		ERR_FAIL_V(Variant());
+	ERR_FAIL_COND_V(!script.is_valid(), Variant());
 
 	GD_MONO_SCOPE_THREAD_ATTACH;
 
@@ -2650,12 +2690,24 @@ int CSharpScript::_try_get_member_export_hint(IMonoClassMember *p_member, Manage
 
 		ERR_FAIL_COND_V_MSG(elem_variant_type == Variant::NIL, -1, "Unknown array element type.");
 
-		int hint_res = _try_get_member_export_hint(p_member, elem_type, elem_variant_type, /* allow_generics: */ false, elem_hint, elem_hint_string);
+		bool preset_hint = false;
+		if (elem_variant_type == Variant::STRING) {
+			MonoObject *attr = p_member->get_attribute(CACHED_CLASS(ExportAttribute));
+			if (PropertyHint(CACHED_FIELD(ExportAttribute, hint)->get_int_value(attr)) == PROPERTY_HINT_ENUM) {
+				r_hint_string = itos(elem_variant_type) + "/" + itos(PROPERTY_HINT_ENUM) + ":" + CACHED_FIELD(ExportAttribute, hintString)->get_string_value(attr);
+				preset_hint = true;
+			}
+		}
 
-		ERR_FAIL_COND_V_MSG(hint_res == -1, -1, "Error while trying to determine information about the array element type.");
+		if (!preset_hint) {
+			int hint_res = _try_get_member_export_hint(p_member, elem_type, elem_variant_type, /* allow_generics: */ false, elem_hint, elem_hint_string);
 
-		// Format: type/hint:hint_string
-		r_hint_string = itos(elem_variant_type) + "/" + itos(elem_hint) + ":" + elem_hint_string;
+			ERR_FAIL_COND_V_MSG(hint_res == -1, -1, "Error while trying to determine information about the array element type.");
+
+			// Format: type/hint:hint_string
+			r_hint_string = itos(elem_variant_type) + "/" + itos(elem_hint) + ":" + elem_hint_string;
+		}
+
 		r_hint = PROPERTY_HINT_TYPE_STRING;
 
 	} else if (p_allow_generics && p_variant_type == Variant::DICTIONARY) {
@@ -2671,6 +2723,7 @@ int CSharpScript::_try_get_member_export_hint(IMonoClassMember *p_member, Manage
 void CSharpScript::_clear() {
 	tool = false;
 	valid = false;
+	reload_invalidated = true;
 
 	base = NULL;
 	native = NULL;
@@ -2774,6 +2827,7 @@ void CSharpScript::initialize_for_managed_type(Ref<CSharpScript> p_script, GDMon
 
 	p_script->valid = true;
 	p_script->tool = p_script->script_class->has_attribute(CACHED_CLASS(ToolAttribute));
+	p_script->reload_invalidated = false;
 
 	if (!p_script->tool) {
 		GDMonoClass *nesting_class = p_script->script_class->get_nesting_class();
@@ -2978,18 +3032,17 @@ ScriptInstance *CSharpScript::instance_create(Object *p_this) {
 	CRASH_COND(!valid);
 #endif
 
+	GD_MONO_SCOPE_THREAD_ATTACH;
+
 	if (native) {
 		String native_name = NATIVE_GDMONOCLASS_NAME(native);
 		if (!ClassDB::is_parent_class(p_this->get_class_name(), native_name)) {
 			if (ScriptDebugger::get_singleton()) {
 				CSharpLanguage::get_singleton()->debug_break_parse(get_path(), 0, "Script inherits from native type '" + native_name + "', so it can't be instanced in object of type: '" + p_this->get_class() + "'");
 			}
-			ERR_FAIL_V_MSG(NULL, "Script inherits from native type '" + native_name +
-										 "', so it can't be instanced in object of type: '" + p_this->get_class() + "'.");
+			ERR_FAIL_V_MSG(NULL, "Script inherits from native type '" + native_name + "', so it can't be instanced in object of type: '" + p_this->get_class() + "'.");
 		}
 	}
-
-	GD_MONO_SCOPE_THREAD_ATTACH;
 
 	Variant::CallError unchecked_error;
 	return _create_instance(NULL, 0, p_this, Object::cast_to<Reference>(p_this) != NULL, unchecked_error);
@@ -3034,10 +3087,19 @@ void CSharpScript::get_script_method_list(List<MethodInfo> *p_list) const {
 
 	GD_MONO_SCOPE_THREAD_ATTACH;
 
-	// TODO: Filter out things unsuitable for explicit calls, like constructors.
-	const Vector<GDMonoMethod *> &methods = script_class->get_all_methods();
-	for (int i = 0; i < methods.size(); ++i) {
-		p_list->push_back(methods[i]->get_method_info());
+	// TODO: We're filtering out constructors but there may be other methods unsuitable for explicit calls.
+	GDMonoClass *top = script_class;
+
+	while (top && top != native) {
+		const Vector<GDMonoMethod *> &methods = top->get_all_methods();
+		for (int i = 0; i < methods.size(); ++i) {
+			MethodInfo minfo = methods[i]->get_method_info();
+			if (minfo.name != CACHED_STRING_NAME(dotctor)) {
+				p_list->push_back(methods[i]->get_method_info());
+			}
+		}
+
+		top = top->get_parent_class();
 	}
 }
 
@@ -3071,13 +3133,12 @@ MethodInfo CSharpScript::get_method_info(const StringName &p_method) const {
 }
 
 Error CSharpScript::reload(bool p_keep_state) {
-	bool has_instances;
-	{
-		MutexLock lock(CSharpLanguage::get_singleton()->script_instances_mutex);
-		has_instances = instances.size();
+	if (!reload_invalidated) {
+		return OK;
 	}
-
-	ERR_FAIL_COND_V(!p_keep_state && has_instances, ERR_ALREADY_IN_USE);
+	// In the case of C#, reload doesn't really do any script reloading.
+	// That's done separately via domain reloading.
+	reload_invalidated = false;
 
 	GD_MONO_SCOPE_THREAD_ATTACH;
 
@@ -3234,8 +3295,14 @@ Ref<Script> CSharpScript::get_base_script() const {
 }
 
 void CSharpScript::get_script_property_list(List<PropertyInfo> *p_list) const {
-	for (Map<StringName, PropertyInfo>::Element *E = member_info.front(); E; E = E->next()) {
-		p_list->push_back(E->value());
+	List<PropertyInfo> props;
+
+	for (OrderedHashMap<StringName, PropertyInfo>::ConstElement E = member_info.front(); E; E = E.next()) {
+		props.push_front(E.value());
+	}
+
+	for (List<PropertyInfo>::Element *E = props.front(); E; E = E->next()) {
+		p_list->push_back(E->get());
 	}
 }
 
@@ -3248,10 +3315,10 @@ Error CSharpScript::load_source_code(const String &p_path) {
 	Error ferr = read_all_file_utf8(p_path, source);
 
 	ERR_FAIL_COND_V_MSG(ferr != OK, ferr,
-			ferr == ERR_INVALID_DATA ?
-					  "Script '" + p_path + "' contains invalid unicode (UTF-8), so it was not loaded."
-										  " Please ensure that scripts are saved in valid UTF-8 unicode." :
-					  "Failed to read file: '" + p_path + "'.");
+			ferr == ERR_INVALID_DATA
+					? "Script '" + p_path + "' contains invalid unicode (UTF-8), so it was not loaded."
+											" Please ensure that scripts are saved in valid UTF-8 unicode."
+					: "Failed to read file: '" + p_path + "'.");
 
 #ifdef TOOLS_ENABLED
 	source_changed_cache = true;

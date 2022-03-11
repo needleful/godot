@@ -15,7 +15,7 @@
 		In 2D, all visible objects are some form of canvas item. In order to be visible, a canvas item needs to be the child of a canvas attached to a viewport, or it needs to be the child of another canvas item that is eventually attached to the canvas.
 	</description>
 	<tutorials>
-		<link>https://docs.godotengine.org/en/3.4/tutorials/optimization/using_servers.html</link>
+		<link>https://docs.godotengine.org/en/3.4/tutorials/performance/using_servers.html</link>
 	</tutorials>
 	<methods>
 		<method name="black_bars_set_images">
@@ -861,6 +861,7 @@
 			<argument index="8" name="hdr_bleed_scale" type="float" />
 			<argument index="9" name="hdr_luminance_cap" type="float" />
 			<argument index="10" name="bicubic_upscale" type="bool" />
+			<argument index="11" name="high_quality" type="bool" />
 			<description>
 				Sets the variables to be used with the "glow" post-process effect. See [Environment] for more details.
 			</description>
@@ -2317,7 +2318,8 @@
 			<argument index="0" name="particles" type="RID" />
 			<argument index="1" name="material" type="RID" />
 			<description>
-				Sets the material for processing the particles. Note: this is not the material used to draw the materials. Equivalent to [member Particles.process_material].
+				Sets the material for processing the particles.
+				[b]Note:[/b] This is not the material used to draw the materials. Equivalent to [member Particles.process_material].
 			</description>
 		</method>
 		<method name="particles_set_randomness_ratio">
@@ -3797,6 +3799,9 @@
 		</constant>
 		<constant name="ENV_TONE_MAPPER_ACES" value="3" enum="EnvironmentToneMapper">
 			Use the ACES tonemapper.
+		</constant>
+		<constant name="ENV_TONE_MAPPER_ACES_FITTED" value="4" enum="EnvironmentToneMapper">
+			Use the ACES Fitted tonemapper.
 		</constant>
 		<constant name="ENV_SSAO_QUALITY_LOW" value="0" enum="EnvironmentSSAOQuality">
 			Lowest quality of screen space ambient occlusion.

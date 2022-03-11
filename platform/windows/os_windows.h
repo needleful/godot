@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -52,7 +52,9 @@
 #include <dwmapi.h>
 #include <fcntl.h>
 #include <io.h>
+#include <shellapi.h>
 #include <stdio.h>
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <windowsx.h>
 // WinTab API
@@ -334,6 +336,7 @@ class OS_Windows : public OS {
 	Vector2 im_position;
 
 	MouseMode mouse_mode;
+	int restore_mouse_trails;
 	bool alt_mem;
 	bool gr_mem;
 	bool shift_mem;
@@ -367,6 +370,8 @@ class OS_Windows : public OS {
 #endif
 
 	CrashHandler crash_handler;
+
+	bool _is_win11_terminal() const;
 
 	void _drag_event(float p_x, float p_y, int idx);
 	void _touch_event(bool p_pressed, float p_x, float p_y, int idx);

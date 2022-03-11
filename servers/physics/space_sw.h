@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -83,8 +83,8 @@ private:
 	SelfList<AreaSW>::List monitor_query_list;
 	SelfList<AreaSW>::List area_moved_list;
 
-	static void *_broadphase_pair(CollisionObjectSW *A, int p_subindex_A, CollisionObjectSW *B, int p_subindex_B, void *p_self);
-	static void _broadphase_unpair(CollisionObjectSW *A, int p_subindex_A, CollisionObjectSW *B, int p_subindex_B, void *p_data, void *p_self);
+	static void *_broadphase_pair(CollisionObjectSW *p_object_A, int p_subindex_A, CollisionObjectSW *p_object_B, int p_subindex_B, void *p_pair_data, void *p_self);
+	static void _broadphase_unpair(CollisionObjectSW *p_object_A, int p_subindex_A, CollisionObjectSW *p_object_B, int p_subindex_B, void *p_pair_data, void *p_self);
 
 	Set<CollisionObjectSW *> objects;
 
@@ -94,7 +94,6 @@ private:
 	real_t contact_max_separation;
 	real_t contact_max_allowed_penetration;
 	real_t constraint_bias;
-	real_t test_motion_min_contact_depth;
 
 	enum {
 

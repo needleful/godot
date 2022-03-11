@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -43,17 +43,14 @@ real_t Triangulate::get_area(const Vector<Vector2> &contour) {
 }
 
 /*
-     is_inside_triangle decides if a point P is Inside of the triangle
-     defined by A, B, C.
-   */
-
+ * `is_inside_triangle` decides if a point P is inside the triangle
+ * defined by A, B, C.
+ */
 bool Triangulate::is_inside_triangle(real_t Ax, real_t Ay,
 		real_t Bx, real_t By,
 		real_t Cx, real_t Cy,
 		real_t Px, real_t Py,
-		bool include_edges)
-
-{
+		bool include_edges) {
 	real_t ax, ay, bx, by, cx, cy, apx, apy, bpx, bpy, cpx, cpy;
 	real_t cCROSSap, bCROSScp, aCROSSbp;
 
@@ -79,7 +76,7 @@ bool Triangulate::is_inside_triangle(real_t Ax, real_t Ay,
 	} else {
 		return ((aCROSSbp >= 0.0) && (bCROSScp >= 0.0) && (cCROSSap >= 0.0));
 	}
-};
+}
 
 bool Triangulate::snip(const Vector<Vector2> &p_contour, int u, int v, int w, int n, const Vector<int> &V, bool relaxed) {
 	int p;

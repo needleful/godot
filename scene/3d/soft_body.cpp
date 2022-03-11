@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -365,6 +365,11 @@ void SoftBody::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_drag_coefficient", "drag_coefficient"), &SoftBody::set_drag_coefficient);
 	ClassDB::bind_method(D_METHOD("get_drag_coefficient"), &SoftBody::get_drag_coefficient);
 
+	ClassDB::bind_method(D_METHOD("get_point_transform", "point_index"), &SoftBody::get_point_transform);
+
+	ClassDB::bind_method(D_METHOD("set_point_pinned", "point_index", "pinned", "attachment_path"), &SoftBody::pin_point, DEFVAL(NodePath()));
+	ClassDB::bind_method(D_METHOD("is_point_pinned", "point_index"), &SoftBody::is_point_pinned);
+
 	ClassDB::bind_method(D_METHOD("set_ray_pickable", "ray_pickable"), &SoftBody::set_ray_pickable);
 	ClassDB::bind_method(D_METHOD("is_ray_pickable"), &SoftBody::is_ray_pickable);
 
@@ -432,8 +437,9 @@ void SoftBody::_draw_soft_mesh() {
 		return;
 	}
 
-	if (!visual_server_handler.is_ready()) {
-		visual_server_handler.prepare(get_mesh()->get_rid(), 0);
+	const RID mesh_rid = get_mesh()->get_rid();
+	if (!visual_server_handler.is_ready(mesh_rid)) {
+		visual_server_handler.prepare(mesh_rid, 0);
 
 		/// Necessary in order to render the mesh correctly (Soft body nodes are in global space)
 		simulation_started = true;

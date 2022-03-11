@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -351,13 +351,6 @@ Error PluginScript::reload(bool p_keep_state) {
 			_methods_rpc_mode[pi.name] = MultiplayerAPI::RPCMode(int(var));
 		}
 	}
-
-#ifdef TOOLS_ENABLED
-/*for (Set<PlaceHolderScriptInstance*>::Element *E=placeholders.front();E;E=E->next()) {
-
-        _update_placeholder(E->get());
-    }*/
-#endif
 
 	FREE_SCRIPT_MANIFEST(manifest);
 	return OK;
