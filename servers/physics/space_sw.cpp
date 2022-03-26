@@ -116,7 +116,7 @@ bool PhysicsDirectSpaceStateSW::intersect_ray(const Vector3 &p_from, const Vecto
 	Vector3 res_point, res_normal;
 	int res_shape;
 	const CollisionObjectSW *res_obj;
-	real_t min_d = 1e10;
+	real_t min_d = 0;
 
 	for (int i = 0; i < amount; i++) {
 		if (!_can_collide_with(space->intersection_query_results[i], p_collision_mask, p_collide_with_bodies, p_collide_with_areas)) {

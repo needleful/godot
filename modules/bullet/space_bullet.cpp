@@ -102,6 +102,7 @@ bool BulletPhysicsDirectSpaceState::intersect_ray(const Vector3 &p_from, const V
 	if (btResult.hasHit()) {
 		B_TO_G(btResult.m_hitPointWorld, r_result.position);
 		B_TO_G(btResult.m_hitNormalWorld.normalize(), r_result.normal);
+		
 		CollisionObjectBullet *gObj = static_cast<CollisionObjectBullet *>(btResult.m_collisionObject->getUserPointer());
 		if (gObj) {
 			r_result.shape = btResult.m_shapeId;
