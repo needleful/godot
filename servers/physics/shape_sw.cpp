@@ -977,7 +977,7 @@ bool ConvexPolygonShapeSW::intersect_segment(const Vector3 &p_begin, const Vecto
 	const Vector3 *vertices = mesh.vertices.ptr();
 
 	Vector3 n = p_end - p_begin;
-	real_t min = 1e20;
+	real_t min = 0;
 	bool col = false;
 
 	for (int i = 0; i < fc; i++) {
