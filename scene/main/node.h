@@ -180,6 +180,9 @@ private:
 		bool inside_tree : 1;
 		bool ready_notified : 1; //this is a small hack, so if a node is added during _ready() to the tree, it correctly gets the _ready() notification
 		bool ready_first : 1;
+		bool display_folded;
+		bool editable_instance;
+		bool time_scale_response;
 
 		mutable NodePath *path_cache;
 
@@ -415,6 +418,9 @@ public:
 
 	void set_process_unhandled_key_input(bool p_enable);
 	bool is_processing_unhandled_key_input() const;
+
+	void set_time_scale_response(bool p_enable);
+	bool is_time_scale_response() const;
 
 	int get_position_in_parent() const;
 

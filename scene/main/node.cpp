@@ -30,6 +30,7 @@
 
 #include "node.h"
 
+#include "core/bind/core_bind.h"
 #include "core/core_string_names.h"
 #include "core/io/resource_loader.h"
 #include "core/message_queue.h"
@@ -889,7 +890,11 @@ void Node::reset_physics_interpolation() {
 
 float Node::get_physics_process_delta_time() const {
 	if (data.tree) {
-		return data.tree->get_physics_process_time();
+		float t = data.tree->get_physics_process_time();
+		if (!data.time_scale_response) {
+			t /= _Engine::get_singleton()->get_time_scale();
+		}
+		return t;
 	} else {
 		return 0;
 	}
@@ -897,7 +902,11 @@ float Node::get_physics_process_delta_time() const {
 
 float Node::get_process_delta_time() const {
 	if (data.tree) {
-		return data.tree->get_idle_process_time();
+		float t = data.tree->get_idle_process_time();
+		if (!data.time_scale_response) {
+			t /= _Engine::get_singleton()->get_time_scale();
+		}
+		return t;
 	} else {
 		return 0;
 	}
@@ -2163,6 +2172,14 @@ bool Node::get_scene_instance_load_placeholder() const {
 	return data.use_placeholder;
 }
 
+void Node::set_time_scale_response(bool p_enable) {
+	data.time_scale_response = p_enable;
+}
+
+bool Node::is_time_scale_response() const {
+	return data.time_scale_response;
+}
+
 int Node::get_position_in_parent() const {
 	return data.pos;
 }
@@ -3046,6 +3063,9 @@ void Node::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_process_internal", "enable"), &Node::set_process_internal);
 	ClassDB::bind_method(D_METHOD("is_processing_internal"), &Node::is_processing_internal);
 
+	ClassDB::bind_method(D_METHOD("set_time_scale_response", "enable"), &Node::set_time_scale_response);
+	ClassDB::bind_method(D_METHOD("is_time_scale_response"), &Node::is_time_scale_response);
+
 	ClassDB::bind_method(D_METHOD("set_physics_process_internal", "enable"), &Node::set_physics_process_internal);
 	ClassDB::bind_method(D_METHOD("is_physics_processing_internal"), &Node::is_physics_processing_internal);
 
@@ -3178,6 +3198,7 @@ void Node::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "pause_mode", PROPERTY_HINT_ENUM, "Inherit,Stop,Process"), "set_pause_mode", "get_pause_mode");
 
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "physics_interpolation_mode", PROPERTY_HINT_ENUM, "Inherit,Off,On"), "set_physics_interpolation_mode", "get_physics_interpolation_mode");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "time_scale_response"), "set_time_scale_response", "is_time_scale_response");
 
 #ifdef ENABLE_DEPRECATED
 	//no longer exists, but remains for compatibility (keep previous scenes folded
@@ -3252,6 +3273,7 @@ Node::Node() {
 	data.display_folded = false;
 	data.ready_first = true;
 	data.editable_instance = false;
+	data.time_scale_response = true;
 
 	orphan_node_count++;
 }
