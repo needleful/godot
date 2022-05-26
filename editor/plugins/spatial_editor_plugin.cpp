@@ -1440,9 +1440,9 @@ void SpatialEditorViewport::_sinput(const Ref<InputEvent> &p_event) {
 							if (!se) {
 								continue;
 							}
-
-							undo_redo->add_do_method(sp, "set_global_transform", sp->get_global_gizmo_transform());
-							undo_redo->add_undo_method(sp, "set_global_transform", se->original);
+							
+							undo_redo->add_do_method(sp, "set_transform", sp->get_transform());
+							undo_redo->add_undo_method(sp, "set_transform", se->original_local);
 						}
 						undo_redo->commit_action();
 						_edit.mode = TRANSFORM_NONE;
