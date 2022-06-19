@@ -334,6 +334,18 @@ Node *ResourceImporterScene::_fix_node(Node *p_node, Node *p_root, Map<Ref<Mesh>
 
 		if (p_light_bake_mode != LIGHT_BAKE_DISABLED) {
 			mi->set_flag(GeometryInstance::FLAG_USE_BAKED_LIGHT, true);
+
+			if (m.is_valid()){
+				int surfaces = m->get_surface_count();
+				for (int i = 0; i < surfaces; i++){
+					Array arrays = m->surface_get_arrays(i);
+					PoolVector<Vector2> uv2 = arrays[Mesh::ARRAY_TEX_UV2];
+					if (uv2.size() == 0) {
+						m->lightmap_unwrap();
+						break;
+					}
+				}
+			}
 		}
 	}
 
