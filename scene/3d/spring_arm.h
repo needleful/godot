@@ -38,6 +38,7 @@ class SpringArm : public Spatial {
 
 	Ref<Shape> shape;
 	Set<RID> excluded_objects;
+	Object *collider;
 	float spring_length;
 	Vector3 current_hit_normal;
 	float current_spring_length;
@@ -61,6 +62,7 @@ public:
 	void clear_excluded_objects();
 	float get_hit_length();
 	Vector3 get_hit_normal();
+	Object *get_hit_collider();
 	void set_margin(float p_margin);
 	float get_margin();
 
