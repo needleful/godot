@@ -1159,7 +1159,6 @@ Vector3 KinematicBody::_move_and_slide_internal(const Vector3 &p_linear_velocity
 
 				if (sliding_enabled || !on_floor) {
 					motion = collision.remainder.slide(collision.normal);
-					body_velocity = body_velocity.slide(collision.normal);
 
 					for (int j = 0; j < 3; j++) {
 						if (locked_axis & (1 << j)) {
@@ -1169,6 +1168,7 @@ Vector3 KinematicBody::_move_and_slide_internal(const Vector3 &p_linear_velocity
 				} else {
 					motion = collision.remainder;
 				}
+				body_velocity = body_velocity.slide(collision.normal);
 			}
 
 			sliding_enabled = true;
@@ -1192,6 +1192,8 @@ Vector3 KinematicBody::_move_and_slide_internal(const Vector3 &p_linear_velocity
 					floor_normal = col.normal;
 					on_floor_body = col.collider_rid;
 					floor_velocity = col.collider_vel;
+					body_velocity = body_velocity.slide(col.normal);
+
 					if (p_stop_on_slope) {
 						// move and collide may stray the object a bit because of pre un-stucking,
 						// so only ensure that motion happens on floor direction in this case.
