@@ -44,8 +44,11 @@ int TabContainer::_get_top_margin() const {
 	Ref<StyleBox> tab_bg = get_stylebox("tab_bg");
 	Ref<StyleBox> tab_fg = get_stylebox("tab_fg");
 	Ref<StyleBox> tab_disabled = get_stylebox("tab_disabled");
+	Ref<StyleBox> tabs_panel = get_stylebox("tabs_panel");
 
-	int tab_height = MAX(MAX(tab_bg->get_minimum_size().height, tab_fg->get_minimum_size().height), tab_disabled->get_minimum_size().height);
+	int tab_height = MAX(
+			MAX(tab_bg->get_minimum_size().height, tab_fg->get_minimum_size().height),
+			MAX(tab_disabled->get_minimum_size().height, tabs_panel->get_minimum_size().height));
 
 	// Font height or higher icon wins.
 	Ref<Font> font = get_font("font");
@@ -270,6 +273,7 @@ void TabContainer::_notification(int p_what) {
 			Ref<StyleBox> tab_bg = get_stylebox("tab_bg");
 			Ref<StyleBox> tab_fg = get_stylebox("tab_fg");
 			Ref<StyleBox> tab_disabled = get_stylebox("tab_disabled");
+			Ref<StyleBox> tabs_panel = get_stylebox("tabs_panel");
 			Ref<Texture> increment = get_icon("increment");
 			Ref<Texture> increment_hl = get_icon("increment_highlight");
 			Ref<Texture> decrement = get_icon("decrement");
@@ -346,6 +350,8 @@ void TabContainer::_notification(int p_what) {
 					tabs_ofs_cache = header_x + header_width - all_tabs_width;
 					break;
 			}
+
+			tabs_panel->draw(canvas, Rect2(0, 0, size.width, header_height));
 
 			if (all_tabs_in_front) {
 				// Draw the tab area.
@@ -965,10 +971,13 @@ Size2 TabContainer::get_minimum_size() const {
 	Ref<StyleBox> tab_bg = get_stylebox("tab_bg");
 	Ref<StyleBox> tab_fg = get_stylebox("tab_fg");
 	Ref<StyleBox> tab_disabled = get_stylebox("tab_disabled");
+	Ref<StyleBox> tabs_panel = get_stylebox("tabs_panel");
 	Ref<Font> font = get_font("font");
 
 	if (tabs_visible) {
-		ms.y += MAX(MAX(tab_bg->get_minimum_size().y, tab_fg->get_minimum_size().y), tab_disabled->get_minimum_size().y);
+		ms.y += MAX(
+				MAX(tab_bg->get_minimum_size().y, tab_fg->get_minimum_size().y),
+				MAX(tab_disabled->get_minimum_size().y, tabs_panel->get_minimum_size().y));
 		ms.y += font->get_height();
 	}
 
