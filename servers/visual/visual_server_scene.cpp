@@ -2445,6 +2445,7 @@ void VisualServerScene::_update_instance_lightmap_captures(Instance *p_instance)
 
 bool VisualServerScene::_light_instance_update_shadow(Instance *p_instance, const Transform p_cam_transform, const CameraMatrix &p_cam_projection, bool p_cam_orthogonal, RID p_shadow_atlas, Scenario *p_scenario, uint32_t p_visible_layers) {
 	InstanceLightData *light = static_cast<InstanceLightData *>(p_instance->base_data);
+	uint32_t light_cull_mask = VSG::storage->light_get_cull_mask(p_instance->base);
 
 	Transform light_transform = p_instance->transform;
 	light_transform.orthonormalize(); //scale does not count on lights
@@ -2679,7 +2680,7 @@ bool VisualServerScene::_light_instance_update_shadow(Instance *p_instance, cons
 				for (int j = 0; j < cull_count; j++) {
 					float min, max;
 					Instance *instance = instance_shadow_cull_result[j];
-					if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !static_cast<InstanceGeometryData *>(instance->base_data)->can_cast_shadows || !(p_visible_layers & instance->layer_mask)) {
+					if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !static_cast<InstanceGeometryData *>(instance->base_data)->can_cast_shadows || !(p_visible_layers & instance->layer_mask) || !(instance->layer_mask & light_cull_mask)) {
 						cull_count--;
 						SWAP(instance_shadow_cull_result[j], instance_shadow_cull_result[cull_count]);
 						j--;
@@ -2736,7 +2737,7 @@ bool VisualServerScene::_light_instance_update_shadow(Instance *p_instance, cons
 
 					for (int j = 0; j < cull_count; j++) {
 						Instance *instance = instance_shadow_cull_result[j];
-						if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !static_cast<InstanceGeometryData *>(instance->base_data)->can_cast_shadows || !(p_visible_layers & instance->layer_mask)) {
+						if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !static_cast<InstanceGeometryData *>(instance->base_data)->can_cast_shadows || !(p_visible_layers & instance->layer_mask) || !(instance->layer_mask & light_cull_mask)) {
 							cull_count--;
 							SWAP(instance_shadow_cull_result[j], instance_shadow_cull_result[cull_count]);
 							j--;
@@ -2788,7 +2789,7 @@ bool VisualServerScene::_light_instance_update_shadow(Instance *p_instance, cons
 					Plane near_plane(xform.origin, -xform.basis.get_axis(2));
 					for (int j = 0; j < cull_count; j++) {
 						Instance *instance = instance_shadow_cull_result[j];
-						if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !static_cast<InstanceGeometryData *>(instance->base_data)->can_cast_shadows || !(p_visible_layers & instance->layer_mask)) {
+						if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !static_cast<InstanceGeometryData *>(instance->base_data)->can_cast_shadows || !(p_visible_layers & instance->layer_mask) || !(instance->layer_mask & light_cull_mask)) {
 							cull_count--;
 							SWAP(instance_shadow_cull_result[j], instance_shadow_cull_result[cull_count]);
 							j--;
@@ -2823,7 +2824,7 @@ bool VisualServerScene::_light_instance_update_shadow(Instance *p_instance, cons
 			Plane near_plane(light_transform.origin, -light_transform.basis.get_axis(2));
 			for (int j = 0; j < cull_count; j++) {
 				Instance *instance = instance_shadow_cull_result[j];
-				if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !static_cast<InstanceGeometryData *>(instance->base_data)->can_cast_shadows || !(p_visible_layers & instance->layer_mask)) {
+				if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !static_cast<InstanceGeometryData *>(instance->base_data)->can_cast_shadows || !(p_visible_layers & instance->layer_mask) || !(instance->layer_mask & light_cull_mask)) {
 					cull_count--;
 					SWAP(instance_shadow_cull_result[j], instance_shadow_cull_result[cull_count]);
 					j--;
