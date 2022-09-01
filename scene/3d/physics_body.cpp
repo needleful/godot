@@ -1234,7 +1234,10 @@ void KinematicBody::_set_collision_direction(const Collision &p_collision, const
 		//all is a wall
 		on_wall = true;
 	} else {
-		if (Math::acos(p_collision.normal.dot(p_up_direction)) <= p_floor_max_angle + FLOOR_ANGLE_THRESHOLD) { //floor
+		RID col = p_collision.collider_rid;
+		bool excluded_floor = moving_platform_exclude_mask & PhysicsServer::get_singleton()->body_get_collision_layer(p_collision.collider_rid);
+
+		if (!excluded_floor && Math::acos(p_collision.normal.dot(p_up_direction)) <= p_floor_max_angle + FLOOR_ANGLE_THRESHOLD) { //floor
 			on_floor = true;
 			floor_normal = p_collision.normal;
 			on_floor_body = p_collision.collider_rid;
@@ -1269,6 +1272,14 @@ real_t KinematicBody::get_floor_angle(const Vector3 &p_up_direction) const {
 
 Vector3 KinematicBody::get_floor_velocity() const {
 	return floor_velocity;
+}
+
+void KinematicBody::set_moving_platform_exclude_mask(uint32_t p_mask) {
+	moving_platform_exclude_mask = p_mask;
+}
+
+uint32_t KinematicBody::get_moving_platform_exclude_mask() {
+	return moving_platform_exclude_mask;
 }
 
 void KinematicBody::set_moving_platform_apply_velocity_on_leave(MovingPlatformApplyVelocityOnLeave p_on_leave_apply_velocity) {
@@ -1468,6 +1479,9 @@ void KinematicBody::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_safe_margin", "pixels"), &KinematicBody::set_safe_margin);
 	ClassDB::bind_method(D_METHOD("get_safe_margin"), &KinematicBody::get_safe_margin);
 
+	ClassDB::bind_method(D_METHOD("get_moving_platform_exclude_mask"), &KinematicBody::get_moving_platform_exclude_mask);
+	ClassDB::bind_method(D_METHOD("set_moving_platform_exclude_mask", "mask"), &KinematicBody::set_moving_platform_exclude_mask);
+
 	ClassDB::bind_method(D_METHOD("set_moving_platform_apply_velocity_on_leave", "on_leave_apply_velocity"), &KinematicBody::set_moving_platform_apply_velocity_on_leave);
 	ClassDB::bind_method(D_METHOD("get_moving_platform_apply_velocity_on_leave"), &KinematicBody::get_moving_platform_apply_velocity_on_leave);
 
@@ -1492,6 +1506,7 @@ void KinematicBody::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "motion/sync_to_physics"), "set_sync_to_physics", "is_sync_to_physics_enabled");
 	ADD_GROUP("Moving Platform", "moving_platform");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "moving_platform_apply_velocity_on_leave", PROPERTY_HINT_ENUM, "Always,Upward Only,Never", PROPERTY_USAGE_DEFAULT), "set_moving_platform_apply_velocity_on_leave", "get_moving_platform_apply_velocity_on_leave");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "moving_platform_exclude_mask", PROPERTY_HINT_LAYERS_3D_PHYSICS), "set_moving_platform_exclude_mask", "get_moving_platform_exclude_mask");
 
 	BIND_ENUM_CONSTANT(PLATFORM_VEL_ON_LEAVE_ALWAYS);
 	BIND_ENUM_CONSTANT(PLATFORM_VEL_ON_LEAVE_UPWARD_ONLY);
