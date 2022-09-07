@@ -292,6 +292,14 @@ void VisibilityEnabler::_find_nodes(Node *p_node) {
 	}
 }
 
+void VisibilityEnabler::set_children_only(bool p_children_only) {
+	children_only = p_children_only;
+}
+
+bool VisibilityEnabler::is_children_only() const {
+	return children_only;
+}
+
 void VisibilityEnabler::_notification(int p_what) {
 	if (p_what == NOTIFICATION_ENTER_TREE) {
 		if (Engine::get_singleton()->is_editor_hint()) {
@@ -300,8 +308,10 @@ void VisibilityEnabler::_notification(int p_what) {
 
 		Node *from = this;
 		//find where current scene starts
-		while (from->get_parent() && from->get_filename() == String()) {
-			from = from->get_parent();
+		if (!children_only) {
+			while (from->get_parent() && from->get_filename() == String()) {
+				from = from->get_parent();
+			}
 		}
 
 		_find_nodes(from);
@@ -361,10 +371,13 @@ void VisibilityEnabler::_node_removed(Node *p_node) {
 void VisibilityEnabler::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_enabler", "enabler", "enabled"), &VisibilityEnabler::set_enabler);
 	ClassDB::bind_method(D_METHOD("is_enabler_enabled", "enabler"), &VisibilityEnabler::is_enabler_enabled);
+	ClassDB::bind_method(D_METHOD("set_children_only", "children_only"), &VisibilityEnabler::set_children_only);
+	ClassDB::bind_method(D_METHOD("is_children_only"), &VisibilityEnabler::is_children_only);
 	ClassDB::bind_method(D_METHOD("_node_removed"), &VisibilityEnabler::_node_removed);
 
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "pause_animations"), "set_enabler", "is_enabler_enabled", ENABLER_PAUSE_ANIMATIONS);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "freeze_bodies"), "set_enabler", "is_enabler_enabled", ENABLER_FREEZE_BODIES);
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "children_only"), "set_children_only", "is_children_only");
 
 	BIND_ENUM_CONSTANT(ENABLER_PAUSE_ANIMATIONS);
 	BIND_ENUM_CONSTANT(ENABLER_FREEZE_BODIES);

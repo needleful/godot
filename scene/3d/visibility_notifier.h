@@ -108,6 +108,7 @@ protected:
 	virtual void _screen_exit();
 
 	bool visible;
+	bool children_only;
 
 	void _find_nodes(Node *p_node);
 
@@ -123,6 +124,9 @@ protected:
 public:
 	void set_enabler(Enabler p_enabler, bool p_enable);
 	bool is_enabler_enabled(Enabler p_enabler) const;
+
+	void set_children_only(bool p_children_only);
+	bool is_children_only() const;
 
 	VisibilityEnabler();
 };
