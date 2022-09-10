@@ -30,6 +30,7 @@
 
 #include "physics_body.h"
 
+#include "core/bind/core_bind.h"
 #include "core/core_string_names.h"
 #include "core/engine.h"
 #include "core/list.h"
@@ -1084,6 +1085,9 @@ Vector3 KinematicBody::_move_and_slide_internal(const Vector3 &p_linear_velocity
 			Transform gt = get_global_transform();
 			Vector3 local_position = gt.origin - bs->get_transform().origin;
 			current_floor_velocity = bs->get_velocity_at_local_position(local_position);
+			if (!is_time_scale_response()) {
+				current_floor_velocity *= _Engine::get_singleton()->get_time_scale();
+			}
 		} else {
 			// Body is removed or destroyed, invalidate floor.
 			current_floor_velocity = Vector3();
