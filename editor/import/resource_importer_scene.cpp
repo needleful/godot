@@ -335,9 +335,9 @@ Node *ResourceImporterScene::_fix_node(Node *p_node, Node *p_root, Map<Ref<Mesh>
 		if (p_light_bake_mode != LIGHT_BAKE_DISABLED) {
 			mi->set_flag(GeometryInstance::FLAG_USE_BAKED_LIGHT, true);
 
-			if (m.is_valid()){
+			if (m.is_valid()) {
 				int surfaces = m->get_surface_count();
-				for (int i = 0; i < surfaces; i++){
+				for (int i = 0; i < surfaces; i++) {
 					Array arrays = m->surface_get_arrays(i);
 					PoolVector<Vector2> uv2 = arrays[Mesh::ARRAY_TEX_UV2];
 					if (uv2.size() == 0) {
@@ -432,7 +432,13 @@ Node *ResourceImporterScene::_fix_node(Node *p_node, Node *p_root, Map<Ref<Mesh>
 				}
 
 				if (shapes.size()) {
-					StaticBody *col = memnew(StaticBody);
+					PhysicsBody *col;
+					if (_teststr(name, "kine")) {
+						fixed_name = _fixstr(fixed_name, "kine");
+						col = memnew(KinematicBody);
+					} else {
+						col = memnew(StaticBody);
+					}
 					col->set_transform(mi->get_transform());
 					col->set_name(fixed_name);
 					p_node->replace_by(col);
@@ -473,6 +479,36 @@ Node *ResourceImporterScene::_fix_node(Node *p_node, Node *p_root, Map<Ref<Mesh>
 			colshape->set_owner(sb->get_owner());
 		}
 
+	} else if (_teststr(name, "kine")) {
+		if (isroot) {
+			return p_node;
+		}
+
+		MeshInstance *mi = Object::cast_to<MeshInstance>(p_node);
+		ERR_FAIL_COND_V_MSG(!mi, nullptr, "No mesh for kinematic body");
+		Ref<Mesh> mesh = mi->get_mesh();
+
+		if (mesh.is_valid()) {
+			KinematicBody *kbody = memnew(KinematicBody);
+			// Don't fix until next project
+			//kbody->set_name(_fixstr(name, "kine"));
+			kbody->set_name(name);
+			p_node->replace_by(kbody);
+			kbody->set_transform(mi->get_transform());
+			p_node = kbody;
+			mi->set_name("mesh");
+			mi->set_transform(Transform());
+			kbody->add_child(mi);
+			mi->set_owner(kbody->get_owner());
+
+			Ref<Shape> shape = mesh->create_convex_shape(true, false);
+			CollisionShape *cshape = memnew(CollisionShape);
+			cshape->set_shape(shape);
+			kbody->add_child(cshape);
+
+			cshape->set_name("shape_");
+			cshape->set_owner(kbody->get_owner());
+		}
 	} else if (_teststr(name, "rigid") && Object::cast_to<MeshInstance>(p_node)) {
 		if (isroot) {
 			return p_node;
