@@ -180,9 +180,7 @@ private:
 		bool inside_tree : 1;
 		bool ready_notified : 1; //this is a small hack, so if a node is added during _ready() to the tree, it correctly gets the _ready() notification
 		bool ready_first : 1;
-		bool display_folded;
-		bool editable_instance;
-		bool time_scale_response;
+		bool time_scale_response : 1;
 
 		mutable NodePath *path_cache;
 
