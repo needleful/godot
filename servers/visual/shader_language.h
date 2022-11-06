@@ -322,25 +322,6 @@ public:
 		TAG_ARRAY,
 	};
 
-	struct VaryingFunctionNames {
-		StringName fragment;
-		StringName vertex;
-		StringName light;
-		VaryingFunctionNames() {
-			fragment = "fragment";
-			vertex = "vertex";
-			light = "light";
-		}
-
-		bool uses_stencil() const {
-			bool could_read = test != STENCIL_TEST_ALWAYS;
-			bool could_write = (pass != STENCIL_ACTION_KEEP && test != STENCIL_TEST_NEVER) ||
-					fail_depth != STENCIL_ACTION_KEEP ||
-					fail_stencil != STENCIL_ACTION_KEEP;
-			return could_read || (could_write && write_mask != 0);
-		}
-	};
-
 	struct StencilTest {
 		enum StencilActionType {
 			STENCIL_ACTION_KEEP,
@@ -379,6 +360,25 @@ public:
 				pass(STENCIL_ACTION_KEEP),
 				fail_depth(STENCIL_ACTION_KEEP),
 				fail_stencil(STENCIL_ACTION_KEEP) {
+		}
+
+		bool uses_stencil() const {
+			bool could_read = test != STENCIL_TEST_ALWAYS;
+			bool could_write = (pass != STENCIL_ACTION_KEEP && test != STENCIL_TEST_NEVER) ||
+					fail_depth != STENCIL_ACTION_KEEP ||
+					fail_stencil != STENCIL_ACTION_KEEP;
+			return could_read || (could_write && write_mask != 0);
+		}
+	};
+
+	struct VaryingFunctionNames {
+		StringName fragment;
+		StringName vertex;
+		StringName light;
+		VaryingFunctionNames() {
+			fragment = "fragment";
+			vertex = "vertex";
+			light = "light";
 		}
 	};
 
