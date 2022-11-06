@@ -166,10 +166,10 @@ void RasterizerSceneGLES3::shadow_atlas_set_size(RID p_atlas, int p_size) {
 		glBindFramebuffer(GL_FRAMEBUFFER, shadow_atlas->fbo);
 
 		// Create a texture for storing the depth
-		GLenum atlas_internal_format = storage->config.stencil_buffer_shadows ? GL_DEPTH24_STENCIL8 : GL_DEPTH_COMPONENT24;
-		GLenum atlas_format = storage->config.stencil_buffer_shadows ? GL_DEPTH_STENCIL : GL_DEPTH_COMPONENT;
-		GLenum atlas_type = storage->config.stencil_buffer_shadows ? GL_UNSIGNED_INT_24_8 : GL_UNSIGNED_INT;
-		GLenum atlas_attachment = storage->config.stencil_buffer_shadows ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
+		GLenum atlas_internal_format = GL_DEPTH_COMPONENT24;
+		GLenum atlas_format = GL_DEPTH_COMPONENT;
+		GLenum atlas_type = GL_UNSIGNED_INT;
+		GLenum atlas_attachment = GL_DEPTH_ATTACHMENT;
 
 		glActiveTexture(GL_TEXTURE0);
 		glGenTextures(1, &shadow_atlas->depth);
@@ -4648,7 +4648,7 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, storage->frame.current_rt->buffers.fbo);
 			glReadBuffer(GL_COLOR_ATTACHMENT0);
 			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, storage->frame.current_rt->effects.mip_maps[0].sizes[0].fbo);
-			glBlitFramebuffer(0, 0, storage->frame.current_rt->width, storage->frame.current_rt->height, 0, 0, storage->frame.current_rt->width, storage->frame.current_rt->height, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+			glBlitFramebuffer(0, 0, storage->frame.current_rt->width, storage->frame.current_rt->height, 0, 0, storage->frame.current_rt->width, storage->frame.current_rt->height, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, GL_NEAREST);
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 			_blur_effect_buffer();
@@ -4967,12 +4967,7 @@ void RasterizerSceneGLES3::render_shadow(RID p_light, RID p_shadow_atlas, int p_
 	_fill_render_list(p_cull_result, p_cull_count, true, true);
 
 	//shadow is front to back for performance
-	//if geometry rendered for shadows wants to use the stencil buffer, we still need priority.
-	if (storage->config.stencil_buffer_shadows) {
-		render_list.sort_by_depth_and_priority(false);
-	} else {
-		render_list.sort_by_depth(false);
-	}
+	render_list.sort_by_depth(false);
 
 	glDisable(GL_BLEND);
 	glDisable(GL_DITHER);
@@ -5054,7 +5049,7 @@ void RasterizerSceneGLES3::render_shadow(RID p_light, RID p_shadow_atlas, int p_
 			glScissor(local_x, local_y, local_width, local_height);
 			glEnable(GL_SCISSOR_TEST);
 			glClearDepth(1.0f);
-			glClear(GL_DEPTH_BUFFER_BIT);
+			glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 			glDisable(GL_SCISSOR_TEST);
 			//glDisable(GL_DEPTH_TEST);
 			glDisable(GL_BLEND);
@@ -5223,10 +5218,10 @@ void RasterizerSceneGLES3::initialize() {
 
 	glActiveTexture(GL_TEXTURE0);
 
-	GLenum shadow_depth_internal_format = storage->config.stencil_buffer_shadows ? GL_DEPTH24_STENCIL8 : GL_DEPTH_COMPONENT24;
-	GLenum shadow_depth_format = storage->config.stencil_buffer_shadows ? GL_DEPTH_STENCIL : GL_DEPTH_COMPONENT;
-	GLenum shadow_depth_type = storage->config.stencil_buffer_shadows ? GL_UNSIGNED_INT_24_8 : GL_UNSIGNED_INT;
-	GLenum shadow_depth_attachment = storage->config.stencil_buffer_shadows ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
+	GLenum shadow_depth_internal_format = GL_DEPTH_COMPONENT24;
+	GLenum shadow_depth_format = GL_DEPTH_COMPONENT;
+	GLenum shadow_depth_type = GL_UNSIGNED_INT;
+	GLenum shadow_depth_attachment = GL_DEPTH_ATTACHMENT;
 
 	while (cube_size >= 32) {
 		ShadowCubeMap cube;

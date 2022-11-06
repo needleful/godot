@@ -116,8 +116,6 @@ public:
 		bool parallel_shader_compile_supported;
 		bool async_compilation_enabled;
 		bool shader_cache_enabled;
-		bool stencil_buffer_enable;
-		bool stencil_buffer_shadows;
 	} config;
 
 	mutable struct Shaders {
