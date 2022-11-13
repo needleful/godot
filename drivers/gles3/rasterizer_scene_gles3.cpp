@@ -187,7 +187,7 @@ void RasterizerSceneGLES3::shadow_atlas_set_size(RID p_atlas, int p_size) {
 		glViewport(0, 0, shadow_atlas->size, shadow_atlas->size);
 		glClearDepth(0.0f);
 		glClearStencil(0);
-		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		glClear(GL_DEPTH_BUFFER_BIT);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
@@ -2446,7 +2446,6 @@ void RasterizerSceneGLES3::_add_geometry_with_material(RasterizerStorageGLES3::G
 				!p_material->shader->spatial.uses_discard &&
 				p_material->shader->spatial.depth_draw_mode != RasterizerStorageGLES3::Shader::Spatial::DEPTH_DRAW_ALPHA_PREPASS &&
 				!p_material->shader->uses_stencil) {
-			//shader does not use discard, stencil, and does not write a vertex position, use generic material
 			if (p_instance->cast_shadows == VS::SHADOW_CASTING_SETTING_DOUBLE_SIDED) {
 				p_material = storage->material_owner.getptr(!p_shadow_pass && p_material->shader->spatial.uses_world_coordinates ? default_worldcoord_material_twosided : default_material_twosided);
 				no_cull = true;
@@ -2515,8 +2514,10 @@ void RasterizerSceneGLES3::_add_geometry_with_material(RasterizerStorageGLES3::G
 		e->sort_key |= uint64_t(e->instance->depth_layer) << RenderList::SORT_KEY_OPAQUE_DEPTH_LAYER_SHIFT;
 		e->sort_key |= uint64_t(e->material->index) << RenderList::SORT_KEY_MATERIAL_INDEX_SHIFT;
 
-		//Want to be able to control render order for use with stencils
-		e->sort_key |= uint64_t(p_material->render_priority + 128) << RenderList::SORT_KEY_PRIORITY_SHIFT;
+		if (p_material->shader->uses_stencil) {
+			//Want to be able to control render order for use with stencils
+			e->sort_key |= uint64_t(p_material->render_priority + 128) << RenderList::SORT_KEY_PRIORITY_SHIFT;
+		}
 	}
 
 	/*
@@ -4322,8 +4323,6 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 		_render_list(render_list.elements, render_list.element_count, p_cam_transform, p_cam_projection, nullptr, false, false, true, false, false);
 		state.scene_shader.set_conditional(SceneShaderGLES3::RENDER_DEPTH, false);
 
-		glClearStencil(0);
-		glClear(GL_STENCIL_BUFFER_BIT);
 		glColorMask(1, 1, 1, 1);
 
 		if (state.used_contact_shadows) {

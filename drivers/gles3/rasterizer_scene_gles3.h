@@ -758,27 +758,6 @@ public:
 			}
 		}
 
-		struct SortByDepthAndPriority {
-			_FORCE_INLINE_ bool operator()(const Element *A, const Element *B) const {
-				uint32_t layer_A = uint32_t(A->sort_key >> SORT_KEY_PRIORITY_SHIFT);
-				uint32_t layer_B = uint32_t(B->sort_key >> SORT_KEY_PRIORITY_SHIFT);
-				if (layer_A == layer_B) {
-					return A->instance->depth < B->instance->depth;
-				} else {
-					return layer_A < layer_B;
-				}
-			}
-		};
-
-		void sort_by_depth_and_priority(bool p_alpha) { //used for shadows
-			SortArray<Element *, SortByDepthAndPriority> sorter;
-			if (p_alpha) {
-				sorter.sort(&elements[max_elements - alpha_element_count], alpha_element_count);
-			} else {
-				sorter.sort(elements, element_count);
-			}
-		}
-
 		struct SortByReverseDepthAndPriority {
 			_FORCE_INLINE_ bool operator()(const Element *A, const Element *B) const {
 				uint32_t layer_A = uint32_t(A->sort_key >> SORT_KEY_PRIORITY_SHIFT);

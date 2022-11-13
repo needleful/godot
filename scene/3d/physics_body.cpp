@@ -1043,6 +1043,7 @@ bool KinematicBody::move_and_collide(const Vector3 &p_motion, bool p_infinite_in
 		r_collision.remainder = result.remainder;
 		r_collision.local_shape = result.collision_local_shape;
 		r_collision.collision_safe_fraction = result.collision_safe_fraction;
+		r_collision.collision_depth = result.collision_depth;
 	}
 
 	for (int i = 0; i < 3; i++) {
@@ -1555,6 +1556,9 @@ Vector3 KinematicCollision::get_travel() const {
 Vector3 KinematicCollision::get_remainder() const {
 	return collision.remainder;
 }
+real_t KinematicCollision::get_collision_depth() const {
+	return collision.collision_depth;
+}
 
 real_t KinematicCollision::get_angle(const Vector3 &p_up_direction) const {
 	ERR_FAIL_COND_V(p_up_direction == Vector3(), 0);
@@ -1618,6 +1622,7 @@ void KinematicCollision::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_collider_shape_index"), &KinematicCollision::get_collider_shape_index);
 	ClassDB::bind_method(D_METHOD("get_collider_velocity"), &KinematicCollision::get_collider_velocity);
 	ClassDB::bind_method(D_METHOD("get_collider_metadata"), &KinematicCollision::get_collider_metadata);
+	ClassDB::bind_method(D_METHOD("get_collision_depth"), &KinematicCollision::get_collision_depth);
 
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "position"), "", "get_position");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "normal"), "", "get_normal");
@@ -1631,6 +1636,7 @@ void KinematicCollision::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "collider_shape_index"), "", "get_collider_shape_index");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "collider_velocity"), "", "get_collider_velocity");
 	ADD_PROPERTY(PropertyInfo(Variant::NIL, "collider_metadata", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NIL_IS_VARIANT), "", "get_collider_metadata");
+	ADD_PROPERTY(PropertyInfo(Variant::REAL, "collision_depth"), "", "get_collision_depth");
 }
 
 KinematicCollision::KinematicCollision() {
