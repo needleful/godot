@@ -117,14 +117,12 @@ void MultiMeshSystem::_add_component(MultiMeshComponent *p_component) {
 
 	components[mesh_id].push_back(p_component);
 	p_component->index = components[mesh_id].size() - 1;
+
 	if (meshes[mesh_id]->is_inside_tree()) {
 		Ref<MultiMesh> mesh = meshes[mesh_id]->get_multimesh();
 		int vis = mesh->get_visible_instance_count();
-		if (vis < mesh->get_instance_count()) {
-			mesh->set_visible_instance_count(vis + 1);
-		} else {
-			mesh->set_instance_count(components[mesh_id].size());
-		}
+		mesh->set_visible_instance_count(vis + 1);
+		mesh->set_instance_count(components[mesh_id].size());
 		mesh->set_instance_transform(p_component->index,
 				get_global_transform().affine_inverse() * p_component->get_global_transform());
 	}
@@ -165,9 +163,6 @@ void MultiMeshSystem::_remove_component(MultiMeshComponent *p_component) {
 
 	comps.resize(end);
 	multimesh->set_visible_instance_count(comps.size());
-	//if(end*2 < multimesh->get_instance_count()) {
-	//	multimesh->set_instance_count(comps.size());
-	//}
 
 	p_component->index = -1;
 }
