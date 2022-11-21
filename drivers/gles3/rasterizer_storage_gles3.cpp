@@ -2295,6 +2295,9 @@ void RasterizerStorageGLES3::_update_shader(Shader *p_shader) const {
 		case VS::SHADER_PARTICLES: {
 			actions = &shaders.actions_particles;
 			actions->uniforms = &p_shader->uniforms;
+			actions->back_stencil = nullptr;
+			actions->front_stencil = nullptr;
+			actions->uses_stencil = nullptr;
 		} break;
 		case VS::SHADER_MAX:
 			break; // Can't happen, but silences warning
