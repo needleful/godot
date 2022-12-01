@@ -348,6 +348,9 @@ float AnimationNodeStateMachinePlayback::process(AnimationNodeStateMachine *p_st
 
 		len_current = p_state_machine->blend_node(current, p_state_machine->states[current].node, 0, true, 1.0, AnimationNode::FILTER_IGNORE, false);
 		pos_current = 0;
+		if (fading_time == 0.0 || fading_from == StringName()) {
+			return len_current;
+		}
 	}
 
 	if (!p_state_machine->states.has(current)) {
