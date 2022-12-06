@@ -909,7 +909,6 @@ void AnimationTree::_process_graph(float p_delta) {
 							Vector3 scale;
 
 							Error err = a->transform_track_interpolate(i, time, &loc, &rot, &scale);
-							//ERR_CONTINUE(err!=OK); //used for testing, should be removed
 
 							if (t->process_pass != process_pass) {
 								t->process_pass = process_pass;

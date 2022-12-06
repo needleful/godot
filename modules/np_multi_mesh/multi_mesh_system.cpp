@@ -112,7 +112,6 @@ void MultiMeshSystem::_add_component(MultiMeshComponent *p_component) {
 
 		meshes[mesh_id] = mmi;
 		components[mesh_id] = Vector<MultiMeshComponent *>();
-		// TODO: add logic for adding once the node is ready.
 	}
 
 	components[mesh_id].push_back(p_component);
@@ -120,11 +119,14 @@ void MultiMeshSystem::_add_component(MultiMeshComponent *p_component) {
 
 	if (meshes[mesh_id]->is_inside_tree()) {
 		Ref<MultiMesh> mesh = meshes[mesh_id]->get_multimesh();
-		int vis = mesh->get_visible_instance_count();
-		mesh->set_visible_instance_count(vis + 1);
-		mesh->set_instance_count(components[mesh_id].size());
+		int vis = components[mesh_id].size();
+		if (vis > mesh->get_instance_count()) {
+			mesh->set_instance_count(vis * 1.5);
+		}
+		mesh->set_visible_instance_count(vis);
 		mesh->set_instance_transform(p_component->index,
 				get_global_transform().affine_inverse() * p_component->get_global_transform());
+		p_component->set_notify_transform(true);
 	}
 }
 
@@ -186,6 +188,7 @@ void MultiMeshSystem::_notification(int p_what) {
 			m->set_name("__mmi_" + m->get_multimesh()->get_mesh()->get_name());
 			add_child(m);
 		}
+		ready = true;
 	}
 }
 

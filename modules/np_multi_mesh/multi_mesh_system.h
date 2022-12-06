@@ -39,6 +39,7 @@ protected:
 	// The uint32_t here is the internal id of the mesh resource or something.
 	HashMap<uint32_t, MultiMeshInstance *> meshes;
 	HashMap<uint32_t, Vector<MultiMeshComponent *>> components;
+	bool ready;
 
 	void _add_component(MultiMeshComponent *p_component);
 	void _update_component_transform(MultiMeshComponent *p_component);
