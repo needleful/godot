@@ -4223,6 +4223,7 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 	bool use_shadows = shadow_atlas && shadow_atlas->size;
 
 	state.scene_shader.set_conditional(SceneShaderGLES3::USE_SHADOW, use_shadows);
+	state.scene_shader.set_conditional(SceneShaderGLES3::SHADOW_DEPTH_BIAS, false);
 
 	if (use_shadows) {
 		glActiveTexture(GL_TEXTURE0 + storage->config.max_texture_image_units - 6);
@@ -5006,6 +5007,7 @@ void RasterizerSceneGLES3::render_shadow(RID p_light, RID p_shadow_atlas, int p_
 	_setup_environment(nullptr, light_projection, light_transform);
 
 	state.scene_shader.set_conditional(SceneShaderGLES3::RENDER_DEPTH, true);
+	state.scene_shader.set_conditional(SceneShaderGLES3::SHADOW_DEPTH_BIAS, true);
 
 	if (light->reverse_cull) {
 		flip_facing = !flip_facing;

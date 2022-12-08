@@ -579,7 +579,9 @@ VERTEX_SHADER_CODE
 #else //ubershader-runtime
 
 	float z_ofs = z_offset;
+#ifndef SHADOW_DEPTH_BIAS
 	z_ofs += (1.0 - abs(normal_interp.z)) * z_slope_scale;
+#endif // SHADOW_DEPTH_BIAS
 	vertex_interp.z -= z_ofs;
 
 #endif //RENDER_DEPTH_DUAL_PARABOLOID //ubershader-runtime
@@ -2301,7 +2303,11 @@ FRAGMENT_SHADER_CODE
 #endif // USE_SHADOW_TO_OPACITY
 
 #ifdef RENDER_DEPTH //ubershader-runtime
-//nothing happens, so a tree-ssa optimizer will result in no fragment shader :)
+#ifdef SHADOW_DEPTH_BIAS // something happens!
+	vec2 s_norm = vec2(dFdx(gl_FragCoord.z), dFdy(gl_FragCoord.z));
+	float s_depth_change = sqrt(s_norm.x * s_norm.x + s_norm.y * s_norm.y);
+	gl_FragDepth = gl_FragCoord.z + max(z_slope_scale * s_depth_change, 0.0);
+#endif // SHADOW_DEPTH_BIAS
 #else //ubershader-runtime
 
 	specular_light *= reflection_multiplier;
