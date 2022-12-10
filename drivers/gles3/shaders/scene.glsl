@@ -2127,7 +2127,9 @@ FRAGMENT_SHADER_CODE
 #if !defined(SHADOWS_DISABLED)
 
 	float value;
+	// For normal-offset shadow mapping if I can eventually figure it out
 	vec3 v_normal = normalize(cross(dFdx(vertex), dFdy(vertex)));
+	v_normal *= clamp(1.0 - 20.0 * abs(dot(v_normal, light_direction_attenuation.xyz)), 0.0, 1.0);
 #ifdef LIGHT_USE_PSSM4 //ubershader-runtime
 	value = shadow_split_offsets.w;
 #else //ubershader-runtime
@@ -2151,52 +2153,40 @@ FRAGMENT_SHADER_CODE
 
 		if (depth_z < shadow_split_offsets.y) {
 			if (depth_z < shadow_split_offsets.x) {
-				highp vec4 splane = (shadow_matrix1 * vec4(vertex, 1.0));
-				highp vec4 snorm = (shadow_matrix1 * vec4(v_normal, 0.0));
-				snorm.z = 0;
-				snorm = snorm * snorm;
-				pssm_coord = (splane.xyz + snorm.xyz) / splane.w;
+				highp vec4 splane = (shadow_matrix1 * vec4(vertex + v_normal, 1.0));
+				pssm_coord = splane.xyz / splane.w;
 
 #ifdef LIGHT_USE_PSSM_BLEND //ubershader-runtime
 
-				splane = (shadow_matrix2 * vec4(vertex, 1.0));
+				splane = (shadow_matrix2 * vec4(vertex + v_normal, 1.0));
 				pssm_coord2 = splane.xyz / splane.w;
 				pssm_blend = smoothstep(0.0, shadow_split_offsets.x, depth_z);
 #endif //ubershader-runtime
 
 			} else {
-				highp vec4 splane = (shadow_matrix2 * vec4(vertex, 1.0));
-				highp vec4 snorm = (shadow_matrix2 * vec4(v_normal, 0.0));
-				snorm.z = 0;
-				snorm = snorm * snorm;
-				pssm_coord = (splane.xyz + snorm.xyz) / splane.w;
+				highp vec4 splane = (shadow_matrix2 * vec4(vertex + v_normal, 1.0));
+				pssm_coord = splane.xyz / splane.w;
 
 #ifdef LIGHT_USE_PSSM_BLEND //ubershader-runtime
-				splane = (shadow_matrix3 * vec4(vertex, 1.0));
+				splane = (shadow_matrix3 * vec4(vertex + v_normal, 1.0));
 				pssm_coord2 = splane.xyz / splane.w;
 				pssm_blend = smoothstep(shadow_split_offsets.x, shadow_split_offsets.y, depth_z);
 #endif //ubershader-runtime
 			}
 		} else {
 			if (depth_z < shadow_split_offsets.z) {
-				highp vec4 splane = (shadow_matrix3 * vec4(vertex, 1.0));
-				highp vec4 snorm = (shadow_matrix3 * vec4(v_normal, 0.0));
-				snorm.z = 0;
-				snorm = snorm * snorm;
-				pssm_coord = (splane.xyz + snorm.xyz) / splane.w;
+				highp vec4 splane = (shadow_matrix3 * vec4(vertex + v_normal, 1.0));
+				pssm_coord = splane.xyz / splane.w;
 
 #ifdef LIGHT_USE_PSSM_BLEND //ubershader-runtime
-				splane = (shadow_matrix4 * vec4(vertex, 1.0));
+				splane = (shadow_matrix4 * vec4(vertex + v_normal, 1.0));
 				pssm_coord2 = splane.xyz / splane.w;
 				pssm_blend = smoothstep(shadow_split_offsets.y, shadow_split_offsets.z, depth_z);
 #endif //ubershader-runtime
 
 			} else {
-				highp vec4 splane = (shadow_matrix4 * vec4(vertex, 1.0));
-				highp vec4 snorm = (shadow_matrix4 * vec4(v_normal, 0.0));
-				snorm.z = 0;
-				snorm = snorm * snorm;
-				pssm_coord = (splane.xyz + snorm.xyz) / splane.w;
+				highp vec4 splane = (shadow_matrix4 * vec4(vertex + v_normal, 1.0));
+				pssm_coord = splane.xyz / splane.w;
 				pssm_fade = smoothstep(shadow_split_offsets.z, shadow_split_offsets.w, depth_z);
 
 #ifdef LIGHT_USE_PSSM_BLEND //ubershader-runtime
@@ -2211,25 +2201,19 @@ FRAGMENT_SHADER_CODE
 #ifdef LIGHT_USE_PSSM2 //ubershader-runtime
 
 		if (depth_z < shadow_split_offsets.x) {
-			highp vec4 splane = (shadow_matrix1 * vec4(vertex, 1.0));
-			highp vec4 snorm = 0.02 * (shadow_matrix1 * vec4(v_normal, 0.0));
-			snorm.z = 0;
-			snorm = snorm * snorm;
-			pssm_coord = (splane.xyz + snorm.xyz) / splane.w;
+			highp vec4 splane = (shadow_matrix1 * vec4(vertex + v_normal, 1.0));
+			pssm_coord = splane.xyz / splane.w;
 
 #ifdef LIGHT_USE_PSSM_BLEND //ubershader-runtime
 
-			splane = (shadow_matrix2 * vec4(vertex, 1.0));
+			splane = (shadow_matrix2 * vec4(vertex + v_normal, 1.0));
 			pssm_coord2 = splane.xyz / splane.w;
 			pssm_blend = smoothstep(0.0, shadow_split_offsets.x, depth_z);
 #endif //ubershader-runtime
 
 		} else {
-			highp vec4 splane = (shadow_matrix2 * vec4(vertex, 1.0));
-			highp vec4 snorm = 0.2 * (shadow_matrix2 * vec4(v_normal, 0.0));
-			snorm.z = 0;
-			snorm = snorm * snorm;
-			pssm_coord = (splane.xyz + snorm.xyz) / splane.w;
+			highp vec4 splane = (shadow_matrix2 * vec4(vertex + v_normal, 1.0));
+			pssm_coord = splane.xyz / splane.w;
 			pssm_fade = smoothstep(shadow_split_offsets.x, shadow_split_offsets.y, depth_z);
 #ifdef LIGHT_USE_PSSM_BLEND //ubershader-runtime
 			use_blend = false;
@@ -2243,10 +2227,7 @@ FRAGMENT_SHADER_CODE
 #ifndef LIGHT_USE_PSSM4 //ubershader-runtime
 		{ //regular orthogonal
 			highp vec4 splane = (shadow_matrix1 * vec4(vertex, 1.0));
-			highp vec4 snorm = 0.02 * (shadow_matrix1 * vec4(v_normal, 0.0));
-			snorm.z = 0;
-			snorm = snorm * snorm;
-			pssm_coord = (splane.xyz + snorm.xyz) / splane.w;
+			pssm_coord = splane.xyz / splane.w;
 		}
 #endif //ubershader-runtime
 #endif //ubershader-runtime
