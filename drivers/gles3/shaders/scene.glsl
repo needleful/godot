@@ -1839,6 +1839,8 @@ void main() {
 	float clearcoat_gloss = 0.0;
 	float anisotropy = 0.0;
 	vec2 anisotropy_flow = vec2(1.0, 0.0);
+	float shadow_normal_offset = 0.0;
+	float shadow_normal_parallel = 20.0;
 
 #if defined(ENABLE_AO)
 	float ao = 1.0;
@@ -2129,7 +2131,7 @@ FRAGMENT_SHADER_CODE
 	float value;
 	// For normal-offset shadow mapping if I can eventually figure it out
 	vec3 v_normal = normalize(cross(dFdx(vertex), dFdy(vertex)));
-	v_normal *= clamp(1.0 - 20.0 * abs(dot(v_normal, light_direction_attenuation.xyz)), 0.0, 1.0);
+	v_normal *= shadow_normal_offset * clamp(1.0 - shadow_normal_parallel * abs(dot(v_normal, light_direction_attenuation.xyz)), 0.0, 1.0);
 #ifdef LIGHT_USE_PSSM4 //ubershader-runtime
 	value = shadow_split_offsets.w;
 #else //ubershader-runtime
@@ -2164,7 +2166,7 @@ FRAGMENT_SHADER_CODE
 #endif //ubershader-runtime
 
 			} else {
-				highp vec4 splane = (shadow_matrix2 * vec4(vertex + v_normal, 1.0));
+				highp vec4 splane = (shadow_matrix2 * vec4(vertex + 2.0 * v_normal, 1.0));
 				pssm_coord = splane.xyz / splane.w;
 
 #ifdef LIGHT_USE_PSSM_BLEND //ubershader-runtime
@@ -2175,7 +2177,7 @@ FRAGMENT_SHADER_CODE
 			}
 		} else {
 			if (depth_z < shadow_split_offsets.z) {
-				highp vec4 splane = (shadow_matrix3 * vec4(vertex + v_normal, 1.0));
+				highp vec4 splane = (shadow_matrix3 * vec4(vertex + 4.0 * v_normal, 1.0));
 				pssm_coord = splane.xyz / splane.w;
 
 #ifdef LIGHT_USE_PSSM_BLEND //ubershader-runtime
@@ -2185,7 +2187,7 @@ FRAGMENT_SHADER_CODE
 #endif //ubershader-runtime
 
 			} else {
-				highp vec4 splane = (shadow_matrix4 * vec4(vertex + v_normal, 1.0));
+				highp vec4 splane = (shadow_matrix4 * vec4(vertex + 8.0 * v_normal, 1.0));
 				pssm_coord = splane.xyz / splane.w;
 				pssm_fade = smoothstep(shadow_split_offsets.z, shadow_split_offsets.w, depth_z);
 

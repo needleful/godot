@@ -1232,6 +1232,8 @@ ShaderCompilerGLES3::ShaderCompilerGLES3() {
 	actions[VS::SHADER_SPATIAL].renames["ATTENUATION"] = "attenuation";
 	actions[VS::SHADER_SPATIAL].renames["DIFFUSE_LIGHT"] = "diffuse_light";
 	actions[VS::SHADER_SPATIAL].renames["AMBIENT_LIGHT"] = "ambient_light";
+	actions[VS::SHADER_SPATIAL].renames["SHADOW_NORMAL_OFFSET"] = "shadow_normal_offset";
+	actions[VS::SHADER_SPATIAL].renames["SHADOW_NORMAL_PARALLEL"] = "shadow_normal_parallel";
 	actions[VS::SHADER_SPATIAL].renames["SPECULAR_LIGHT"] = "specular_light";
 
 	actions[VS::SHADER_SPATIAL].usage_defines["TANGENT"] = "#define ENABLE_TANGENT_INTERP\n";

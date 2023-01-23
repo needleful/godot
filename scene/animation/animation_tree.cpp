@@ -914,7 +914,7 @@ void AnimationTree::_process_graph(float p_delta) {
 								t->process_pass = process_pass;
 								t->loc = Vector3();
 								t->rot = Quat();
-								t->scale = Vector3();
+								t->scale = scale;
 							}
 
 							if (err != OK) {
@@ -923,7 +923,7 @@ void AnimationTree::_process_graph(float p_delta) {
 
 							t->loc += loc * blend;
 							t->rot = (t->rot * Quat().slerp(rot, blend).normalized());
-							t->scale += scale * blend;
+							t->scale = t->scale.linear_interpolate(scale, blend);
 						}
 
 					} break;

@@ -139,6 +139,8 @@ ShaderTypes::ShaderTypes() {
 	shader_modes[VS::SHADER_SPATIAL].functions["fragment"].built_ins["NODE_POSITION_VIEW"] = ShaderLanguage::TYPE_VEC3;
 	shader_modes[VS::SHADER_SPATIAL].functions["fragment"].can_discard = true;
 	shader_modes[VS::SHADER_SPATIAL].functions["fragment"].main_function = true;
+	shader_modes[VS::SHADER_SPATIAL].functions["fragment"].built_ins["SHADOW_NORMAL_OFFSET"] = ShaderLanguage::TYPE_FLOAT;
+	shader_modes[VS::SHADER_SPATIAL].functions["fragment"].built_ins["SHADOW_NORMAL_PARALLEL"] = ShaderLanguage::TYPE_FLOAT;
 
 	shader_modes[VS::SHADER_SPATIAL].functions["light"].built_ins["WORLD_MATRIX"] = constt(ShaderLanguage::TYPE_MAT4);
 	shader_modes[VS::SHADER_SPATIAL].functions["light"].built_ins["INV_CAMERA_MATRIX"] = constt(ShaderLanguage::TYPE_MAT4);
