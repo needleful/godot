@@ -479,7 +479,7 @@ Node *ResourceImporterScene::_fix_node(Node *p_node, Node *p_root, Map<Ref<Mesh>
 			colshape->set_owner(sb->get_owner());
 		}
 
-	} else if (_teststr(name, "kine")) {
+	} else if (_teststr(name, "kine") || _teststr(name, "convstatic")) {
 		if (isroot) {
 			return p_node;
 		}
@@ -489,25 +489,29 @@ Node *ResourceImporterScene::_fix_node(Node *p_node, Node *p_root, Map<Ref<Mesh>
 		Ref<Mesh> mesh = mi->get_mesh();
 
 		if (mesh.is_valid()) {
-			KinematicBody *kbody = memnew(KinematicBody);
-			// Don't fix until next project
-			//kbody->set_name(_fixstr(name, "kine"));
-			kbody->set_name(name);
-			p_node->replace_by(kbody);
-			kbody->set_transform(mi->get_transform());
-			p_node = kbody;
+			Spatial *result;
+			if (_teststr(name, "kine")) {
+				result = memnew(KinematicBody);
+				result->set_name(name);
+			} else {
+				result = memnew(StaticBody);
+				result->set_name(_fixstr(name, "convstatic"));
+			}
+			p_node->replace_by(result);
+			result->set_transform(mi->get_transform());
+			p_node = result;
 			mi->set_name("mesh");
 			mi->set_transform(Transform());
-			kbody->add_child(mi);
-			mi->set_owner(kbody->get_owner());
+			result->add_child(mi);
+			mi->set_owner(result->get_owner());
 
-			Ref<Shape> shape = mesh->create_convex_shape(true, false);
+			Ref<Shape> shape = mesh->create_convex_shape(false, false);
 			CollisionShape *cshape = memnew(CollisionShape);
 			cshape->set_shape(shape);
-			kbody->add_child(cshape);
+			result->add_child(cshape);
 
 			cshape->set_name("shape_");
-			cshape->set_owner(kbody->get_owner());
+			cshape->set_owner(result->get_owner());
 		}
 	} else if (_teststr(name, "rigid") && Object::cast_to<MeshInstance>(p_node)) {
 		if (isroot) {
