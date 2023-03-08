@@ -177,15 +177,6 @@ NinePatchRect::AxisStretchMode NinePatchRect::get_v_axis_stretch_mode() const {
 String NinePatchRect::get_configuration_warning() const {
 	String warning = Control::get_configuration_warning();
 
-	if (String(GLOBAL_GET("rendering/quality/driver/driver_name")) == "GLES2") {
-		if (axis_v > AXIS_STRETCH_MODE_STRETCH || axis_h > AXIS_STRETCH_MODE_STRETCH) {
-			if (!warning.empty()) {
-				warning += "\n\n";
-			}
-			warning += TTR("The Tile and Tile Fit options for Axis Stretch properties are only effective when using the GLES3 rendering backend.\nThe GLES2 backend is currently in use, so these modes will act like Stretch instead.");
-		}
-	}
-
 	return warning;
 }
 

@@ -840,7 +840,7 @@ BakedLightmap::BakeError BakedLightmap::bake(Node *p_from_node, String p_data_sa
 	bsud.from_percent = 0.1;
 	bsud.to_percent = 0.9;
 
-	bool gen_atlas = OS::get_singleton()->get_current_video_driver() == OS::VIDEO_DRIVER_GLES2 ? false : generate_atlas;
+	bool gen_atlas = generate_atlas;
 
 	Lightmapper::BakeError bake_err = lightmapper->bake(Lightmapper::BakeQuality(bake_quality), use_denoiser, bounces, bounce_indirect_energy, bias, gen_atlas, max_atlas_size, environment_image, environment_xform, _lightmap_bake_step_function, &bsud, bake_substep_function);
 
@@ -1174,8 +1174,6 @@ void BakedLightmap::_notification(int p_what) {
 void BakedLightmap::_assign_lightmaps() {
 	ERR_FAIL_COND(!light_data.is_valid());
 
-	bool atlassed_on_gles2 = false;
-
 	for (int i = 0; i < light_data->get_user_count(); i++) {
 		Ref<Resource> lightmap = light_data->get_user_lightmap(i);
 		ERR_CONTINUE(!lightmap.is_valid());
@@ -1187,20 +1185,14 @@ void BakedLightmap::_assign_lightmaps() {
 			RID instance = node->call("get_bake_mesh_instance", instance_idx);
 			if (instance.is_valid()) {
 				int slice = light_data->get_user_lightmap_slice(i);
-				atlassed_on_gles2 = atlassed_on_gles2 || (slice != -1 && OS::get_singleton()->get_current_video_driver() == OS::VIDEO_DRIVER_GLES2);
 				VS::get_singleton()->instance_set_use_lightmap(instance, get_instance(), lightmap->get_rid(), slice, light_data->get_user_lightmap_uv_rect(i));
 			}
 		} else {
 			VisualInstance *vi = Object::cast_to<VisualInstance>(node);
 			ERR_CONTINUE(!vi);
 			int slice = light_data->get_user_lightmap_slice(i);
-			atlassed_on_gles2 = atlassed_on_gles2 || (slice != -1 && OS::get_singleton()->get_current_video_driver() == OS::VIDEO_DRIVER_GLES2);
 			VS::get_singleton()->instance_set_use_lightmap(vi->get_instance(), get_instance(), lightmap->get_rid(), slice, light_data->get_user_lightmap_uv_rect(i));
 		}
-	}
-
-	if (atlassed_on_gles2) {
-		ERR_PRINT("GLES2 doesn't support layered textures, so lightmap atlassing is not supported. Please re-bake the lightmap or switch to GLES3.");
 	}
 }
 
@@ -1472,10 +1464,6 @@ void BakedLightmap::_validate_property(PropertyInfo &property) const {
 
 	if (property.name == "environment_custom_energy" && environment_mode != ENVIRONMENT_MODE_CUSTOM_COLOR && environment_mode != ENVIRONMENT_MODE_CUSTOM_SKY) {
 		property.usage = 0;
-	}
-
-	if (property.name.begins_with("atlas") && OS::get_singleton()->get_current_video_driver() == OS::VIDEO_DRIVER_GLES2) {
-		property.usage = PROPERTY_USAGE_NOEDITOR;
 	}
 
 	if (property.name.begins_with("capture") && property.name != "capture_enabled" && !capture_enabled) {

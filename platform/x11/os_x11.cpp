@@ -33,7 +33,6 @@
 #include "core/os/dir_access.h"
 #include "core/print_string.h"
 #include "detect_prime.h"
-#include "drivers/gles2/rasterizer_gles2.h"
 #include "drivers/gles3/rasterizer_gles3.h"
 #include "key_mapping_x11.h"
 #include "main/main.h"
@@ -343,10 +342,6 @@ Error OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 
 	ContextGL_X11::ContextType opengl_api_type = ContextGL_X11::GLES_3_0_COMPATIBLE;
 
-	if (p_video_driver == VIDEO_DRIVER_GLES2) {
-		opengl_api_type = ContextGL_X11::GLES_2_0_COMPATIBLE;
-	}
-
 	bool editor = Engine::get_singleton()->is_editor_hint();
 	bool gl_initialization_error = false;
 
@@ -358,18 +353,8 @@ Error OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 			memdelete(context_gl);
 			context_gl = nullptr;
 
-			if (GLOBAL_GET("rendering/quality/driver/fallback_to_gles2") || editor) {
-				if (p_video_driver == VIDEO_DRIVER_GLES2) {
-					gl_initialization_error = true;
-					break;
-				}
-
-				p_video_driver = VIDEO_DRIVER_GLES2;
-				opengl_api_type = ContextGL_X11::GLES_2_0_COMPATIBLE;
-			} else {
-				gl_initialization_error = true;
-				break;
-			}
+			gl_initialization_error = true;
+			break;
 		}
 	}
 
@@ -380,26 +365,12 @@ Error OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 				RasterizerGLES3::make_current();
 				break;
 			} else {
-				if (GLOBAL_GET("rendering/quality/driver/fallback_to_gles2") || editor) {
-					p_video_driver = VIDEO_DRIVER_GLES2;
-					opengl_api_type = ContextGL_X11::GLES_2_0_COMPATIBLE;
-					continue;
-				} else {
-					gl_initialization_error = true;
-					break;
-				}
-			}
-		}
-
-		if (opengl_api_type == ContextGL_X11::GLES_2_0_COMPATIBLE) {
-			if (RasterizerGLES2::is_viable() == OK) {
-				RasterizerGLES2::register_config();
-				RasterizerGLES2::make_current();
-				break;
-			} else {
 				gl_initialization_error = true;
 				break;
 			}
+		} else {
+			gl_initialization_error = true;
+			break;
 		}
 	}
 

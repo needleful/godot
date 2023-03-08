@@ -2715,9 +2715,6 @@ VisualServer::VisualServer() {
 	GLOBAL_DEF("rendering/batching/parameters/item_reordering_lookahead", 4);
 	GLOBAL_DEF("rendering/batching/debug/flash_batching", false);
 	GLOBAL_DEF("rendering/batching/debug/diagnose_frame", false);
-	GLOBAL_DEF("rendering/gles2/compatibility/disable_half_float", false);
-	GLOBAL_DEF("rendering/gles2/compatibility/disable_half_float.iOS", true);
-	GLOBAL_DEF("rendering/gles2/compatibility/enable_high_float.Android", false);
 	GLOBAL_DEF("rendering/batching/precision/uv_contract", false);
 	GLOBAL_DEF("rendering/batching/precision/uv_contract_amount", 100);
 

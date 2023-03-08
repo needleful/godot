@@ -7341,10 +7341,6 @@ RID RasterizerStorageGLES3::render_target_create() {
 	return render_target_owner.make_rid(rt);
 }
 
-void RasterizerStorageGLES3::render_target_set_position(RID p_render_target, int p_x, int p_y) {
-	//only used in GLES2
-}
-
 void RasterizerStorageGLES3::render_target_set_size(RID p_render_target, int p_width, int p_height) {
 	RenderTarget *rt = render_target_owner.getornull(p_render_target);
 	ERR_FAIL_COND(!rt);

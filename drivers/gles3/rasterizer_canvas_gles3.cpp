@@ -2182,11 +2182,6 @@ void RasterizerCanvasGLES3::initialize() {
 			indices.set(i_pos + 3, q_pos);
 			indices.set(i_pos + 4, q_pos + 2);
 			indices.set(i_pos + 5, q_pos + 3);
-
-			// we can only use 16 bit indices in GLES2!
-#ifdef DEBUG_ENABLED
-			CRASH_COND((q_pos + 3) > 65535);
-#endif
 		}
 
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, bdata.index_buffer_size_bytes, &indices[0], GL_STATIC_DRAW);

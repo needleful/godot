@@ -460,13 +460,12 @@ bool RasterizerGLES3::gl_check_errors() {
 			case GL_OUT_OF_MEMORY: {
 				ERR_PRINT("GL_OUT_OF_MEMORY: There is not enough memory left to execute the command. The state of the GL is undefined.");
 			} break;
-			// GL_STACK_UNDERFLOW and GL_STACK_OVERFLOW are undefined in GLES2/gl2.h, which is used when not using GLAD.
-			//case GL_STACK_UNDERFLOW: {
-			//	ERR_PRINT("GL_STACK_UNDERFLOW: An attempt has been made to perform an operation that would cause an internal stack to underflow.");
-			//} break;
-			//case GL_STACK_OVERFLOW: {
-			//	ERR_PRINT("GL_STACK_OVERFLOW: An attempt has been made to perform an operation that would cause an internal stack to overflow.");
-			//} break;
+			case GL_STACK_UNDERFLOW: {
+				ERR_PRINT("GL_STACK_UNDERFLOW: An attempt has been made to perform an operation that would cause an internal stack to underflow.");
+			} break;
+			case GL_STACK_OVERFLOW: {
+				ERR_PRINT("GL_STACK_OVERFLOW: An attempt has been made to perform an operation that would cause an internal stack to overflow.");
+			} break;
 			default: {
 #ifdef DEBUG_ENABLED
 				ERR_PRINT("Unrecognized GLError");

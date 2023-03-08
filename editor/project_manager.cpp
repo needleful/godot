@@ -462,10 +462,6 @@ private:
 					ProjectSettings::CustomMap initial_settings;
 					if (rasterizer_button_group->get_pressed_button()->get_meta("driver_name") == "GLES3") {
 						initial_settings["rendering/quality/driver/driver_name"] = "GLES3";
-					} else {
-						initial_settings["rendering/quality/driver/driver_name"] = "GLES2";
-						initial_settings["rendering/vram_compression/import_etc2"] = false;
-						initial_settings["rendering/vram_compression/import_etc"] = true;
 					}
 					initial_settings["application/config/name"] = project_name->get_text().strip_edges();
 					initial_settings["application/config/icon"] = "res://icon.png";
@@ -842,65 +838,6 @@ public:
 		msg = memnew(Label);
 		msg->set_align(Label::ALIGN_CENTER);
 		vb->add_child(msg);
-
-		// rasterizer selection
-		rasterizer_container = memnew(VBoxContainer);
-		vb->add_child(rasterizer_container);
-		l = memnew(Label);
-		l->set_text(TTR("Renderer:"));
-		rasterizer_container->add_child(l);
-		Container *rshb = memnew(HBoxContainer);
-		rasterizer_container->add_child(rshb);
-		rasterizer_button_group.instance();
-
-		// Enable GLES3 by default as it's the default value for the project setting.
-#ifndef SERVER_ENABLED
-		bool gles3_viable = RasterizerGLES3::is_viable() == OK;
-#else
-		// Whatever, project manager isn't even used in headless builds.
-		bool gles3_viable = false;
-#endif
-
-		Container *rvb = memnew(VBoxContainer);
-		rvb->set_h_size_flags(SIZE_EXPAND_FILL);
-		rshb->add_child(rvb);
-		Button *rs_button = memnew(CheckBox);
-		rs_button->set_button_group(rasterizer_button_group);
-		rs_button->set_text(TTR("OpenGL ES 3.0"));
-		rs_button->set_meta("driver_name", "GLES3");
-		rvb->add_child(rs_button);
-		if (gles3_viable) {
-			rs_button->set_pressed(true);
-		} else {
-			// If GLES3 can't be used, don't let users shoot themselves in the foot.
-			rs_button->set_disabled(true);
-			l = memnew(Label);
-			l->set_text(TTR("Not supported by your GPU drivers."));
-			rvb->add_child(l);
-		}
-		l = memnew(Label);
-		l->set_text(TTR("Higher visual quality\nAll features available\nIncompatible with older hardware\nNot recommended for web games"));
-		rvb->add_child(l);
-
-		rshb->add_child(memnew(VSeparator));
-
-		rvb = memnew(VBoxContainer);
-		rvb->set_h_size_flags(SIZE_EXPAND_FILL);
-		rshb->add_child(rvb);
-		rs_button = memnew(CheckBox);
-		rs_button->set_button_group(rasterizer_button_group);
-		rs_button->set_text(TTR("OpenGL ES 2.0"));
-		rs_button->set_meta("driver_name", "GLES2");
-		rs_button->set_pressed(!gles3_viable);
-		rvb->add_child(rs_button);
-		l = memnew(Label);
-		l->set_text(TTR("Lower visual quality\nSome features not available\nWorks on most hardware\nRecommended for web games"));
-		rvb->add_child(l);
-
-		l = memnew(Label);
-		l->set_text(TTR("Renderer can be changed later, but scenes may need to be adjusted."));
-		l->set_align(Label::ALIGN_CENTER);
-		rasterizer_container->add_child(l);
 
 		fdialog = memnew(FileDialog);
 		fdialog->set_access(FileDialog::ACCESS_FILESYSTEM);

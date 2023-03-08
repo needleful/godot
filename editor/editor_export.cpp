@@ -1362,22 +1362,13 @@ void EditorExport::add_export_preset(const Ref<EditorExportPreset> &p_preset, in
 
 String EditorExportPlatform::test_etc2() const {
 	String driver = ProjectSettings::get_singleton()->get("rendering/quality/driver/driver_name");
-	bool driver_fallback = ProjectSettings::get_singleton()->get("rendering/quality/driver/fallback_to_gles2");
 	bool etc_supported = ProjectSettings::get_singleton()->get("rendering/vram_compression/import_etc");
 	bool etc2_supported = ProjectSettings::get_singleton()->get("rendering/vram_compression/import_etc2");
 
-	if (driver == "GLES2" && !etc_supported) {
-		return TTR("Target platform requires 'ETC' texture compression for GLES2. Enable 'Import Etc' in Project Settings.");
-	} else if (driver == "GLES3") {
+	if (driver == "GLES3") {
 		String err;
 		if (!etc2_supported) {
 			err += TTR("Target platform requires 'ETC2' texture compression for GLES3. Enable 'Import Etc 2' in Project Settings.");
-		}
-		if (driver_fallback && !etc_supported) {
-			if (err != String()) {
-				err += "\n";
-			}
-			err += TTR("Target platform requires 'ETC' texture compression for the driver fallback to GLES2.\nEnable 'Import Etc' in Project Settings, or disable 'Driver Fallback Enabled'.");
 		}
 		return err;
 	}
@@ -1386,22 +1377,13 @@ String EditorExportPlatform::test_etc2() const {
 
 String EditorExportPlatform::test_etc2_or_pvrtc() const {
 	String driver = ProjectSettings::get_singleton()->get("rendering/quality/driver/driver_name");
-	bool driver_fallback = ProjectSettings::get_singleton()->get("rendering/quality/driver/fallback_to_gles2");
 	bool etc2_supported = ProjectSettings::get_singleton()->get("rendering/vram_compression/import_etc2");
 	bool pvrtc_supported = ProjectSettings::get_singleton()->get("rendering/vram_compression/import_pvrtc");
 
-	if (driver == "GLES2" && !pvrtc_supported) {
-		return TTR("Target platform requires 'PVRTC' texture compression for GLES2. Enable 'Import Pvrtc' in Project Settings.");
-	} else if (driver == "GLES3") {
+	if (driver == "GLES3") {
 		String err;
 		if (!etc2_supported && !pvrtc_supported) {
 			err += TTR("Target platform requires 'ETC2' or 'PVRTC' texture compression for GLES3. Enable 'Import Etc 2' or 'Import Pvrtc' in Project Settings.");
-		}
-		if (driver_fallback && !pvrtc_supported) {
-			if (err != String()) {
-				err += "\n";
-			}
-			err += TTR("Target platform requires 'PVRTC' texture compression for the driver fallback to GLES2.\nEnable 'Import Pvrtc' in Project Settings, or disable 'Driver Fallback Enabled'.");
 		}
 		return err;
 	}

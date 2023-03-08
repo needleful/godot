@@ -4,7 +4,7 @@
 		Library of meshes.
 	</brief_description>
 	<description>
-		A library of meshes. Contains a list of [Mesh] resources, each with a name and ID. Each item can also include collision and navigation shapes. This resource is used in [GridMap].
+		A library of meshes. Contains a list of [Mesh] resources, each with a name and ID. Each item can also include collision and navigation shapes.
 	</description>
 	<tutorials>
 		<link title="3D Kinematic Character Demo">https://godotengine.org/asset-library/asset/126</link>

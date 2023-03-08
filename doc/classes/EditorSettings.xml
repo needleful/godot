@@ -371,12 +371,6 @@
 		<member name="editors/animation/onion_layers_past_color" type="Color" setter="" getter="">
 			The modulate color to use for "past" frames displayed in the animation editor's onion skinning feature.
 		</member>
-		<member name="editors/grid_map/pick_distance" type="float" setter="" getter="">
-			The maximum distance at which tiles can be placed on a GridMap, relative to the camera position (in 3D units).
-		</member>
-		<member name="editors/grid_map/preview_size" type="int" setter="" getter="">
-			The size of tiles in the GridMap editor sidebar (in pixels).
-		</member>
 		<member name="editors/poly_editor/point_grab_radius" type="int" setter="" getter="">
 			The radius of each point's clickable area in 2D and 3D polygon editors (in pixels). Increase this value if you are having trouble selecting points in polygon editors. However, increasing this value may make it more difficult to select points located close to each other.
 		</member>

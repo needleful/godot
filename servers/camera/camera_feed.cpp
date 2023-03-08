@@ -235,8 +235,6 @@ void CameraFeed::set_YCbCr_imgs(const Ref<Image> &p_y_img, const Ref<Image> &p_c
 			base_height = new_y_height;
 
 			vs->texture_allocate(texture[CameraServer::FEED_Y_IMAGE], new_y_width, new_y_height, 0, Image::FORMAT_R8, VS::TEXTURE_TYPE_2D, VS::TEXTURE_FLAG_USED_FOR_STREAMING);
-
-			///@TODO GLES2 doesn't support FORMAT_RG8, need to do some form of conversion
 			vs->texture_allocate(texture[CameraServer::FEED_CBCR_IMAGE], new_cbcr_width, new_cbcr_height, 0, Image::FORMAT_RG8, VS::TEXTURE_TYPE_2D, VS::TEXTURE_FLAG_USED_FOR_STREAMING);
 		}
 

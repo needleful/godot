@@ -166,7 +166,7 @@
 			Represents the size of the [enum SamplePartitionType] enum.
 		</constant>
 		<constant name="PARSED_GEOMETRY_MESH_INSTANCES" value="0" enum="ParsedGeometryType">
-			Parses mesh instances as geometry. This includes [MeshInstance], [CSGShape], and [GridMap] nodes.
+			Parses mesh instances as geometry. This includes [MeshInstance], and [CSGShape] nodes.
 		</constant>
 		<constant name="PARSED_GEOMETRY_STATIC_COLLIDERS" value="1" enum="ParsedGeometryType">
 			Parses [StaticBody] colliders as geometry. The collider should be in any of the layers specified by [member geometry_collision_mask].

@@ -14,7 +14,7 @@
 		<method name="get_contact_body" qualifiers="const">
 			<return type="Spatial" />
 			<description>
-				Returns the contacting body node if valid in the tree, as [Spatial]. At the moment, [GridMap] is not supported so the node will be always of type [PhysicsBody].
+				Returns the contacting body node if valid in the tree, as [Spatial]. The node will be always of type [PhysicsBody].
 				Returns [code]null[/code] if the wheel is not in contact with a surface, or the contact body is not a [PhysicsBody].
 			</description>
 		</method>
