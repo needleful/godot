@@ -33,6 +33,12 @@
 #include "core/os/os.h"
 #include "core/project_settings.h"
 
+RasterizerGLES3 *(*Rasterizer::_create_func)() = nullptr;
+
+RasterizerGLES3 *Rasterizer::create() {
+	return _create_func();
+}
+
 RasterizerStorage *RasterizerGLES3::get_storage() {
 	return storage;
 }

@@ -120,6 +120,8 @@
 #define glClearDepth glClearDepthf
 #endif
 
+RasterizerStorageGLES3 *RasterizerStorageGLES3::base_singleton = nullptr;
+
 void glTexStorage2DCustom(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height, GLenum format, GLenum type) {
 #ifdef GLES_OVER_GL
 
@@ -2688,11 +2690,11 @@ bool RasterizerStorageGLES3::material_uses_ensure_correct_normals(RID p_material
 	return material->shader->spatial.uses_ensure_correct_normals;
 }
 
-void RasterizerStorageGLES3::material_add_instance_owner(RID p_material, RasterizerScene::InstanceBase *p_instance) {
+void RasterizerStorageGLES3::material_add_instance_owner(RID p_material, RasterizerInstanceBase *p_instance) {
 	Material *material = material_owner.get(p_material);
 	ERR_FAIL_COND(!material);
 
-	Map<RasterizerScene::InstanceBase *, int>::Element *E = material->instance_owners.find(p_instance);
+	Map<RasterizerInstanceBase *, int>::Element *E = material->instance_owners.find(p_instance);
 	if (E) {
 		E->get()++;
 	} else {
@@ -2700,11 +2702,11 @@ void RasterizerStorageGLES3::material_add_instance_owner(RID p_material, Rasteri
 	}
 }
 
-void RasterizerStorageGLES3::material_remove_instance_owner(RID p_material, RasterizerScene::InstanceBase *p_instance) {
+void RasterizerStorageGLES3::material_remove_instance_owner(RID p_material, RasterizerInstanceBase *p_instance) {
 	Material *material = material_owner.get(p_material);
 	ERR_FAIL_COND(!material);
 
-	Map<RasterizerScene::InstanceBase *, int>::Element *E = material->instance_owners.find(p_instance);
+	Map<RasterizerInstanceBase *, int>::Element *E = material->instance_owners.find(p_instance);
 	ERR_FAIL_COND(!E);
 	E->get()--;
 
@@ -3208,7 +3210,7 @@ void RasterizerStorageGLES3::_update_material(Material *material) {
 					E->key()->material_changed_notify();
 				}
 
-				for (Map<RasterizerScene::InstanceBase *, int>::Element *E = material->instance_owners.front(); E; E = E->next()) {
+				for (Map<RasterizerInstanceBase *, int>::Element *E = material->instance_owners.front(); E; E = E->next()) {
 					E->key()->base_changed(false, true);
 				}
 			}
@@ -4469,12 +4471,12 @@ void RasterizerStorageGLES3::mesh_render_blend_shapes(Surface *s, const float *p
 
 /* MULTIMESH API */
 
-RID RasterizerStorageGLES3::_multimesh_create() {
+RID RasterizerStorageGLES3::multimesh_create() {
 	MultiMesh *multimesh = memnew(MultiMesh);
 	return multimesh_owner.make_rid(multimesh);
 }
 
-void RasterizerStorageGLES3::_multimesh_allocate(RID p_multimesh, int p_instances, VS::MultimeshTransformFormat p_transform_format, VS::MultimeshColorFormat p_color_format, VS::MultimeshCustomDataFormat p_data_format) {
+void RasterizerStorageGLES3::multimesh_allocate(RID p_multimesh, int p_instances, VS::MultimeshTransformFormat p_transform_format, VS::MultimeshColorFormat p_color_format, VS::MultimeshCustomDataFormat p_data_format) {
 	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
 	ERR_FAIL_COND(!multimesh);
 
@@ -4607,14 +4609,14 @@ void RasterizerStorageGLES3::_multimesh_allocate(RID p_multimesh, int p_instance
 	}
 }
 
-int RasterizerStorageGLES3::_multimesh_get_instance_count(RID p_multimesh) const {
+int RasterizerStorageGLES3::multimesh_get_instance_count(RID p_multimesh) const {
 	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
 	ERR_FAIL_COND_V(!multimesh, 0);
 
 	return multimesh->size;
 }
 
-void RasterizerStorageGLES3::_multimesh_set_mesh(RID p_multimesh, RID p_mesh) {
+void RasterizerStorageGLES3::multimesh_set_mesh(RID p_multimesh, RID p_mesh) {
 	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
 	ERR_FAIL_COND(!multimesh);
 
@@ -4641,7 +4643,48 @@ void RasterizerStorageGLES3::_multimesh_set_mesh(RID p_multimesh, RID p_mesh) {
 	}
 }
 
-void RasterizerStorageGLES3::_multimesh_instance_set_transform(RID p_multimesh, int p_index, const Transform &p_transform) {
+void RasterizerStorageGLES3::multimesh_instance_set_transform(RID p_multimesh, int p_index, const Transform &p_transform) {
+	MMInterpolator *mmi = multimesh_get_interpolator(p_multimesh);
+	if (mmi) {
+		if (mmi->interpolated) {
+			ERR_FAIL_COND(p_index >= mmi->_num_instances);
+			ERR_FAIL_COND(mmi->_vf_size_xform != 12);
+
+			PoolVector<float>::Write w = mmi->_data_curr.write();
+			int start = p_index * mmi->_stride;
+
+			float *ptr = w.ptr();
+			ptr += start;
+
+			const Transform &t = p_transform;
+			ptr[0] = t.basis.elements[0][0];
+			ptr[1] = t.basis.elements[0][1];
+			ptr[2] = t.basis.elements[0][2];
+			ptr[3] = t.origin.x;
+			ptr[4] = t.basis.elements[1][0];
+			ptr[5] = t.basis.elements[1][1];
+			ptr[6] = t.basis.elements[1][2];
+			ptr[7] = t.origin.y;
+			ptr[8] = t.basis.elements[2][0];
+			ptr[9] = t.basis.elements[2][1];
+			ptr[10] = t.basis.elements[2][2];
+			ptr[11] = t.origin.z;
+
+			multimesh_add_to_interpolation_lists(p_multimesh, *mmi);
+
+#if defined(DEBUG_ENABLED) && defined(TOOLS_ENABLED)
+			if (!Engine::get_singleton()->is_in_physics_frame()) {
+				static int32_t warn_count = 0;
+				warn_count++;
+				if (((warn_count % 2048) == 0) && GLOBAL_GET("debug/settings/physics_interpolation/enable_warnings")) {
+					WARN_PRINT("[Physics interpolation] MultiMesh interpolation is being triggered from outside physics process, this might lead to issues (possibly benign).");
+				}
+			}
+#endif
+			return;
+		}
+	}
+
 	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
 	ERR_FAIL_COND(!multimesh);
 	ERR_FAIL_INDEX(p_index, multimesh->size);
@@ -4671,7 +4714,7 @@ void RasterizerStorageGLES3::_multimesh_instance_set_transform(RID p_multimesh, 
 	}
 }
 
-void RasterizerStorageGLES3::_multimesh_instance_set_transform_2d(RID p_multimesh, int p_index, const Transform2D &p_transform) {
+void RasterizerStorageGLES3::multimesh_instance_set_transform_2d(RID p_multimesh, int p_index, const Transform2D &p_transform) {
 	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
 	ERR_FAIL_COND(!multimesh);
 	ERR_FAIL_INDEX(p_index, multimesh->size);
@@ -4696,7 +4739,36 @@ void RasterizerStorageGLES3::_multimesh_instance_set_transform_2d(RID p_multimes
 		multimesh_update_list.add(&multimesh->update_list);
 	}
 }
-void RasterizerStorageGLES3::_multimesh_instance_set_color(RID p_multimesh, int p_index, const Color &p_color) {
+void RasterizerStorageGLES3::multimesh_instance_set_color(RID p_multimesh, int p_index, const Color &p_color) {
+	MMInterpolator *mmi = multimesh_get_interpolator(p_multimesh);
+	if (mmi) {
+		if (mmi->interpolated) {
+			ERR_FAIL_COND(p_index >= mmi->_num_instances);
+			ERR_FAIL_COND(mmi->_vf_size_color == 0);
+
+			PoolVector<float>::Write w = mmi->_data_curr.write();
+			int start = (p_index * mmi->_stride) + mmi->_vf_size_xform;
+
+			float *ptr = w.ptr();
+			ptr += start;
+
+			if (mmi->_vf_size_color == 4) {
+				for (int n = 0; n < 4; n++) {
+					ptr[n] = p_color.components[n];
+				}
+			} else {
+#ifdef DEV_ENABLED
+				// The options are currently 4, 1, or zero, but just in case this changes in future...
+				ERR_FAIL_COND(mmi->_vf_size_color != 1);
+#endif
+				uint32_t *pui = (uint32_t *)ptr;
+				*pui = p_color.to_rgba32();
+			}
+			multimesh_add_to_interpolation_lists(p_multimesh, *mmi);
+			return;
+		}
+	}
+
 	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
 	ERR_FAIL_COND(!multimesh);
 	ERR_FAIL_INDEX(p_index, multimesh->size);
@@ -4728,7 +4800,7 @@ void RasterizerStorageGLES3::_multimesh_instance_set_color(RID p_multimesh, int 
 	}
 }
 
-void RasterizerStorageGLES3::_multimesh_instance_set_custom_data(RID p_multimesh, int p_index, const Color &p_custom_data) {
+void RasterizerStorageGLES3::multimesh_instance_set_custom_data(RID p_multimesh, int p_index, const Color &p_custom_data) {
 	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
 	ERR_FAIL_COND(!multimesh);
 	ERR_FAIL_INDEX(p_index, multimesh->size);
@@ -4759,14 +4831,14 @@ void RasterizerStorageGLES3::_multimesh_instance_set_custom_data(RID p_multimesh
 		multimesh_update_list.add(&multimesh->update_list);
 	}
 }
-RID RasterizerStorageGLES3::_multimesh_get_mesh(RID p_multimesh) const {
+RID RasterizerStorageGLES3::multimesh_get_mesh(RID p_multimesh) const {
 	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
 	ERR_FAIL_COND_V(!multimesh, RID());
 
 	return multimesh->mesh;
 }
 
-Transform RasterizerStorageGLES3::_multimesh_instance_get_transform(RID p_multimesh, int p_index) const {
+Transform RasterizerStorageGLES3::multimesh_instance_get_transform(RID p_multimesh, int p_index) const {
 	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
 	ERR_FAIL_COND_V(!multimesh, Transform());
 	ERR_FAIL_INDEX_V(p_index, multimesh->size, Transform());
@@ -4792,7 +4864,7 @@ Transform RasterizerStorageGLES3::_multimesh_instance_get_transform(RID p_multim
 
 	return xform;
 }
-Transform2D RasterizerStorageGLES3::_multimesh_instance_get_transform_2d(RID p_multimesh, int p_index) const {
+Transform2D RasterizerStorageGLES3::multimesh_instance_get_transform_2d(RID p_multimesh, int p_index) const {
 	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
 	ERR_FAIL_COND_V(!multimesh, Transform2D());
 	ERR_FAIL_INDEX_V(p_index, multimesh->size, Transform2D());
@@ -4813,7 +4885,7 @@ Transform2D RasterizerStorageGLES3::_multimesh_instance_get_transform_2d(RID p_m
 	return xform;
 }
 
-Color RasterizerStorageGLES3::_multimesh_instance_get_color(RID p_multimesh, int p_index) const {
+Color RasterizerStorageGLES3::multimesh_instance_get_color(RID p_multimesh, int p_index) const {
 	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
 	ERR_FAIL_COND_V(!multimesh, Color());
 	ERR_FAIL_INDEX_V(p_index, multimesh->size, Color());
@@ -4846,7 +4918,7 @@ Color RasterizerStorageGLES3::_multimesh_instance_get_color(RID p_multimesh, int
 	return Color();
 }
 
-Color RasterizerStorageGLES3::_multimesh_instance_get_custom_data(RID p_multimesh, int p_index) const {
+Color RasterizerStorageGLES3::multimesh_instance_get_custom_data(RID p_multimesh, int p_index) const {
 	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
 	ERR_FAIL_COND_V(!multimesh, Color());
 	ERR_FAIL_INDEX_V(p_index, multimesh->size, Color());
@@ -4879,7 +4951,25 @@ Color RasterizerStorageGLES3::_multimesh_instance_get_custom_data(RID p_multimes
 	return Color();
 }
 
-void RasterizerStorageGLES3::_multimesh_set_as_bulk_array(RID p_multimesh, const PoolVector<float> &p_array) {
+void RasterizerStorageGLES3::multimesh_set_as_bulk_array(RID p_multimesh, const PoolVector<float> &p_array) {
+	MMInterpolator *mmi = multimesh_get_interpolator(p_multimesh);
+	if (mmi) {
+		if (mmi->interpolated) {
+			ERR_FAIL_COND_MSG(p_array.size() != mmi->_data_curr.size(), vformat("Array should have %d elements, got %d instead.", mmi->_data_curr.size(), p_array.size()));
+
+			mmi->_data_curr = p_array;
+			multimesh_add_to_interpolation_lists(p_multimesh, *mmi);
+#if defined(DEBUG_ENABLED) && defined(TOOLS_ENABLED)
+			if (!Engine::get_singleton()->is_in_physics_frame()) {
+				static int32_t warn_count = 0;
+				warn_count++;
+				if (((warn_count % 2048) == 0) && GLOBAL_GET("debug/settings/physics_interpolation/enable_warnings")) {
+					WARN_PRINT("[Physics interpolation] MultiMesh interpolation is being triggered from outside physics process, this might lead to issues (possibly benign).");
+				}
+			}
+#endif
+		}
+	}
 	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
 	ERR_FAIL_COND(!multimesh);
 	ERR_FAIL_COND(!multimesh->data.ptr());
@@ -4899,20 +4989,20 @@ void RasterizerStorageGLES3::_multimesh_set_as_bulk_array(RID p_multimesh, const
 	}
 }
 
-void RasterizerStorageGLES3::_multimesh_set_visible_instances(RID p_multimesh, int p_visible) {
+void RasterizerStorageGLES3::multimesh_set_visible_instances(RID p_multimesh, int p_visible) {
 	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
 	ERR_FAIL_COND(!multimesh);
 
 	multimesh->visible_instances = p_visible;
 }
-int RasterizerStorageGLES3::_multimesh_get_visible_instances(RID p_multimesh) const {
+int RasterizerStorageGLES3::multimesh_get_visible_instances(RID p_multimesh) const {
 	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
 	ERR_FAIL_COND_V(!multimesh, -1);
 
 	return multimesh->visible_instances;
 }
 
-AABB RasterizerStorageGLES3::_multimesh_get_aabb(RID p_multimesh) const {
+AABB RasterizerStorageGLES3::multimesh_get_aabb(RID p_multimesh) const {
 	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
 	ERR_FAIL_COND_V(!multimesh, AABB());
 
@@ -4921,7 +5011,7 @@ AABB RasterizerStorageGLES3::_multimesh_get_aabb(RID p_multimesh) const {
 	return multimesh->aabb;
 }
 
-RasterizerStorage::MMInterpolator *RasterizerStorageGLES3::_multimesh_get_interpolator(RID p_multimesh) const {
+RasterizerStorageGLES3::MMInterpolator *RasterizerStorageGLES3::multimesh_get_interpolator(RID p_multimesh) const {
 	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
 	ERR_FAIL_COND_V_MSG(!multimesh, nullptr, "Multimesh not found: " + itos(p_multimesh.get_id()));
 
@@ -5342,7 +5432,7 @@ void RasterizerStorageGLES3::update_dirty_skeletons() {
 			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, height * (skeleton->use_2d ? 2 : 3), GL_RGBA, GL_FLOAT, skeleton->skel_texture.ptr());
 		}
 
-		for (Set<RasterizerScene::InstanceBase *>::Element *E = skeleton->instances.front(); E; E = E->next()) {
+		for (Set<RasterizerInstanceBase *>::Element *E = skeleton->instances.front(); E; E = E->next()) {
 			E->get()->base_changed(true, false);
 		}
 
@@ -6148,7 +6238,7 @@ bool RasterizerStorageGLES3::lightmap_capture_is_interior(RID p_capture) const {
 	return capture->interior;
 }
 
-const PoolVector<RasterizerStorage::LightmapCaptureOctree> *RasterizerStorageGLES3::lightmap_capture_get_octree_ptr(RID p_capture) const {
+const PoolVector<RasterizerStorageGLES3::LightmapCaptureOctree> *RasterizerStorageGLES3::lightmap_capture_get_octree_ptr(RID p_capture) const {
 	const LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
 	ERR_FAIL_COND_V(!capture, nullptr);
 	return &capture->octree;
@@ -6726,21 +6816,21 @@ bool RasterizerStorageGLES3::particles_is_inactive(RID p_particles) const {
 
 ////////
 
-void RasterizerStorageGLES3::instance_add_skeleton(RID p_skeleton, RasterizerScene::InstanceBase *p_instance) {
+void RasterizerStorageGLES3::instance_add_skeleton(RID p_skeleton, RasterizerInstanceBase *p_instance) {
 	Skeleton *skeleton = skeleton_owner.getornull(p_skeleton);
 	ERR_FAIL_COND(!skeleton);
 
 	skeleton->instances.insert(p_instance);
 }
 
-void RasterizerStorageGLES3::instance_remove_skeleton(RID p_skeleton, RasterizerScene::InstanceBase *p_instance) {
+void RasterizerStorageGLES3::instance_remove_skeleton(RID p_skeleton, RasterizerInstanceBase *p_instance) {
 	Skeleton *skeleton = skeleton_owner.getornull(p_skeleton);
 	ERR_FAIL_COND(!skeleton);
 
 	skeleton->instances.erase(p_instance);
 }
 
-void RasterizerStorageGLES3::instance_add_dependency(RID p_base, RasterizerScene::InstanceBase *p_instance) {
+void RasterizerStorageGLES3::instance_add_dependency(RID p_base, RasterizerInstanceBase *p_instance) {
 	Instantiable *inst = nullptr;
 	switch (p_instance->base_type) {
 		case VS::INSTANCE_MESH: {
@@ -6783,7 +6873,7 @@ void RasterizerStorageGLES3::instance_add_dependency(RID p_base, RasterizerScene
 	inst->instance_list.add(&p_instance->dependency_item);
 }
 
-void RasterizerStorageGLES3::instance_remove_dependency(RID p_base, RasterizerScene::InstanceBase *p_instance) {
+void RasterizerStorageGLES3::instance_remove_dependency(RID p_base, RasterizerInstanceBase *p_instance) {
 	Instantiable *inst = nullptr;
 
 	switch (p_instance->base_type) {
@@ -7779,8 +7869,8 @@ bool RasterizerStorageGLES3::free(RID p_rid) {
 			Geometry *g = E->key();
 			g->material = RID();
 		}
-		for (Map<RasterizerScene::InstanceBase *, int>::Element *E = material->instance_owners.front(); E; E = E->next()) {
-			RasterizerScene::InstanceBase *ins = E->key();
+		for (Map<RasterizerInstanceBase *, int>::Element *E = material->instance_owners.front(); E; E = E->next()) {
+			RasterizerInstanceBase *ins = E->key();
 
 			if (ins->material_override == p_rid) {
 				ins->material_override = RID();
@@ -7807,7 +7897,7 @@ bool RasterizerStorageGLES3::free(RID p_rid) {
 			skeleton_update_list.remove(&skeleton->update_list);
 		}
 
-		for (Set<RasterizerScene::InstanceBase *>::Element *E = skeleton->instances.front(); E; E = E->next()) {
+		for (Set<RasterizerInstanceBase *>::Element *E = skeleton->instances.front(); E; E = E->next()) {
 			E->get()->skeleton = RID();
 		}
 
@@ -8453,6 +8543,7 @@ void RasterizerStorageGLES3::update_dirty_resources() {
 }
 
 RasterizerStorageGLES3::RasterizerStorageGLES3() {
+	RasterizerStorageGLES3::base_singleton = this;
 	config.should_orphan = true;
 }
 
@@ -8466,5 +8557,298 @@ RasterizerStorageGLES3::~RasterizerStorageGLES3() {
 	if (shaders.compile_queue) {
 		shaders.compile_queue->enqueue(0, []() { OS::get_singleton()->set_offscreen_gl_current(false); });
 		memdelete(shaders.compile_queue);
+	}
+}
+
+void RasterizerStorageGLES3::InterpolationData::notify_free_multimesh(RID p_rid) {
+	// print_line("free multimesh " + itos(p_rid.get_id()));
+
+	// if the instance was on any of the lists, remove
+	multimesh_interpolate_update_list.erase_multiple_unordered(p_rid);
+	multimesh_transform_update_lists[0].erase_multiple_unordered(p_rid);
+	multimesh_transform_update_lists[1].erase_multiple_unordered(p_rid);
+}
+
+void RasterizerStorageGLES3::update_interpolation_tick(bool p_process) {
+	// detect any that were on the previous transform list that are no longer active,
+	// we should remove them from the interpolate list
+
+	for (unsigned int n = 0; n < _interpolation_data.multimesh_transform_update_list_prev->size(); n++) {
+		const RID &rid = (*_interpolation_data.multimesh_transform_update_list_prev)[n];
+
+		bool active = true;
+
+		// no longer active? (either the instance deleted or no longer being transformed)
+
+		MMInterpolator *mmi = multimesh_get_interpolator(rid);
+		if (mmi && !mmi->on_transform_update_list) {
+			active = false;
+			mmi->on_interpolate_update_list = false;
+
+			// make sure the most recent transform is set
+			// copy data rather than use Pool = function?
+			mmi->_data_interpolated = mmi->_data_curr;
+
+			// and that both prev and current are the same, just in case of any interpolations
+			mmi->_data_prev = mmi->_data_curr;
+
+			// make sure are updated one more time to ensure the AABBs are correct
+			//_instance_queue_update(instance, true);
+		}
+
+		if (!mmi) {
+			active = false;
+		}
+
+		if (!active) {
+			_interpolation_data.multimesh_interpolate_update_list.erase(rid);
+		}
+	}
+
+	if (p_process) {
+		for (unsigned int i = 0; i < _interpolation_data.multimesh_transform_update_list_curr->size(); i++) {
+			const RID &rid = (*_interpolation_data.multimesh_transform_update_list_curr)[i];
+
+			MMInterpolator *mmi = multimesh_get_interpolator(rid);
+			if (mmi) {
+				// reset for next tick
+				mmi->on_transform_update_list = false;
+				mmi->_data_prev = mmi->_data_curr;
+			}
+		} // for n
+	}
+
+	// if any have left the transform list, remove from the interpolate list
+
+	// we maintain a mirror list for the transform updates, so we can detect when an instance
+	// is no longer being transformed, and remove it from the interpolate list
+	SWAP(_interpolation_data.multimesh_transform_update_list_curr, _interpolation_data.multimesh_transform_update_list_prev);
+
+	// prepare for the next iteration
+	_interpolation_data.multimesh_transform_update_list_curr->clear();
+}
+
+void RasterizerStorageGLES3::update_interpolation_frame(bool p_process) {
+	if (p_process) {
+		// Only need 32 bit for interpolation, don't use real_t
+		float f = Engine::get_singleton()->get_physics_interpolation_fraction();
+
+		for (unsigned int c = 0; c < _interpolation_data.multimesh_interpolate_update_list.size(); c++) {
+			const RID &rid = _interpolation_data.multimesh_interpolate_update_list[c];
+
+			// We could use the TransformInterpolator here to slerp transforms, but that might be too expensive,
+			// so just using a Basis lerp for now.
+			MMInterpolator *mmi = multimesh_get_interpolator(rid);
+			if (mmi) {
+				// make sure arrays are correct size
+				DEV_ASSERT(mmi->_data_prev.size() == mmi->_data_curr.size());
+
+				if (mmi->_data_interpolated.size() < mmi->_data_curr.size()) {
+					mmi->_data_interpolated.resize(mmi->_data_curr.size());
+				}
+				DEV_ASSERT(mmi->_data_interpolated.size() >= mmi->_data_curr.size());
+
+				DEV_ASSERT((mmi->_data_curr.size() % mmi->_stride) == 0);
+				int num = mmi->_data_curr.size() / mmi->_stride;
+
+				PoolVector<float>::Read r_prev = mmi->_data_prev.read();
+				PoolVector<float>::Read r_curr = mmi->_data_curr.read();
+				PoolVector<float>::Write w = mmi->_data_interpolated.write();
+
+				const float *pf_prev = r_prev.ptr();
+				const float *pf_curr = r_curr.ptr();
+				float *pf_int = w.ptr();
+
+				bool use_lerp = mmi->quality == 0;
+
+				// temporary transform (needed for swizzling)
+				// (transform prev, curr and result)
+				Transform tp, tc, tr;
+
+				// Test for cache friendliness versus doing branchless
+				for (int n = 0; n < num; n++) {
+					// Transform
+					if (use_lerp) {
+						for (int i = 0; i < mmi->_vf_size_xform; i++) {
+							float a = pf_prev[i];
+							float b = pf_curr[i];
+							pf_int[i] = (a + ((b - a) * f));
+						}
+					} else {
+						// Silly swizzling, this will slow things down. no idea why it is using this format
+						// .. maybe due to the shader.
+						tp.basis.elements[0][0] = pf_prev[0];
+						tp.basis.elements[0][1] = pf_prev[1];
+						tp.basis.elements[0][2] = pf_prev[2];
+						tp.basis.elements[1][0] = pf_prev[4];
+						tp.basis.elements[1][1] = pf_prev[5];
+						tp.basis.elements[1][2] = pf_prev[6];
+						tp.basis.elements[2][0] = pf_prev[8];
+						tp.basis.elements[2][1] = pf_prev[9];
+						tp.basis.elements[2][2] = pf_prev[10];
+						tp.origin.x = pf_prev[3];
+						tp.origin.y = pf_prev[7];
+						tp.origin.z = pf_prev[11];
+
+						tc.basis.elements[0][0] = pf_curr[0];
+						tc.basis.elements[0][1] = pf_curr[1];
+						tc.basis.elements[0][2] = pf_curr[2];
+						tc.basis.elements[1][0] = pf_curr[4];
+						tc.basis.elements[1][1] = pf_curr[5];
+						tc.basis.elements[1][2] = pf_curr[6];
+						tc.basis.elements[2][0] = pf_curr[8];
+						tc.basis.elements[2][1] = pf_curr[9];
+						tc.basis.elements[2][2] = pf_curr[10];
+						tc.origin.x = pf_curr[3];
+						tc.origin.y = pf_curr[7];
+						tc.origin.z = pf_curr[11];
+
+						TransformInterpolator::interpolate_transform(tp, tc, tr, f);
+
+						pf_int[0] = tr.basis.elements[0][0];
+						pf_int[1] = tr.basis.elements[0][1];
+						pf_int[2] = tr.basis.elements[0][2];
+						pf_int[4] = tr.basis.elements[1][0];
+						pf_int[5] = tr.basis.elements[1][1];
+						pf_int[6] = tr.basis.elements[1][2];
+						pf_int[8] = tr.basis.elements[2][0];
+						pf_int[9] = tr.basis.elements[2][1];
+						pf_int[10] = tr.basis.elements[2][2];
+						pf_int[3] = tr.origin.x;
+						pf_int[7] = tr.origin.y;
+						pf_int[11] = tr.origin.z;
+					}
+
+					pf_prev += mmi->_vf_size_xform;
+					pf_curr += mmi->_vf_size_xform;
+					pf_int += mmi->_vf_size_xform;
+
+					// Color
+					if (mmi->_vf_size_color == 1) {
+						const uint8_t *p8_prev = (const uint8_t *)pf_prev;
+						const uint8_t *p8_curr = (const uint8_t *)pf_curr;
+						uint8_t *p8_int = (uint8_t *)pf_int;
+						_interpolate_RGBA8(p8_prev, p8_curr, p8_int, f);
+
+						pf_prev += 1;
+						pf_curr += 1;
+						pf_int += 1;
+					} else if (mmi->_vf_size_color == 4) {
+						for (int i = 0; i < 4; i++) {
+							pf_int[i] = pf_prev[i] + ((pf_curr[i] - pf_prev[i]) * f);
+						}
+
+						pf_prev += 4;
+						pf_curr += 4;
+						pf_int += 4;
+					}
+
+					// Custom Data
+					if (mmi->_vf_size_data == 1) {
+						const uint8_t *p8_prev = (const uint8_t *)pf_prev;
+						const uint8_t *p8_curr = (const uint8_t *)pf_curr;
+						uint8_t *p8_int = (uint8_t *)pf_int;
+						_interpolate_RGBA8(p8_prev, p8_curr, p8_int, f);
+
+						pf_prev += 1;
+						pf_curr += 1;
+						pf_int += 1;
+					} else if (mmi->_vf_size_data == 4) {
+						for (int i = 0; i < 4; i++) {
+							pf_int[i] = pf_prev[i] + ((pf_curr[i] - pf_prev[i]) * f);
+						}
+
+						pf_prev += 4;
+						pf_curr += 4;
+						pf_int += 4;
+					}
+				}
+
+				multimesh_set_as_bulk_array(rid, mmi->_data_interpolated);
+
+				// make sure AABBs are constantly up to date through the interpolation?
+				// NYI
+			}
+		} // for n
+	}
+}
+
+void RasterizerStorageGLES3::multimesh_set_physics_interpolated(RID p_multimesh, bool p_interpolated) {
+	MMInterpolator *mmi = multimesh_get_interpolator(p_multimesh);
+	if (mmi) {
+		mmi->interpolated = p_interpolated;
+	}
+}
+
+void RasterizerStorageGLES3::multimesh_set_physics_interpolation_quality(RID p_multimesh, VS::MultimeshPhysicsInterpolationQuality p_quality) {
+	ERR_FAIL_COND((p_quality < 0) || (p_quality > 1));
+	MMInterpolator *mmi = multimesh_get_interpolator(p_multimesh);
+	if (mmi) {
+		mmi->quality = (int)p_quality;
+	}
+}
+
+RID RasterizerStorageGLES3::directional_light_create() {
+	return light_create(VS::LIGHT_DIRECTIONAL);
+}
+
+RID RasterizerStorageGLES3::omni_light_create() {
+	return light_create(VS::LIGHT_OMNI);
+}
+
+RID RasterizerStorageGLES3::spot_light_create() {
+	return light_create(VS::LIGHT_SPOT);
+}
+
+void RasterizerStorageGLES3::multimesh_instance_reset_physics_interpolation(RID p_multimesh, int p_index) {
+	MMInterpolator *mmi = multimesh_get_interpolator(p_multimesh);
+	if (mmi) {
+		ERR_FAIL_INDEX(p_index, mmi->_num_instances);
+
+		PoolVector<float>::Write w = mmi->_data_prev.write();
+		PoolVector<float>::Read r = mmi->_data_curr.read();
+
+		int start = p_index * mmi->_stride;
+
+		for (int n = 0; n < mmi->_stride; n++) {
+			w[start + n] = r[start + n];
+		}
+	}
+}
+
+void RasterizerStorageGLES3::multimesh_add_to_interpolation_lists(RID p_multimesh, MMInterpolator &r_mmi) {
+	if (!r_mmi.on_interpolate_update_list) {
+		r_mmi.on_interpolate_update_list = true;
+		_interpolation_data.multimesh_interpolate_update_list.push_back(p_multimesh);
+	}
+
+	if (!r_mmi.on_transform_update_list) {
+		r_mmi.on_transform_update_list = true;
+		_interpolation_data.multimesh_transform_update_list_curr->push_back(p_multimesh);
+	}
+}
+
+void RasterizerStorageGLES3::multimesh_set_as_bulk_array_interpolated(RID p_multimesh, const PoolVector<float> &p_array, const PoolVector<float> &p_array_prev) {
+	MMInterpolator *mmi = multimesh_get_interpolator(p_multimesh);
+	if (mmi) {
+		ERR_FAIL_COND_MSG(p_array.size() != mmi->_data_curr.size(), vformat("Array for current frame should have %d elements, got %d instead.", mmi->_data_curr.size(), p_array.size()));
+		ERR_FAIL_COND_MSG(p_array_prev.size() != mmi->_data_prev.size(), vformat("Array for previous frame should have %d elements, got %d instead.", mmi->_data_prev.size(), p_array_prev.size()));
+
+		// We are assuming that mmi->interpolated is the case,
+		// (can possibly assert this?)
+		// even if this flag hasn't been set - just calling this function suggests
+		// interpolation is desired.
+		mmi->_data_prev = p_array_prev;
+		mmi->_data_curr = p_array;
+		multimesh_add_to_interpolation_lists(p_multimesh, *mmi);
+#if defined(DEBUG_ENABLED) && defined(TOOLS_ENABLED)
+		if (!Engine::get_singleton()->is_in_physics_frame()) {
+			static int32_t warn_count = 0;
+			warn_count++;
+			if (((warn_count % 2048) == 0) && GLOBAL_GET("debug/settings/physics_interpolation/enable_warnings")) {
+				WARN_PRINT("[Physics interpolation] MultiMesh interpolation is being triggered from outside physics process, this might lead to issues (possibly benign).");
+			}
+		}
+#endif
 	}
 }

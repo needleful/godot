@@ -290,7 +290,7 @@ public:
 		virtual ~InstanceBaseData() {}
 	};
 
-	struct Instance : RasterizerScene::InstanceBase {
+	struct Instance : RasterizerInstanceBase {
 		RID self;
 		//scenario stuff
 		SpatialPartitionID spatial_partition_id;

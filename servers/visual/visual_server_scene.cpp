@@ -2709,7 +2709,7 @@ bool VisualServerScene::_light_instance_update_shadow(Instance *p_instance, cons
 					VSG::scene_render->light_instance_set_shadow_transform(light->instance, ortho_camera, ortho_transform, 0, distances[i + 1], i, bias_scale);
 				}
 
-				VSG::scene_render->render_shadow(light->instance, p_shadow_atlas, i, (RasterizerScene::InstanceBase **)instance_shadow_cull_result, cull_count);
+				VSG::scene_render->render_shadow(light->instance, p_shadow_atlas, i, (RasterizerInstanceBase **)instance_shadow_cull_result, cull_count);
 			}
 
 		} break;
@@ -2752,7 +2752,7 @@ bool VisualServerScene::_light_instance_update_shadow(Instance *p_instance, cons
 					}
 
 					VSG::scene_render->light_instance_set_shadow_transform(light->instance, CameraMatrix(), light_transform, radius, 0, i);
-					VSG::scene_render->render_shadow(light->instance, p_shadow_atlas, i, (RasterizerScene::InstanceBase **)instance_shadow_cull_result, cull_count);
+					VSG::scene_render->render_shadow(light->instance, p_shadow_atlas, i, (RasterizerInstanceBase **)instance_shadow_cull_result, cull_count);
 				}
 			} else { //shadow cube
 
@@ -2803,7 +2803,7 @@ bool VisualServerScene::_light_instance_update_shadow(Instance *p_instance, cons
 					}
 
 					VSG::scene_render->light_instance_set_shadow_transform(light->instance, cm, xform, radius, 0, i);
-					VSG::scene_render->render_shadow(light->instance, p_shadow_atlas, i, (RasterizerScene::InstanceBase **)instance_shadow_cull_result, cull_count);
+					VSG::scene_render->render_shadow(light->instance, p_shadow_atlas, i, (RasterizerInstanceBase **)instance_shadow_cull_result, cull_count);
 				}
 
 				//restore the regular DP matrix
@@ -2838,7 +2838,7 @@ bool VisualServerScene::_light_instance_update_shadow(Instance *p_instance, cons
 			}
 
 			VSG::scene_render->light_instance_set_shadow_transform(light->instance, cm, light_transform, radius, 0, 0);
-			VSG::scene_render->render_shadow(light->instance, p_shadow_atlas, 0, (RasterizerScene::InstanceBase **)instance_shadow_cull_result, cull_count);
+			VSG::scene_render->render_shadow(light->instance, p_shadow_atlas, 0, (RasterizerInstanceBase **)instance_shadow_cull_result, cull_count);
 
 		} break;
 	}
@@ -3322,7 +3322,7 @@ void VisualServerScene::_render_scene(const Transform p_cam_transform, const Cam
 
 	/* PROCESS GEOMETRY AND DRAW SCENE */
 
-	VSG::scene_render->render_scene(p_cam_transform, p_cam_projection, p_eye, p_cam_orthogonal, (RasterizerScene::InstanceBase **)instance_cull_result, instance_cull_count, light_instance_cull_result, light_cull_count + directional_light_count, reflection_probe_instance_cull_result, reflection_probe_cull_count, environment, p_shadow_atlas, scenario->reflection_atlas, p_reflection_probe, p_reflection_probe_pass);
+	VSG::scene_render->render_scene(p_cam_transform, p_cam_projection, p_eye, p_cam_orthogonal, (RasterizerInstanceBase **)instance_cull_result, instance_cull_count, light_instance_cull_result, light_cull_count + directional_light_count, reflection_probe_instance_cull_result, reflection_probe_cull_count, environment, p_shadow_atlas, scenario->reflection_atlas, p_reflection_probe, p_reflection_probe_pass);
 }
 
 void VisualServerScene::render_empty_scene(RID p_scenario, RID p_shadow_atlas) {
