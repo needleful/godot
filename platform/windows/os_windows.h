@@ -39,7 +39,6 @@
 #include "drivers/unix/ip_unix.h"
 #include "drivers/wasapi/audio_driver_wasapi.h"
 #include "key_mapping_windows.h"
-#include "main/input_default.h"
 #include "power_windows.h"
 #include "servers/audio_server.h"
 #include "servers/visual/rasterizer.h"
@@ -370,7 +369,7 @@ class OS_Windows : public OS {
 	CursorShape cursor_shape;
 	Map<CursorShape, Vector<Variant>> cursors_cache;
 
-	InputDefault *input;
+	Input *input;
 	JoypadWindows *joypad;
 	Map<int, Vector2> touch_state;
 

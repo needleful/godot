@@ -77,7 +77,7 @@ void JoypadLinux::Joypad::reset() {
 	events.clear();
 }
 
-JoypadLinux::JoypadLinux(InputDefault *in) {
+JoypadLinux::JoypadLinux(Input *in) {
 #ifdef UDEV_ENABLED
 	use_udev = initialize_libudev() == 0;
 	if (use_udev) {
@@ -494,12 +494,12 @@ void JoypadLinux::process_joypads() {
 						case ABS_HAT0X:
 							if (joypad_event.value != 0) {
 								if (joypad_event.value < 0) {
-									joypad.dpad = (joypad.dpad | InputDefault::HAT_MASK_LEFT) & ~InputDefault::HAT_MASK_RIGHT;
+									joypad.dpad = (joypad.dpad | Input::HAT_MASK_LEFT) & ~Input::HAT_MASK_RIGHT;
 								} else {
-									joypad.dpad = (joypad.dpad | InputDefault::HAT_MASK_RIGHT) & ~InputDefault::HAT_MASK_LEFT;
+									joypad.dpad = (joypad.dpad | Input::HAT_MASK_RIGHT) & ~Input::HAT_MASK_LEFT;
 								}
 							} else {
-								joypad.dpad &= ~(InputDefault::HAT_MASK_LEFT | InputDefault::HAT_MASK_RIGHT);
+								joypad.dpad &= ~(Input::HAT_MASK_LEFT | Input::HAT_MASK_RIGHT);
 							}
 							input->joy_hat(i, joypad.dpad);
 							break;
@@ -507,12 +507,12 @@ void JoypadLinux::process_joypads() {
 						case ABS_HAT0Y:
 							if (joypad_event.value != 0) {
 								if (joypad_event.value < 0) {
-									joypad.dpad = (joypad.dpad | InputDefault::HAT_MASK_UP) & ~InputDefault::HAT_MASK_DOWN;
+									joypad.dpad = (joypad.dpad | Input::HAT_MASK_UP) & ~Input::HAT_MASK_DOWN;
 								} else {
-									joypad.dpad = (joypad.dpad | InputDefault::HAT_MASK_DOWN) & ~InputDefault::HAT_MASK_UP;
+									joypad.dpad = (joypad.dpad | Input::HAT_MASK_DOWN) & ~Input::HAT_MASK_UP;
 								}
 							} else {
-								joypad.dpad &= ~(InputDefault::HAT_MASK_UP | InputDefault::HAT_MASK_DOWN);
+								joypad.dpad &= ~(Input::HAT_MASK_UP | Input::HAT_MASK_DOWN);
 							}
 							input->joy_hat(i, joypad.dpad);
 							break;

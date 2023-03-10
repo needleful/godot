@@ -34,12 +34,12 @@
 #include "core/io/resource_loader.h"
 #include "core/message_queue.h"
 #include "core/os/dir_access.h"
+#include "core/os/input.h"
 #include "core/os/keyboard.h"
 #include "core/os/os.h"
 #include "core/print_string.h"
 #include "core/project_settings.h"
 #include "core/variant_parser.h"
-#include "main/input_default.h"
 #include "node.h"
 #include "scene/animation/scene_tree_tween.h"
 #include "scene/debugger/script_debugger_remote.h"
@@ -813,11 +813,7 @@ void SceneTree::_notification(int p_notification) {
 		} break;
 
 		case NOTIFICATION_WM_FOCUS_IN: {
-			InputDefault *id = Object::cast_to<InputDefault>(Input::get_singleton());
-			if (id) {
-				id->ensure_touch_mouse_raised();
-			}
-
+			Input::get_singleton()->ensure_touch_mouse_raised();
 			get_root()->propagate_notification(p_notification);
 		} break;
 

@@ -40,6 +40,7 @@
 #include "core/io/resource_loader.h"
 #include "core/message_queue.h"
 #include "core/os/dir_access.h"
+#include "core/os/input.h"
 #include "core/os/os.h"
 #include "core/os/time.h"
 #include "core/project_settings.h"
@@ -50,7 +51,6 @@
 #include "core/version.h"
 #include "drivers/register_driver_types.h"
 #include "main/app_icon.gen.h"
-#include "main/input_default.h"
 #include "main/main_timer_sync.h"
 #include "main/performance.h"
 #include "main/splash.gen.h"
@@ -1516,7 +1516,7 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	GLOBAL_DEF("application/config/windows_native_icon", String());
 	ProjectSettings::get_singleton()->set_custom_property_info("application/config/windows_native_icon", PropertyInfo(Variant::STRING, "application/config/windows_native_icon", PROPERTY_HINT_FILE, "*.ico"));
 
-	InputDefault *id = Object::cast_to<InputDefault>(Input::get_singleton());
+	Input *id = Input::get_singleton();
 	if (id) {
 		agile_input_event_flushing = GLOBAL_DEF("input_devices/buffering/agile_event_flushing", false);
 
@@ -2286,8 +2286,8 @@ bool Main::iteration() {
 	bool exit = false;
 
 	for (int iters = 0; iters < advance.physics_steps; ++iters) {
-		if (InputDefault::get_singleton()->is_using_input_buffering() && agile_input_event_flushing) {
-			InputDefault::get_singleton()->flush_buffered_events();
+		if (Input::get_singleton()->is_using_input_buffering() && agile_input_event_flushing) {
+			Input::get_singleton()->flush_buffered_events();
 		}
 
 		Engine::get_singleton()->_in_physics = true;
@@ -2324,8 +2324,8 @@ bool Main::iteration() {
 		Engine::get_singleton()->_in_physics = false;
 	}
 
-	if (InputDefault::get_singleton()->is_using_input_buffering() && agile_input_event_flushing) {
-		InputDefault::get_singleton()->flush_buffered_events();
+	if (Input::get_singleton()->is_using_input_buffering() && agile_input_event_flushing) {
+		Input::get_singleton()->flush_buffered_events();
 	}
 
 	uint64_t idle_begin = OS::get_singleton()->get_ticks_usec();
@@ -2415,8 +2415,8 @@ bool Main::iteration() {
 	iterating--;
 
 	// Needed for OSs using input buffering regardless accumulation (like Android)
-	if (InputDefault::get_singleton()->is_using_input_buffering() && !agile_input_event_flushing) {
-		InputDefault::get_singleton()->flush_buffered_events();
+	if (Input::get_singleton()->is_using_input_buffering() && !agile_input_event_flushing) {
+		Input::get_singleton()->flush_buffered_events();
 	}
 
 	if (fixed_fps != -1) {

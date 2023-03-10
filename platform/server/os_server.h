@@ -31,9 +31,9 @@
 #ifndef OS_SERVER_H
 #define OS_SERVER_H
 
+#include "core/os/input.h"
 #include "drivers/dummy/texture_loader_dummy.h"
 #include "drivers/unix/os_unix.h"
-#include "main/input_default.h"
 #ifdef __APPLE__
 #include "platform/osx/crash_handler_osx.h"
 #include "platform/osx/power_osx.h"
@@ -59,7 +59,7 @@ class OS_Server : public OS_Unix {
 
 	bool force_quit;
 
-	InputDefault *input;
+	Input *input;
 
 #ifdef __APPLE__
 	PowerOSX *power_manager;

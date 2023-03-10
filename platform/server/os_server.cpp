@@ -80,7 +80,7 @@ Error OS_Server::initialize(const VideoMode &p_desired, int p_video_driver, int 
 
 	AudioDriverManager::initialize(p_audio_driver);
 
-	input = memnew(InputDefault);
+	input = memnew(Input);
 
 #ifdef __APPLE__
 	power_manager = memnew(PowerOSX);

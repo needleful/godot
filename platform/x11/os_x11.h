@@ -40,7 +40,6 @@
 #include "drivers/pulseaudio/audio_driver_pulseaudio.h"
 #include "drivers/unix/os_unix.h"
 #include "joypad_linux.h"
-#include "main/input_default.h"
 #include "power_x11.h"
 #include "servers/audio_server.h"
 #include "servers/visual/rasterizer.h"
@@ -200,7 +199,7 @@ class OS_X11 : public OS_Unix {
 	CursorShape current_cursor;
 	Map<CursorShape, Vector<Variant>> cursors_cache;
 
-	InputDefault *input;
+	Input *input;
 
 #ifdef JOYDEV_ENABLED
 	JoypadLinux *joypad;

@@ -47,7 +47,6 @@
 #include "core/project_settings.h"
 #include "core/translation.h"
 #include "core/version.h"
-#include "main/input_default.h"
 #include "main/main.h"
 #include "scene/gui/center_container.h"
 #include "scene/gui/control.h"
@@ -5852,7 +5851,7 @@ EditorNode::EditorNode() {
 	ResourceLoader::clear_translation_remaps(); //no remaps using during editor
 	ResourceLoader::clear_path_remaps();
 
-	InputDefault *id = Object::cast_to<InputDefault>(Input::get_singleton());
+	Input *id = Input::get_singleton();
 
 	if (id) {
 		if (!OS::get_singleton()->has_touchscreen_ui_hint() && Input::get_singleton()) {

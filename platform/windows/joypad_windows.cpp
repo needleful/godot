@@ -48,7 +48,7 @@ DWORD WINAPI _xinput_set_state(DWORD dwUserIndex, XINPUT_VIBRATION *pVibration) 
 JoypadWindows::JoypadWindows() {
 }
 
-JoypadWindows::JoypadWindows(InputDefault *_input, HWND *hwnd) {
+JoypadWindows::JoypadWindows(Input *_input, HWND *hwnd) {
 	input = _input;
 	hWnd = hwnd;
 	joypad_count = 0;
@@ -418,31 +418,31 @@ void JoypadWindows::post_hat(int p_device, DWORD p_dpad) {
 	//  BOOL POVCentered = (LOWORD(dwPOV) == 0xFFFF);"
 	// https://docs.microsoft.com/en-us/previous-versions/windows/desktop/ee416628(v%3Dvs.85)#remarks
 	if (LOWORD(p_dpad) == 0xFFFF) {
-		dpad_val = InputDefault::HAT_MASK_CENTER;
+		dpad_val = Input::HAT_MASK_CENTER;
 	}
 	if (p_dpad == 0) {
-		dpad_val = InputDefault::HAT_MASK_UP;
+		dpad_val = Input::HAT_MASK_UP;
 
 	} else if (p_dpad == 4500) {
-		dpad_val = (InputDefault::HAT_MASK_UP | InputDefault::HAT_MASK_RIGHT);
+		dpad_val = (Input::HAT_MASK_UP | Input::HAT_MASK_RIGHT);
 
 	} else if (p_dpad == 9000) {
-		dpad_val = InputDefault::HAT_MASK_RIGHT;
+		dpad_val = Input::HAT_MASK_RIGHT;
 
 	} else if (p_dpad == 13500) {
-		dpad_val = (InputDefault::HAT_MASK_RIGHT | InputDefault::HAT_MASK_DOWN);
+		dpad_val = (Input::HAT_MASK_RIGHT | Input::HAT_MASK_DOWN);
 
 	} else if (p_dpad == 18000) {
-		dpad_val = InputDefault::HAT_MASK_DOWN;
+		dpad_val = Input::HAT_MASK_DOWN;
 
 	} else if (p_dpad == 22500) {
-		dpad_val = (InputDefault::HAT_MASK_DOWN | InputDefault::HAT_MASK_LEFT);
+		dpad_val = (Input::HAT_MASK_DOWN | Input::HAT_MASK_LEFT);
 
 	} else if (p_dpad == 27000) {
-		dpad_val = InputDefault::HAT_MASK_LEFT;
+		dpad_val = Input::HAT_MASK_LEFT;
 
 	} else if (p_dpad == 31500) {
-		dpad_val = (InputDefault::HAT_MASK_LEFT | InputDefault::HAT_MASK_UP);
+		dpad_val = (Input::HAT_MASK_LEFT | Input::HAT_MASK_UP);
 	}
 	input->joy_hat(p_device, dpad_val);
 };

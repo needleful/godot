@@ -1613,7 +1613,7 @@ Error OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int
 
 	visual_server->init();
 
-	input = memnew(InputDefault);
+	input = memnew(Input);
 	joypad = memnew(JoypadWindows(input, &hWnd));
 
 	power_manager = memnew(PowerWindows);

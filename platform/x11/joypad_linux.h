@@ -34,15 +34,15 @@
 #define JOYPAD_LINUX_H
 
 #ifdef JOYDEV_ENABLED
+#include "core/os/input.h"
 #include "core/os/mutex.h"
 #include "core/os/thread.h"
-#include "main/input_default.h"
 
 struct input_absinfo;
 
 class JoypadLinux {
 public:
-	JoypadLinux(InputDefault *in);
+	JoypadLinux(Input *in);
 	~JoypadLinux();
 	void process_joypads();
 
@@ -83,7 +83,7 @@ private:
 #ifdef UDEV_ENABLED
 	bool use_udev;
 #endif
-	InputDefault *input;
+	Input *input;
 
 	SafeFlag monitor_joypads_exit;
 	SafeFlag joypad_events_exit;

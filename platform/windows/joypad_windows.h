@@ -52,7 +52,7 @@
 class JoypadWindows {
 public:
 	JoypadWindows();
-	JoypadWindows(InputDefault *_input, HWND *hwnd);
+	JoypadWindows(Input *_input, HWND *hwnd);
 	~JoypadWindows();
 
 	void probe_joypads();
@@ -115,7 +115,7 @@ private:
 	HWND *hWnd;
 	HANDLE xinput_dll;
 	LPDIRECTINPUT8 dinput;
-	InputDefault *input;
+	Input *input;
 
 	int id_to_change;
 	int slider_count;
