@@ -188,6 +188,8 @@ opts.Add(BoolVariable("builtin_xatlas", "Use the built-in xatlas library", True)
 opts.Add(BoolVariable("builtin_zlib", "Use the built-in zlib library", True))
 opts.Add(BoolVariable("builtin_zstd", "Use the built-in Zstd library", True))
 
+opts.Add(BoolVariable("single_threaded", "Disable multithreading entirely", False))
+
 # Compilation environment setup
 opts.Add("CXX", "C++ compiler")
 opts.Add("CC", "C compiler")
@@ -341,6 +343,9 @@ if methods.get_cmdline_bool("fast_unsafe", env_base["target"] == "debug"):
     env_base.Decider("MD5-timestamp")
     env_base.SetOption("implicit_cache", 1)
     env_base.SetOption("max_drift", 60)
+
+if env_base["single_threaded"]:
+    env_base.Append(CPPDEFINES=["NO_THREADS"])
 
 if env_base["use_precise_math_checks"]:
     env_base.Append(CPPDEFINES=["PRECISE_MATH_CHECKS"])
