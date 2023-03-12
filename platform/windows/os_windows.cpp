@@ -42,7 +42,6 @@
 #include "main/main.h"
 #include "servers/audio_server.h"
 #include "servers/visual/visual_server_raster.h"
-#include "servers/visual/visual_server_wrap_mt.h"
 #include "windows_terminal_logger.h"
 
 #include <avrt.h>
@@ -1607,9 +1606,6 @@ Error OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int
 #endif
 
 	visual_server = memnew(VisualServerRaster);
-	if (get_render_thread_mode() != RENDER_THREAD_UNSAFE) {
-		visual_server = memnew(VisualServerWrapMT(visual_server, get_render_thread_mode() == RENDER_SEPARATE_THREAD));
-	}
 
 	visual_server->init();
 

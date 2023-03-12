@@ -332,8 +332,6 @@ public:
 	BIND2(light_set_negative, RID, bool)
 	BIND2(light_set_cull_mask, RID, uint32_t)
 	BIND2(light_set_reverse_cull_face_mode, RID, bool)
-	BIND2(light_set_use_gi, RID, bool)
-	BIND2(light_set_bake_mode, RID, LightBakeMode)
 
 	BIND2(light_omni_set_shadow_mode, RID, LightOmniShadowMode)
 	BIND2(light_omni_set_shadow_detail, RID, LightOmniShadowDetail)
@@ -359,64 +357,6 @@ public:
 	BIND2(reflection_probe_set_enable_shadows, RID, bool)
 	BIND2(reflection_probe_set_cull_mask, RID, uint32_t)
 	BIND2(reflection_probe_set_resolution, RID, int)
-
-	/* BAKED LIGHT API */
-
-	BIND0R(RID, gi_probe_create)
-
-	BIND2(gi_probe_set_bounds, RID, const AABB &)
-	BIND1RC(AABB, gi_probe_get_bounds, RID)
-
-	BIND2(gi_probe_set_cell_size, RID, float)
-	BIND1RC(float, gi_probe_get_cell_size, RID)
-
-	BIND2(gi_probe_set_to_cell_xform, RID, const Transform &)
-	BIND1RC(Transform, gi_probe_get_to_cell_xform, RID)
-
-	BIND2(gi_probe_set_dynamic_range, RID, int)
-	BIND1RC(int, gi_probe_get_dynamic_range, RID)
-
-	BIND2(gi_probe_set_energy, RID, float)
-	BIND1RC(float, gi_probe_get_energy, RID)
-
-	BIND2(gi_probe_set_bias, RID, float)
-	BIND1RC(float, gi_probe_get_bias, RID)
-
-	BIND2(gi_probe_set_normal_bias, RID, float)
-	BIND1RC(float, gi_probe_get_normal_bias, RID)
-
-	BIND2(gi_probe_set_propagation, RID, float)
-	BIND1RC(float, gi_probe_get_propagation, RID)
-
-	BIND2(gi_probe_set_interior, RID, bool)
-	BIND1RC(bool, gi_probe_is_interior, RID)
-
-	BIND2(gi_probe_set_compress, RID, bool)
-	BIND1RC(bool, gi_probe_is_compressed, RID)
-
-	BIND2(gi_probe_set_dynamic_data, RID, const PoolVector<int> &)
-	BIND1RC(PoolVector<int>, gi_probe_get_dynamic_data, RID)
-
-	/* LIGHTMAP CAPTURE */
-
-	BIND0R(RID, lightmap_capture_create)
-
-	BIND2(lightmap_capture_set_bounds, RID, const AABB &)
-	BIND1RC(AABB, lightmap_capture_get_bounds, RID)
-
-	BIND2(lightmap_capture_set_octree, RID, const PoolVector<uint8_t> &)
-	BIND1RC(PoolVector<uint8_t>, lightmap_capture_get_octree, RID)
-
-	BIND2(lightmap_capture_set_octree_cell_transform, RID, const Transform &)
-	BIND1RC(Transform, lightmap_capture_get_octree_cell_transform, RID)
-	BIND2(lightmap_capture_set_octree_cell_subdiv, RID, int)
-	BIND1RC(int, lightmap_capture_get_octree_cell_subdiv, RID)
-
-	BIND2(lightmap_capture_set_energy, RID, float)
-	BIND1RC(float, lightmap_capture_get_energy, RID)
-
-	BIND2(lightmap_capture_set_interior, RID, bool)
-	BIND1RC(bool, lightmap_capture_is_interior, RID)
 
 	/* PARTICLES */
 
@@ -587,7 +527,6 @@ public:
 	BIND3(instance_set_blend_shape_weight, RID, int, float)
 	BIND3(instance_set_surface_material, RID, int, RID)
 	BIND2(instance_set_visible, RID, bool)
-	BIND5(instance_set_use_lightmap, RID, RID, RID, int, const Rect2 &)
 
 	BIND2(instance_set_custom_aabb, RID, AABB)
 

@@ -37,7 +37,6 @@
 #include "key_mapping_x11.h"
 #include "main/main.h"
 #include "servers/visual/visual_server_raster.h"
-#include "servers/visual/visual_server_wrap_mt.h"
 
 #ifdef HAVE_MNTENT
 #include <mntent.h>
@@ -396,9 +395,6 @@ Error OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 #endif
 
 	visual_server = memnew(VisualServerRaster);
-	if (get_render_thread_mode() != RENDER_THREAD_UNSAFE) {
-		visual_server = memnew(VisualServerWrapMT(visual_server, get_render_thread_mode() == RENDER_SEPARATE_THREAD));
-	}
 
 	if (current_videomode.maximized) {
 		current_videomode.maximized = false;

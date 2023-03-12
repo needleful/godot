@@ -420,17 +420,11 @@ public:
 		List<Instance *> reflection_probes;
 		bool reflection_dirty;
 
-		List<Instance *> gi_probes;
-		bool gi_probes_dirty;
-
-		List<Instance *> lightmap_captures;
-
 		InstanceGeometryData() {
 			lighting_dirty = true;
 			reflection_dirty = true;
 			can_cast_shadows = true;
 			material_is_animated = true;
-			gi_probes_dirty = true;
 		}
 	};
 
@@ -474,130 +468,13 @@ public:
 
 		List<PairInfo> geometries;
 
-		Instance *baked_light;
 		int32_t previous_room_id_hint;
 
 		InstanceLightData() {
 			shadow_dirty = true;
 			D = nullptr;
 			last_version = 0;
-			baked_light = nullptr;
 			previous_room_id_hint = -1;
-		}
-	};
-
-	struct InstanceGIProbeData : public InstanceBaseData {
-		Instance *owner;
-
-		struct PairInfo {
-			List<Instance *>::Element *L; //gi probe iterator in geometry
-			Instance *geometry;
-		};
-
-		List<PairInfo> geometries;
-
-		Set<Instance *> lights;
-
-		struct LightCache {
-			VS::LightType type;
-			Transform transform;
-			Color color;
-			float energy;
-			float radius;
-			float attenuation;
-			float spot_angle;
-			float spot_attenuation;
-			bool visible;
-
-			bool operator==(const LightCache &p_cache) {
-				return (type == p_cache.type &&
-						transform == p_cache.transform &&
-						color == p_cache.color &&
-						energy == p_cache.energy &&
-						radius == p_cache.radius &&
-						attenuation == p_cache.attenuation &&
-						spot_angle == p_cache.spot_angle &&
-						spot_attenuation == p_cache.spot_attenuation &&
-						visible == p_cache.visible);
-			}
-
-			bool operator!=(const LightCache &p_cache) {
-				return !operator==(p_cache);
-			}
-
-			LightCache() {
-				type = VS::LIGHT_DIRECTIONAL;
-				energy = 1.0;
-				radius = 1.0;
-				attenuation = 1.0;
-				spot_angle = 1.0;
-				spot_attenuation = 1.0;
-				visible = true;
-			}
-		};
-
-		struct LocalData {
-			uint16_t pos[3];
-			uint16_t energy[3]; //using 0..1024 for float range 0..1. integer is needed for deterministic add/remove of lights
-		};
-
-		struct CompBlockS3TC {
-			uint32_t offset; //offset in mipmap
-			uint32_t source_count; //sources
-			uint32_t sources[16]; //id for each source
-			uint8_t alpha[8]; //alpha block is pre-computed
-		};
-
-		struct Dynamic {
-			Map<RID, LightCache> light_cache;
-			Map<RID, LightCache> light_cache_changes;
-			PoolVector<int> light_data;
-			PoolVector<LocalData> local_data;
-			Vector<Vector<uint32_t>> level_cell_lists;
-			RID probe_data;
-			bool enabled;
-			int bake_dynamic_range;
-			RasterizerStorage::GIProbeCompression compression;
-
-			Vector<PoolVector<uint8_t>> mipmaps_3d;
-			Vector<PoolVector<CompBlockS3TC>> mipmaps_s3tc; //for s3tc
-
-			int updating_stage;
-			float propagate;
-
-			int grid_size[3];
-
-			Transform light_to_cell_xform;
-
-		} dynamic;
-
-		RID probe_instance;
-
-		bool invalid;
-		uint32_t base_version;
-
-		SelfList<InstanceGIProbeData> update_element;
-
-		InstanceGIProbeData() :
-				update_element(this) {
-			invalid = true;
-			base_version = 0;
-			dynamic.updating_stage = GI_UPDATE_STAGE_CHECK;
-		}
-	};
-
-	SelfList<InstanceGIProbeData>::List gi_probe_update_list;
-
-	struct InstanceLightmapCaptureData : public InstanceBaseData {
-		struct PairInfo {
-			List<Instance *>::Element *L; //iterator in geometry
-			Instance *geometry;
-		};
-		List<PairInfo> geometries;
-
-		Set<Instance *> users;
-
-		InstanceLightmapCaptureData() {
 		}
 	};
 
@@ -626,7 +503,6 @@ public:
 	virtual void instance_set_blend_shape_weight(RID p_instance, int p_shape, float p_weight);
 	virtual void instance_set_surface_material(RID p_instance, int p_surface, RID p_material);
 	virtual void instance_set_visible(RID p_instance, bool p_visible);
-	virtual void instance_set_use_lightmap(RID p_instance, RID p_lightmap_instance, RID p_lightmap, int p_lightmap_slice, const Rect2 &p_lightmap_uv_rect);
 
 	virtual void instance_set_custom_aabb(RID p_instance, AABB p_aabb);
 
@@ -836,7 +712,6 @@ public:
 	_FORCE_INLINE_ void _update_instance(Instance *p_instance);
 	_FORCE_INLINE_ void _update_instance_aabb(Instance *p_instance);
 	_FORCE_INLINE_ void _update_dirty_instance(Instance *p_instance);
-	_FORCE_INLINE_ void _update_instance_lightmap_captures(Instance *p_instance);
 
 	_FORCE_INLINE_ bool _light_instance_update_shadow(Instance *p_instance, const Transform p_cam_transform, const CameraMatrix &p_cam_projection, bool p_cam_orthogonal, RID p_shadow_atlas, Scenario *p_scenario, uint32_t p_visible_layers = 0xFFFFFF);
 
@@ -852,34 +727,6 @@ public:
 	void update_interpolation_tick(bool p_process = true);
 	void update_interpolation_frame(bool p_process = true);
 
-	//probes
-	struct GIProbeDataHeader {
-		uint32_t version;
-		uint32_t cell_subdiv;
-		uint32_t width;
-		uint32_t height;
-		uint32_t depth;
-		uint32_t cell_count;
-		uint32_t leaf_cell_count;
-	};
-
-	struct GIProbeDataCell {
-		uint32_t children[8];
-		uint32_t albedo;
-		uint32_t emission;
-		uint32_t normal;
-		uint32_t level_alpha;
-	};
-
-	enum {
-		GI_UPDATE_STAGE_CHECK,
-		GI_UPDATE_STAGE_LIGHTING,
-		GI_UPDATE_STAGE_UPLOADING,
-	};
-
-	void _gi_probe_bake_thread();
-	static void _gi_probe_bake_threads(void *);
-
 	bool probe_bake_thread_exit;
 	Thread probe_bake_thread;
 	Semaphore probe_bake_sem;
@@ -887,14 +734,6 @@ public:
 	List<Instance *> probe_bake_list;
 
 	bool _render_reflection_probe_step(Instance *p_instance, int p_step);
-	void _gi_probe_fill_local_data(int p_idx, int p_level, int p_x, int p_y, int p_z, const GIProbeDataCell *p_cell, const GIProbeDataHeader *p_header, InstanceGIProbeData::LocalData *p_local_data, Vector<uint32_t> *prev_cell);
-
-	_FORCE_INLINE_ uint32_t _gi_bake_find_cell(const GIProbeDataCell *cells, int x, int y, int z, int p_cell_subdiv);
-	void _bake_gi_downscale_light(int p_idx, int p_level, const GIProbeDataCell *p_cells, const GIProbeDataHeader *p_header, InstanceGIProbeData::LocalData *p_local_data, float p_propagate);
-	void _bake_gi_probe_light(const GIProbeDataHeader *header, const GIProbeDataCell *cells, InstanceGIProbeData::LocalData *local_data, const uint32_t *leaves, int p_leaf_count, const InstanceGIProbeData::LightCache &light_cache, int p_sign);
-	void _bake_gi_probe(Instance *p_gi_probe);
-	bool _check_gi_probe(Instance *p_gi_probe);
-	void _setup_gi_probe(Instance *p_instance);
 
 	void render_probes();
 
