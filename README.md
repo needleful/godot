@@ -4,7 +4,7 @@ This is a modified version of the [Godot Engine](https://godotengine.org) built 
 
 ## What are the differences?
 
-It fixes various bugs, adds some small features that would be infeasible to implement otherwise, and replaces the renderer with a custom deferred renderer.
+It fixes various bugs, adds some small features that would be infeasible to implement otherwise, and replaces the renderer with a custom deferred renderer (not implemented yet lol).
 
 ## Why are these not ported upstream to the main Godot repository?
 
@@ -13,4 +13,4 @@ It fixes various bugs, adds some small features that would be infeasible to impl
 
 ## Should I use this for my own projects?
 
-No.  I'm sharing this for those interested in the game *At the Ends of Eras*.
+No. I made this because it was more fun than porting the game to Godot 4, which would be a much more adviseable solution.
