@@ -2340,7 +2340,7 @@ void RasterizerSceneGLES3::_render_list(RenderList::Element **p_elements, int p_
 	state.scene_shader.set_conditional(SceneShaderGLES3::USE_OPAQUE_PREPASS, false);
 }
 
-void RasterizerSceneGLES3::_add_geometry(RasterizerStorageGLES3::Geometry *p_geometry, RasterizerInstanceBase *p_instance, RasterizerStorageGLES3::GeometryOwner *p_owner, int p_material, bool p_depth_pass, bool p_shadow_pass) {
+void RasterizerSceneGLES3::_add_geometry(RasterizerStorageGLES3::Geometry *p_geometry, RasterizerInstance *p_instance, RasterizerStorageGLES3::GeometryOwner *p_owner, int p_material, bool p_depth_pass, bool p_shadow_pass) {
 	RasterizerStorageGLES3::Material *m = nullptr;
 	RID m_src = p_instance->material_override.is_valid() ? p_instance->material_override : (p_material >= 0 ? p_instance->materials[p_material] : p_geometry->material);
 
@@ -2403,7 +2403,7 @@ void RasterizerSceneGLES3::_add_geometry(RasterizerStorageGLES3::Geometry *p_geo
 	}
 }
 
-void RasterizerSceneGLES3::_add_geometry_with_material(RasterizerStorageGLES3::Geometry *p_geometry, RasterizerInstanceBase *p_instance, RasterizerStorageGLES3::GeometryOwner *p_owner, RasterizerStorageGLES3::Material *p_material, bool p_depth_pass, bool p_shadow_pass) {
+void RasterizerSceneGLES3::_add_geometry_with_material(RasterizerStorageGLES3::Geometry *p_geometry, RasterizerInstance *p_instance, RasterizerStorageGLES3::GeometryOwner *p_owner, RasterizerStorageGLES3::Material *p_material, bool p_depth_pass, bool p_shadow_pass) {
 	bool has_base_alpha = (p_material->shader->spatial.uses_alpha && !p_material->shader->spatial.uses_alpha_scissor) || p_material->shader->spatial.uses_screen_texture || p_material->shader->spatial.uses_depth_texture;
 	bool has_blend_alpha = p_material->shader->spatial.blend_mode != RasterizerStorageGLES3::Shader::Spatial::BLEND_MODE_MIX;
 	bool has_alpha = has_base_alpha || has_blend_alpha;
@@ -3234,7 +3234,7 @@ void RasterizerSceneGLES3::_copy_texture_to_front_buffer(GLuint p_texture) {
 	storage->shaders.copy.set_conditional(CopyShaderGLES3::DISABLE_ALPHA, false);
 }
 
-void RasterizerSceneGLES3::_fill_render_list(RasterizerInstanceBase **p_cull_result, int p_cull_count, bool p_depth_pass, bool p_shadow_pass) {
+void RasterizerSceneGLES3::_fill_render_list(RasterizerInstance **p_cull_result, int p_cull_count, bool p_depth_pass, bool p_shadow_pass) {
 	current_geometry_index = 0;
 	current_material_index = 0;
 	state.used_sss = false;
@@ -3244,7 +3244,7 @@ void RasterizerSceneGLES3::_fill_render_list(RasterizerInstanceBase **p_cull_res
 	//fill list
 
 	for (int i = 0; i < p_cull_count; i++) {
-		RasterizerInstanceBase *inst = p_cull_result[i];
+		RasterizerInstance *inst = p_cull_result[i];
 		switch (inst->base_type) {
 			case VS::INSTANCE_MESH: {
 				RasterizerStorageGLES3::Mesh *mesh = storage->mesh_owner.getptr(inst->base);
@@ -4208,7 +4208,7 @@ bool RasterizerSceneGLES3::_element_needs_directional_add(RenderList::Element *e
 	return false; // no visible unbaked light
 }
 
-void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const CameraMatrix &p_cam_projection, const int p_eye, bool p_cam_ortogonal, RasterizerInstanceBase **p_cull_result, int p_cull_count, RID *p_light_cull_result, int p_light_cull_count, RID *p_reflection_probe_cull_result, int p_reflection_probe_cull_count, RID p_environment, RID p_shadow_atlas, RID p_reflection_atlas, RID p_reflection_probe, int p_reflection_probe_pass) {
+void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const CameraMatrix &p_cam_projection, const int p_eye, bool p_cam_ortogonal, RasterizerInstance **p_cull_result, int p_cull_count, RID *p_light_cull_result, int p_light_cull_count, RID *p_reflection_probe_cull_result, int p_reflection_probe_cull_count, RID p_environment, RID p_shadow_atlas, RID p_reflection_atlas, RID p_reflection_probe, int p_reflection_probe_pass) {
 	//first of all, make a new render pass
 	render_pass++;
 
@@ -4741,7 +4741,7 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 	_post_process(env, p_cam_projection);
 }
 
-void RasterizerSceneGLES3::render_shadow(RID p_light, RID p_shadow_atlas, int p_pass, RasterizerInstanceBase **p_cull_result, int p_cull_count) {
+void RasterizerSceneGLES3::render_shadow(RID p_light, RID p_shadow_atlas, int p_pass, RasterizerInstance **p_cull_result, int p_cull_count) {
 	render_pass++;
 
 	directional_light = nullptr;

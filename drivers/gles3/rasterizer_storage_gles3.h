@@ -267,10 +267,10 @@ public:
 	/////////////////////////////////////////////////////////////////////////////////////////
 
 	struct Instantiable : public RID_Data {
-		SelfList<RasterizerInstanceBase>::List instance_list;
+		SelfList<RasterizerInstance>::List instance_list;
 
 		_FORCE_INLINE_ void instance_change_notify(bool p_aabb, bool p_materials) {
-			SelfList<RasterizerInstanceBase> *instances = instance_list.first();
+			SelfList<RasterizerInstance> *instances = instance_list.first();
 			while (instances) {
 				instances->self()->base_changed(p_aabb, p_materials);
 				instances = instances->next();
@@ -278,9 +278,9 @@ public:
 		}
 
 		_FORCE_INLINE_ void instance_remove_deps() {
-			SelfList<RasterizerInstanceBase> *instances = instance_list.first();
+			SelfList<RasterizerInstance> *instances = instance_list.first();
 			while (instances) {
-				SelfList<RasterizerInstanceBase> *next = instances->next();
+				SelfList<RasterizerInstance> *next = instances->next();
 				instances->self()->base_removed();
 				instances = next;
 			}
@@ -656,7 +656,7 @@ public:
 		uint64_t last_pass;
 
 		Map<Geometry *, int> geometry_owners;
-		Map<RasterizerInstanceBase *, int> instance_owners;
+		Map<RasterizerInstance *, int> instance_owners;
 
 		bool can_cast_shadow_cache;
 		bool is_animated_cache;
@@ -699,8 +699,8 @@ public:
 	bool material_uses_tangents(RID p_material);
 	bool material_uses_ensure_correct_normals(RID p_material);
 
-	void material_add_instance_owner(RID p_material, RasterizerInstanceBase *p_instance);
-	void material_remove_instance_owner(RID p_material, RasterizerInstanceBase *p_instance);
+	void material_add_instance_owner(RID p_material, RasterizerInstance *p_instance);
+	void material_remove_instance_owner(RID p_material, RasterizerInstance *p_instance);
 
 	void material_set_render_priority(RID p_material, int priority);
 
@@ -1004,7 +1004,7 @@ public:
 		Vector<float> skel_texture;
 		GLuint texture;
 		SelfList<Skeleton> update_list;
-		Set<RasterizerInstanceBase *> instances; //instances using skeleton
+		Set<RasterizerInstance *> instances; //instances using skeleton
 		Transform2D base_transform_2d;
 
 		Skeleton() :
@@ -1392,11 +1392,11 @@ public:
 
 	/* INSTANCE */
 
-	void instance_add_skeleton(RID p_skeleton, RasterizerInstanceBase *p_instance);
-	void instance_remove_skeleton(RID p_skeleton, RasterizerInstanceBase *p_instance);
+	void instance_add_skeleton(RID p_skeleton, RasterizerInstance *p_instance);
+	void instance_remove_skeleton(RID p_skeleton, RasterizerInstance *p_instance);
 
-	void instance_add_dependency(RID p_base, RasterizerInstanceBase *p_instance);
-	void instance_remove_dependency(RID p_base, RasterizerInstanceBase *p_instance);
+	void instance_add_dependency(RID p_base, RasterizerInstance *p_instance);
+	void instance_remove_dependency(RID p_base, RasterizerInstance *p_instance);
 
 	/* RENDER TARGET */
 
