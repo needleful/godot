@@ -40,8 +40,9 @@
 #include "joypad_windows.h"
 #include "lang_table.h"
 #include "main/main.h"
+#include "scene/resources/texture.h"
 #include "servers/audio_server.h"
-#include "servers/visual/visual_server_raster.h"
+#include "servers/visual_server.h"
 #include "windows_terminal_logger.h"
 
 #include <avrt.h>
@@ -1605,7 +1606,7 @@ Error OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int
 	set_vsync_via_compositor(video_mode.vsync_via_compositor);
 #endif
 
-	visual_server = memnew(VisualServerRaster);
+	visual_server = memnew(VisualServer);
 
 	visual_server->init();
 

@@ -35,7 +35,7 @@
 #include "core/project_settings.h"
 #include "rasterizer_canvas_gles3.h"
 #include "servers/camera/camera_feed.h"
-#include "servers/visual/visual_server_raster.h"
+#include "servers/visual_server.h"
 
 #ifndef GLES_OVER_GL
 #define glClearDepth glClearDepthf
@@ -1133,7 +1133,7 @@ bool RasterizerSceneGLES3::_setup_material(RasterizerStorageGLES3::Material *p_m
 
 		if (t) {
 			if (t->redraw_if_visible) { //must check before proxy because this is often used with proxies
-				VisualServerRaster::redraw_request(false);
+				VisualServer::redraw_request(false);
 			}
 
 			t = t->get_ptr(); //resolve for proxies
@@ -1548,7 +1548,7 @@ void RasterizerSceneGLES3::_render_geometry(RenderList::Element *e) {
 					RasterizerStorageGLES3::Texture *t = storage->texture_owner.get(c.texture);
 
 					if (t->redraw_if_visible) {
-						VisualServerRaster::redraw_request(false);
+						VisualServer::redraw_request(false);
 					}
 					t = t->get_ptr(); //resolve for proxies
 
@@ -2410,7 +2410,7 @@ void RasterizerSceneGLES3::_add_geometry_with_material(RasterizerStorageGLES3::G
 	}
 
 	if (p_material->shader->spatial.uses_time) {
-		VisualServerRaster::redraw_request(false);
+		VisualServer::redraw_request(false);
 	}
 }
 
@@ -3835,7 +3835,7 @@ void RasterizerSceneGLES3::_post_process(Environment *env, const CameraMatrix &p
 
 		glViewport(0, 0, storage->frame.current_rt->width, storage->frame.current_rt->height);
 
-		VisualServerRaster::redraw_request(); //if using auto exposure, redraw must happen
+		VisualServer::redraw_request(); //if using auto exposure, redraw must happen
 	}
 
 	int max_glow_level = -1;

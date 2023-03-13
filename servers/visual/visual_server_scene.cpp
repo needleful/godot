@@ -30,10 +30,10 @@
 
 #include "visual_server_scene.h"
 
+#include "../visual_server.h"
 #include "core/math/transform_interpolator.h"
 #include "core/os/os.h"
 #include "visual_server_globals.h"
-#include "visual_server_raster.h"
 
 #include <new>
 
@@ -2629,7 +2629,7 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 			InstanceGeometryData *geom = static_cast<InstanceGeometryData *>(ins->base_data);
 
 			if (ins->redraw_if_visible) {
-				VisualServerRaster::redraw_request(false);
+				VisualServer::redraw_request(false);
 			}
 
 			if (ins->base_type == VS::INSTANCE_PARTICLES) {
@@ -2641,7 +2641,7 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 					if (OS::get_singleton()->is_update_pending(true)) {
 						VSG::storage->particles_request_process(ins->base);
 						//particles visible? request redraw
-						VisualServerRaster::redraw_request(false);
+						VisualServer::redraw_request(false);
 					}
 				}
 			}
@@ -2880,7 +2880,7 @@ bool VisualServerScene::_render_reflection_probe_step(Instance *p_instance, int 
 	Scenario *scenario = p_instance->scenario;
 	ERR_FAIL_COND_V(!scenario, true);
 
-	VisualServerRaster::redraw_request(false); //update, so it updates in editor
+	VisualServer::redraw_request(false); //update, so it updates in editor
 
 	if (p_step == 0) {
 		if (!VSG::scene_render->reflection_probe_instance_begin_render(reflection_probe->instance, scenario->reflection_atlas)) {

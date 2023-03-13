@@ -33,7 +33,7 @@
 #include "core/print_string.h"
 #include "drivers/dummy/rasterizer_dummy.h"
 #include "drivers/dummy/texture_loader_dummy.h"
-#include "servers/visual/visual_server_raster.h"
+#include "servers/visual_server.h"
 
 #include "main/main.h"
 
@@ -75,7 +75,7 @@ Error OS_Server::initialize(const VideoMode &p_desired, int p_video_driver, int 
 
 	video_driver_index = p_video_driver; // unused in server platform, but should still be initialized
 
-	visual_server = memnew(VisualServerRaster);
+	visual_server = memnew(VisualServer);
 	visual_server->init();
 
 	AudioDriverManager::initialize(p_audio_driver);
