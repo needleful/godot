@@ -328,32 +328,32 @@ void *VisualServerScene::_instance_pair(void *p_self, SpatialPartitionID, Raster
 	}
 
 	if (B->base_type == VS::INSTANCE_LIGHT && ((1 << A->base_type) & VS::INSTANCE_GEOMETRY_MASK)) {
-		InstanceLightData *light = static_cast<InstanceLightData *>(B->base_data);
-		GeometryInstanceData *geom = static_cast<GeometryInstanceData *>(A->base_data);
+		InstanceLightData &light = B->data.light;
+		GeometryInstanceData &geom = A->data.geometry;
 
 		InstanceLightData::PairInfo pinfo;
 		pinfo.geometry = A;
-		pinfo.L = geom->lighting.push_back(B);
+		pinfo.L = geom.lighting.push_back(B);
 
-		List<InstanceLightData::PairInfo>::Element *E = light->geometries.push_back(pinfo);
+		List<InstanceLightData::PairInfo>::Element *E = light.geometries.push_back(pinfo);
 
-		if (geom->can_cast_shadows) {
-			light->shadow_dirty = true;
+		if (geom.can_cast_shadows) {
+			light.shadow_dirty = true;
 		}
-		geom->lighting_dirty = true;
+		geom.lighting_dirty = true;
 
 		return E; //this element should make freeing faster
 	} else if (B->base_type == VS::INSTANCE_REFLECTION_PROBE && ((1 << A->base_type) & VS::INSTANCE_GEOMETRY_MASK)) {
-		InstanceReflectionProbeData *reflection_probe = static_cast<InstanceReflectionProbeData *>(B->base_data);
-		GeometryInstanceData *geom = static_cast<GeometryInstanceData *>(A->base_data);
+		InstanceReflectionProbeData &reflection_probe = B->data.reflection;
+		GeometryInstanceData &geom = A->data.geometry;
 
 		InstanceReflectionProbeData::PairInfo pinfo;
 		pinfo.geometry = A;
-		pinfo.L = geom->reflection_probes.push_back(B);
+		pinfo.L = geom.reflection_probes.push_back(B);
 
-		List<InstanceReflectionProbeData::PairInfo>::Element *E = reflection_probe->geometries.push_back(pinfo);
+		List<InstanceReflectionProbeData::PairInfo>::Element *E = reflection_probe.geometries.push_back(pinfo);
 
-		geom->reflection_dirty = true;
+		geom.reflection_dirty = true;
 
 		return E; //this element should make freeing faster
 	}
@@ -372,29 +372,29 @@ void VisualServerScene::_instance_unpair(void *p_self, SpatialPartitionID, Raste
 	}
 
 	if (B->base_type == VS::INSTANCE_LIGHT && ((1 << A->base_type) & VS::INSTANCE_GEOMETRY_MASK)) {
-		InstanceLightData *light = static_cast<InstanceLightData *>(B->base_data);
-		GeometryInstanceData *geom = static_cast<GeometryInstanceData *>(A->base_data);
+		InstanceLightData &light = B->data.light;
+		GeometryInstanceData &geom = A->data.geometry;
 
 		List<InstanceLightData::PairInfo>::Element *E = reinterpret_cast<List<InstanceLightData::PairInfo>::Element *>(udata);
 
-		geom->lighting.erase(E->get().L);
-		light->geometries.erase(E);
+		geom.lighting.erase(E->get().L);
+		light.geometries.erase(E);
 
-		if (geom->can_cast_shadows) {
-			light->shadow_dirty = true;
+		if (geom.can_cast_shadows) {
+			light.shadow_dirty = true;
 		}
-		geom->lighting_dirty = true;
+		geom.lighting_dirty = true;
 
 	} else if (B->base_type == VS::INSTANCE_REFLECTION_PROBE && ((1 << A->base_type) & VS::INSTANCE_GEOMETRY_MASK)) {
-		InstanceReflectionProbeData *reflection_probe = static_cast<InstanceReflectionProbeData *>(B->base_data);
-		GeometryInstanceData *geom = static_cast<GeometryInstanceData *>(A->base_data);
+		InstanceReflectionProbeData &reflection_probe = B->data.reflection;
+		GeometryInstanceData &geom = A->data.geometry;
 
 		List<InstanceReflectionProbeData::PairInfo>::Element *E = reinterpret_cast<List<InstanceReflectionProbeData::PairInfo>::Element *>(udata);
 
-		geom->reflection_probes.erase(E->get().L);
-		reflection_probe->geometries.erase(E);
+		geom.reflection_probes.erase(E->get().L);
+		reflection_probe.geometries.erase(E);
 
-		geom->reflection_dirty = true;
+		geom.reflection_dirty = true;
 	}
 }
 
@@ -508,29 +508,24 @@ void VisualServerScene::instance_set_base(RID p_instance, RID p_base) {
 
 		switch (instance->base_type) {
 			case VS::INSTANCE_LIGHT: {
-				InstanceLightData *light = static_cast<InstanceLightData *>(instance->base_data);
+				InstanceLightData &light = instance->data.light;
 
-				if (instance->scenario && light->D) {
-					instance->scenario->directional_lights.erase(light->D);
-					light->D = nullptr;
+				if (instance->scenario && light.D) {
+					instance->scenario->directional_lights.erase(light.D);
+					light.D = nullptr;
 				}
-				VSG::scene_render->free(light->instance);
+				VSG::scene_render->free(light.instance);
 			} break;
 			case VS::INSTANCE_REFLECTION_PROBE: {
-				InstanceReflectionProbeData *reflection_probe = static_cast<InstanceReflectionProbeData *>(instance->base_data);
-				VSG::scene_render->free(reflection_probe->instance);
-				if (reflection_probe->update_list.in_list()) {
-					reflection_probe_render_list.remove(&reflection_probe->update_list);
+				InstanceReflectionProbeData &reflection_probe = instance->data.reflection;
+				VSG::scene_render->free(reflection_probe.instance);
+				if (reflection_probe.update_list.in_list()) {
+					reflection_probe_render_list.remove(&reflection_probe.update_list);
 				}
 			} break;
 
 			default: {
 			}
-		}
-
-		if (instance->base_data) {
-			memdelete(instance->base_data);
-			instance->base_data = nullptr;
 		}
 
 		instance->blend_values = PoolRealArray();
@@ -552,32 +547,28 @@ void VisualServerScene::instance_set_base(RID p_instance, RID p_base) {
 
 		switch (instance->base_type) {
 			case VS::INSTANCE_LIGHT: {
-				InstanceLightData *light = memnew(InstanceLightData);
+				InstanceLightData *light = new (&instance->data.light) InstanceLightData();
 
 				if (scenario && VSG::storage->light_get_type(p_base) == VS::LIGHT_DIRECTIONAL) {
 					light->D = scenario->directional_lights.push_back(instance);
 				}
 
 				light->instance = VSG::scene_render->light_instance_create(p_base);
-
-				instance->base_data = light;
 			} break;
 			case VS::INSTANCE_MESH:
 			case VS::INSTANCE_MULTIMESH:
 			case VS::INSTANCE_IMMEDIATE:
 			case VS::INSTANCE_PARTICLES: {
-				GeometryInstanceData *geom = memnew(GeometryInstanceData);
-				instance->base_data = geom;
+				new (&instance->data.geometry) GeometryInstanceData();
 				if (instance->base_type == VS::INSTANCE_MESH) {
 					instance->blend_values.resize(VSG::storage->mesh_get_blend_shape_count(p_base));
 				}
 			} break;
 			case VS::INSTANCE_REFLECTION_PROBE: {
-				InstanceReflectionProbeData *reflection_probe = memnew(InstanceReflectionProbeData);
-				reflection_probe->owner = instance;
-				instance->base_data = reflection_probe;
-
-				reflection_probe->instance = VSG::scene_render->reflection_probe_instance_create(p_base);
+				;
+				InstanceReflectionProbeData *reflection = new (&instance->data.reflection) InstanceReflectionProbeData();
+				reflection->owner = instance;
+				reflection->instance = VSG::scene_render->reflection_probe_instance_create(p_base);
 			} break;
 			default: {
 			}
@@ -614,16 +605,16 @@ void VisualServerScene::instance_set_scenario(RID p_instance, RID p_scenario) {
 
 		switch (instance->base_type) {
 			case VS::INSTANCE_LIGHT: {
-				InstanceLightData *light = static_cast<InstanceLightData *>(instance->base_data);
+				InstanceLightData &light = instance->data.light;
 
-				if (light->D) {
-					instance->scenario->directional_lights.erase(light->D);
-					light->D = nullptr;
+				if (light.D) {
+					instance->scenario->directional_lights.erase(light.D);
+					light.D = nullptr;
 				}
 			} break;
 			case VS::INSTANCE_REFLECTION_PROBE: {
-				InstanceReflectionProbeData *reflection_probe = static_cast<InstanceReflectionProbeData *>(instance->base_data);
-				VSG::scene_render->reflection_probe_release_atlas_index(reflection_probe->instance);
+				InstanceReflectionProbeData &reflection_probe = instance->data.reflection;
+				VSG::scene_render->reflection_probe_release_atlas_index(reflection_probe.instance);
 			} break;
 			default: {
 			}
@@ -642,10 +633,10 @@ void VisualServerScene::instance_set_scenario(RID p_instance, RID p_scenario) {
 
 		switch (instance->base_type) {
 			case VS::INSTANCE_LIGHT: {
-				InstanceLightData *light = static_cast<InstanceLightData *>(instance->base_data);
+				InstanceLightData &light = instance->data.light;
 
 				if (VSG::storage->light_get_type(instance->base) == VS::LIGHT_DIRECTIONAL) {
-					light->D = scenario->directional_lights.push_back(instance);
+					light.D = scenario->directional_lights.push_back(instance);
 				}
 			} break;
 			default: {
@@ -670,12 +661,11 @@ void VisualServerScene::instance_set_layer_mask(RID p_instance, uint32_t p_mask)
 
 	// update lights to show / hide shadows according to the new mask
 	if ((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) {
-		GeometryInstanceData *geom = static_cast<GeometryInstanceData *>(instance->base_data);
-
-		if (geom->can_cast_shadows) {
-			for (List<RasterizerInstance *>::Element *E = geom->lighting.front(); E; E = E->next()) {
-				InstanceLightData *light = static_cast<InstanceLightData *>(E->get()->base_data);
-				light->shadow_dirty = true;
+		GeometryInstanceData &geom = instance->data.geometry;
+		if (geom.can_cast_shadows) {
+			for (List<RasterizerInstance *>::Element *E = geom.lighting.front(); E; E = E->next()) {
+				InstanceLightData &light = E->get()->data.light;
+				light.shadow_dirty = true;
 			}
 		}
 	}
@@ -1085,12 +1075,11 @@ void VisualServerScene::instance_set_visible(RID p_instance, bool p_visible) {
 
 	// when showing or hiding geometry, lights must be kept up to date to show / hide shadows
 	if ((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) {
-		GeometryInstanceData *geom = static_cast<GeometryInstanceData *>(instance->base_data);
-
-		if (geom->can_cast_shadows) {
-			for (List<RasterizerInstance *>::Element *E = geom->lighting.front(); E; E = E->next()) {
-				InstanceLightData *light = static_cast<InstanceLightData *>(E->get()->base_data);
-				light->shadow_dirty = true;
+		GeometryInstanceData &geom = instance->data.geometry;
+		if (geom.can_cast_shadows) {
+			for (List<RasterizerInstance *>::Element *E = geom.lighting.front(); E; E = E->next()) {
+				InstanceLightData &light = E->get()->data.light;
+				light.shadow_dirty = true;
 			}
 		}
 	}
@@ -1867,17 +1856,15 @@ void VisualServerScene::_update_instance(RasterizerInstance *p_instance) {
 	// up to date to avoid culling errors.
 
 	if (p_instance->base_type == VS::INSTANCE_LIGHT) {
-		InstanceLightData *light = static_cast<InstanceLightData *>(p_instance->base_data);
-
-		VSG::scene_render->light_instance_set_transform(light->instance, *instance_xform);
-		light->shadow_dirty = true;
+		InstanceLightData &light = p_instance->data.light;
+		VSG::scene_render->light_instance_set_transform(light.instance, *instance_xform);
+		light.shadow_dirty = true;
 	}
 
 	if (p_instance->base_type == VS::INSTANCE_REFLECTION_PROBE) {
-		InstanceReflectionProbeData *reflection_probe = static_cast<InstanceReflectionProbeData *>(p_instance->base_data);
-
-		VSG::scene_render->reflection_probe_instance_set_transform(reflection_probe->instance, *instance_xform);
-		reflection_probe->reflection_dirty = true;
+		InstanceReflectionProbeData &reflection_probe = p_instance->data.reflection;
+		VSG::scene_render->reflection_probe_instance_set_transform(reflection_probe.instance, *instance_xform);
+		reflection_probe.reflection_dirty = true;
 	}
 
 	if (p_instance->base_type == VS::INSTANCE_PARTICLES) {
@@ -1889,13 +1876,12 @@ void VisualServerScene::_update_instance(RasterizerInstance *p_instance) {
 	}
 
 	if ((1 << p_instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) {
-		GeometryInstanceData *geom = static_cast<GeometryInstanceData *>(p_instance->base_data);
-		//make sure lights are updated if it casts shadow
+		GeometryInstanceData &geom = p_instance->data.geometry; //make sure lights are updated if it casts shado;
 
-		if (geom->can_cast_shadows) {
-			for (List<RasterizerInstance *>::Element *E = geom->lighting.front(); E; E = E->next()) {
-				InstanceLightData *light = static_cast<InstanceLightData *>(E->get()->base_data);
-				light->shadow_dirty = true;
+		if (geom.can_cast_shadows) {
+			for (List<RasterizerInstance *>::Element *E = geom.lighting.front(); E; E = E->next()) {
+				InstanceLightData &light = E->get()->data.light;
+				light.shadow_dirty = true;
 			}
 		}
 	}
@@ -2001,7 +1987,7 @@ void VisualServerScene::_update_instance_aabb(RasterizerInstance *p_instance) {
 }
 
 bool VisualServerScene::_light_instance_update_shadow(RasterizerInstance *p_instance, const Transform p_cam_transform, const CameraMatrix &p_cam_projection, bool p_cam_orthogonal, RID p_shadow_atlas, RasterizerScenario *p_scenario, uint32_t p_visible_layers) {
-	InstanceLightData *light = static_cast<InstanceLightData *>(p_instance->base_data);
+	InstanceLightData &light = p_instance->data.light;
 	uint32_t light_cull_mask = VSG::storage->light_get_cull_mask(p_instance->base);
 
 	Transform light_transform = p_instance->transform;
@@ -2034,11 +2020,11 @@ bool VisualServerScene::_light_instance_update_shadow(RasterizerInstance *p_inst
 
 				for (int i = 0; i < cull_count; i++) {
 					RasterizerInstance *instance = instance_shadow_cull_result[i];
-					if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !static_cast<GeometryInstanceData *>(instance->base_data)->can_cast_shadows || !(p_visible_layers & instance->layer_mask)) {
+					if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !instance->data.geometry.can_cast_shadows || !(p_visible_layers & instance->layer_mask)) {
 						continue;
 					}
 
-					if (static_cast<GeometryInstanceData *>(instance->base_data)->material_is_animated) {
+					if (instance->data.geometry.material_is_animated) {
 						animated_material_found = true;
 					}
 
@@ -2086,7 +2072,7 @@ bool VisualServerScene::_light_instance_update_shadow(RasterizerInstance *p_inst
 
 			distances[splits] = max_distance;
 
-			float texture_size = VSG::scene_render->get_directional_light_shadow_size(light->instance);
+			float texture_size = VSG::scene_render->get_directional_light_shadow_size(light.instance);
 
 			bool overlap = VSG::storage->light_directional_get_blend_splits(p_instance->base);
 
@@ -2237,7 +2223,7 @@ bool VisualServerScene::_light_instance_update_shadow(RasterizerInstance *p_inst
 				for (int j = 0; j < cull_count; j++) {
 					float min, max;
 					RasterizerInstance *instance = instance_shadow_cull_result[j];
-					if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !static_cast<GeometryInstanceData *>(instance->base_data)->can_cast_shadows || !(p_visible_layers & instance->layer_mask) || !(instance->layer_mask & light_cull_mask)) {
+					if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !instance->data.geometry.can_cast_shadows || !(p_visible_layers & instance->layer_mask) || !(instance->layer_mask & light_cull_mask)) {
 						cull_count--;
 						SWAP(instance_shadow_cull_result[j], instance_shadow_cull_result[cull_count]);
 						j--;
@@ -2263,10 +2249,10 @@ bool VisualServerScene::_light_instance_update_shadow(RasterizerInstance *p_inst
 					ortho_transform.basis = transform.basis;
 					ortho_transform.origin = x_vec * (x_min_cam + half_x) + y_vec * (y_min_cam + half_y) + z_vec * z_max;
 
-					VSG::scene_render->light_instance_set_shadow_transform(light->instance, ortho_camera, ortho_transform, 0, distances[i + 1], i, bias_scale);
+					VSG::scene_render->light_instance_set_shadow_transform(light.instance, ortho_camera, ortho_transform, 0, distances[i + 1], i, bias_scale);
 				}
 
-				VSG::scene_render->render_shadow(light->instance, p_shadow_atlas, i, (RasterizerInstance **)instance_shadow_cull_result, cull_count);
+				VSG::scene_render->render_shadow(light.instance, p_shadow_atlas, i, (RasterizerInstance **)instance_shadow_cull_result, cull_count);
 			}
 
 		} break;
@@ -2294,12 +2280,12 @@ bool VisualServerScene::_light_instance_update_shadow(RasterizerInstance *p_inst
 
 					for (int j = 0; j < cull_count; j++) {
 						RasterizerInstance *instance = instance_shadow_cull_result[j];
-						if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !static_cast<GeometryInstanceData *>(instance->base_data)->can_cast_shadows || !(p_visible_layers & instance->layer_mask) || !(instance->layer_mask & light_cull_mask)) {
+						if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !instance->data.geometry.can_cast_shadows || !(p_visible_layers & instance->layer_mask) || !(instance->layer_mask & light_cull_mask)) {
 							cull_count--;
 							SWAP(instance_shadow_cull_result[j], instance_shadow_cull_result[cull_count]);
 							j--;
 						} else {
-							if (static_cast<GeometryInstanceData *>(instance->base_data)->material_is_animated) {
+							if (instance->data.geometry.material_is_animated) {
 								animated_material_found = true;
 							}
 
@@ -2308,8 +2294,8 @@ bool VisualServerScene::_light_instance_update_shadow(RasterizerInstance *p_inst
 						}
 					}
 
-					VSG::scene_render->light_instance_set_shadow_transform(light->instance, CameraMatrix(), light_transform, radius, 0, i);
-					VSG::scene_render->render_shadow(light->instance, p_shadow_atlas, i, (RasterizerInstance **)instance_shadow_cull_result, cull_count);
+					VSG::scene_render->light_instance_set_shadow_transform(light.instance, CameraMatrix(), light_transform, radius, 0, i);
+					VSG::scene_render->render_shadow(light.instance, p_shadow_atlas, i, (RasterizerInstance **)instance_shadow_cull_result, cull_count);
 				}
 			} else { //shadow cube
 
@@ -2341,17 +2327,17 @@ bool VisualServerScene::_light_instance_update_shadow(RasterizerInstance *p_inst
 
 					Vector<Plane> planes = cm.get_projection_planes(xform);
 
-					int cull_count = _cull_convex_from_point(p_scenario, light_transform, cm, planes, instance_shadow_cull_result, MAX_INSTANCE_CULL, light->previous_room_id_hint, VS::INSTANCE_GEOMETRY_MASK);
+					int cull_count = _cull_convex_from_point(p_scenario, light_transform, cm, planes, instance_shadow_cull_result, MAX_INSTANCE_CULL, light.previous_room_id_hint, VS::INSTANCE_GEOMETRY_MASK);
 
 					Plane near_plane(xform.origin, -xform.basis.get_axis(2));
 					for (int j = 0; j < cull_count; j++) {
 						RasterizerInstance *instance = instance_shadow_cull_result[j];
-						if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !static_cast<GeometryInstanceData *>(instance->base_data)->can_cast_shadows || !(p_visible_layers & instance->layer_mask) || !(instance->layer_mask & light_cull_mask)) {
+						if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !instance->data.geometry.can_cast_shadows || !(p_visible_layers & instance->layer_mask) || !(instance->layer_mask & light_cull_mask)) {
 							cull_count--;
 							SWAP(instance_shadow_cull_result[j], instance_shadow_cull_result[cull_count]);
 							j--;
 						} else {
-							if (static_cast<GeometryInstanceData *>(instance->base_data)->material_is_animated) {
+							if (instance->data.geometry.material_is_animated) {
 								animated_material_found = true;
 							}
 							instance->depth = near_plane.distance_to(instance->transform.origin);
@@ -2359,12 +2345,12 @@ bool VisualServerScene::_light_instance_update_shadow(RasterizerInstance *p_inst
 						}
 					}
 
-					VSG::scene_render->light_instance_set_shadow_transform(light->instance, cm, xform, radius, 0, i);
-					VSG::scene_render->render_shadow(light->instance, p_shadow_atlas, i, (RasterizerInstance **)instance_shadow_cull_result, cull_count);
+					VSG::scene_render->light_instance_set_shadow_transform(light.instance, cm, xform, radius, 0, i);
+					VSG::scene_render->render_shadow(light.instance, p_shadow_atlas, i, (RasterizerInstance **)instance_shadow_cull_result, cull_count);
 				}
 
 				//restore the regular DP matrix
-				VSG::scene_render->light_instance_set_shadow_transform(light->instance, CameraMatrix(), light_transform, radius, 0, 0);
+				VSG::scene_render->light_instance_set_shadow_transform(light.instance, CameraMatrix(), light_transform, radius, 0, 0);
 			}
 
 		} break;
@@ -2376,17 +2362,17 @@ bool VisualServerScene::_light_instance_update_shadow(RasterizerInstance *p_inst
 			cm.set_perspective(angle * 2.0, 1.0, 0.01, radius);
 
 			Vector<Plane> planes = cm.get_projection_planes(light_transform);
-			int cull_count = _cull_convex_from_point(p_scenario, light_transform, cm, planes, instance_shadow_cull_result, MAX_INSTANCE_CULL, light->previous_room_id_hint, VS::INSTANCE_GEOMETRY_MASK);
+			int cull_count = _cull_convex_from_point(p_scenario, light_transform, cm, planes, instance_shadow_cull_result, MAX_INSTANCE_CULL, light.previous_room_id_hint, VS::INSTANCE_GEOMETRY_MASK);
 
 			Plane near_plane(light_transform.origin, -light_transform.basis.get_axis(2));
 			for (int j = 0; j < cull_count; j++) {
 				RasterizerInstance *instance = instance_shadow_cull_result[j];
-				if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !static_cast<GeometryInstanceData *>(instance->base_data)->can_cast_shadows || !(p_visible_layers & instance->layer_mask) || !(instance->layer_mask & light_cull_mask)) {
+				if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !instance->data.geometry.can_cast_shadows || !(p_visible_layers & instance->layer_mask) || !(instance->layer_mask & light_cull_mask)) {
 					cull_count--;
 					SWAP(instance_shadow_cull_result[j], instance_shadow_cull_result[cull_count]);
 					j--;
 				} else {
-					if (static_cast<GeometryInstanceData *>(instance->base_data)->material_is_animated) {
+					if (instance->data.geometry.material_is_animated) {
 						animated_material_found = true;
 					}
 					instance->depth = near_plane.distance_to(instance->transform.origin);
@@ -2394,8 +2380,8 @@ bool VisualServerScene::_light_instance_update_shadow(RasterizerInstance *p_inst
 				}
 			}
 
-			VSG::scene_render->light_instance_set_shadow_transform(light->instance, cm, light_transform, radius, 0, 0);
-			VSG::scene_render->render_shadow(light->instance, p_shadow_atlas, 0, (RasterizerInstance **)instance_shadow_cull_result, cull_count);
+			VSG::scene_render->light_instance_set_shadow_transform(light.instance, cm, light_transform, radius, 0, 0);
+			VSG::scene_render->render_shadow(light.instance, p_shadow_atlas, 0, (RasterizerInstance **)instance_shadow_cull_result, cull_count);
 
 		} break;
 	}
@@ -2585,14 +2571,14 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 			//failure
 		} else if (ins->base_type == VS::INSTANCE_LIGHT && ins->visible) {
 			if (light_cull_count < MAX_LIGHTS_CULLED) {
-				InstanceLightData *light = static_cast<InstanceLightData *>(ins->base_data);
+				InstanceLightData &light = ins->data.light;
 
-				if (!light->geometries.empty()) {
+				if (!light.geometries.empty()) {
 					//do not add this light if no geometry is affected by it..
 					light_cull_result[light_cull_count] = ins;
-					light_instance_cull_result[light_cull_count] = light->instance;
+					light_instance_cull_result[light_cull_count] = light.instance;
 					if (p_shadow_atlas.is_valid() && VSG::storage->light_has_shadow(ins->base)) {
-						VSG::scene_render->light_instance_mark_visible(light->instance); //mark it visible for shadow allocation later
+						VSG::scene_render->light_instance_mark_visible(light.instance); //mark it visible for shadow allocation later
 					}
 
 					light_cull_count++;
@@ -2600,25 +2586,25 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 			}
 		} else if (ins->base_type == VS::INSTANCE_REFLECTION_PROBE && ins->visible) {
 			if (reflection_probe_cull_count < MAX_REFLECTION_PROBES_CULLED) {
-				InstanceReflectionProbeData *reflection_probe = static_cast<InstanceReflectionProbeData *>(ins->base_data);
+				InstanceReflectionProbeData &reflection_probe = ins->data.reflection;
 
-				if (p_reflection_probe != reflection_probe->instance) {
+				if (p_reflection_probe != reflection_probe.instance) {
 					//avoid entering The Matrix
 
-					if (!reflection_probe->geometries.empty()) {
+					if (!reflection_probe.geometries.empty()) {
 						//do not add this light if no geometry is affected by it..
 
-						if (reflection_probe->reflection_dirty || VSG::scene_render->reflection_probe_instance_needs_redraw(reflection_probe->instance)) {
-							if (!reflection_probe->update_list.in_list()) {
-								reflection_probe->render_step = 0;
-								reflection_probe_render_list.add_last(&reflection_probe->update_list);
+						if (reflection_probe.reflection_dirty || VSG::scene_render->reflection_probe_instance_needs_redraw(reflection_probe.instance)) {
+							if (!reflection_probe.update_list.in_list()) {
+								reflection_probe.render_step = 0;
+								reflection_probe_render_list.add_last(&reflection_probe.update_list);
 							}
 
-							reflection_probe->reflection_dirty = false;
+							reflection_probe.reflection_dirty = false;
 						}
 
-						if (VSG::scene_render->reflection_probe_instance_has_reflection(reflection_probe->instance)) {
-							reflection_probe_instance_cull_result[reflection_probe_cull_count] = reflection_probe->instance;
+						if (VSG::scene_render->reflection_probe_instance_has_reflection(reflection_probe.instance)) {
+							reflection_probe_instance_cull_result[reflection_probe_cull_count] = reflection_probe.instance;
 							reflection_probe_cull_count++;
 						}
 					}
@@ -2628,7 +2614,7 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 		} else if (((1 << ins->base_type) & VS::INSTANCE_GEOMETRY_MASK) && ins->visible && ins->cast_shadows != VS::SHADOW_CASTING_SETTING_SHADOWS_ONLY) {
 			keep = true;
 
-			GeometryInstanceData *geom = static_cast<GeometryInstanceData *>(ins->base_data);
+			GeometryInstanceData &geom = ins->data.geometry;
 
 			if (ins->redraw_if_visible) {
 				VisualServer::redraw_request(false);
@@ -2648,32 +2634,32 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 				}
 			}
 
-			if (geom->lighting_dirty) {
+			if (geom.lighting_dirty) {
 				int l = 0;
 				//only called when lights AABB enter/exit this geometry
-				ins->light_instances.resize(geom->lighting.size());
+				ins->light_instances.resize(geom.lighting.size());
 
-				for (List<RasterizerInstance *>::Element *E = geom->lighting.front(); E; E = E->next()) {
-					InstanceLightData *light = static_cast<InstanceLightData *>(E->get()->base_data);
+				for (List<RasterizerInstance *>::Element *E = geom.lighting.front(); E; E = E->next()) {
+					InstanceLightData &light = E->get()->data.light;
 
-					ins->light_instances.write[l++] = light->instance;
+					ins->light_instances.write[l++] = light.instance;
 				}
 
-				geom->lighting_dirty = false;
+				geom.lighting_dirty = false;
 			}
 
-			if (geom->reflection_dirty) {
+			if (geom.reflection_dirty) {
 				int l = 0;
 				//only called when reflection probe AABB enter/exit this geometry
-				ins->reflection_probe_instances.resize(geom->reflection_probes.size());
+				ins->reflection_probe_instances.resize(geom.reflection_probes.size());
 
-				for (List<RasterizerInstance *>::Element *E = geom->reflection_probes.front(); E; E = E->next()) {
-					InstanceReflectionProbeData *reflection_probe = static_cast<InstanceReflectionProbeData *>(E->get()->base_data);
+				for (List<RasterizerInstance *>::Element *E = geom.reflection_probes.front(); E; E = E->next()) {
+					InstanceReflectionProbeData &reflection_probe = E->get()->data.reflection;
 
-					ins->reflection_probe_instances.write[l++] = reflection_probe->instance;
+					ins->reflection_probe_instances.write[l++] = reflection_probe.instance;
 				}
 
-				geom->reflection_dirty = false;
+				geom.reflection_dirty = false;
 			}
 		}
 
@@ -2707,17 +2693,13 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 				continue;
 			}
 
-			InstanceLightData *light = static_cast<InstanceLightData *>(E->get()->base_data);
+			InstanceLightData &light = E->get()->data.light;
 
-			//check shadow..
-
-			if (light) {
-				if (p_shadow_atlas.is_valid() && VSG::storage->light_has_shadow(E->get()->base)) {
-					lights_with_shadow[directional_shadow_count++] = E->get();
-				}
-				//add to list
-				directional_light_ptr[directional_light_count++] = light->instance;
+			if (p_shadow_atlas.is_valid() && VSG::storage->light_has_shadow(E->get()->base)) {
+				lights_with_shadow[directional_shadow_count++] = E->get();
 			}
+			//add to list
+			directional_light_ptr[directional_light_count++] = light.instance;
 		}
 
 		VSG::scene_render->set_directional_shadow_count(directional_shadow_count);
@@ -2738,7 +2720,7 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 				continue;
 			}
 
-			InstanceLightData *light = static_cast<InstanceLightData *>(ins->base_data);
+			InstanceLightData &light = ins->data.light;
 
 			float coverage = 0.f;
 
@@ -2810,16 +2792,16 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 				}
 			}
 
-			if (light->shadow_dirty) {
-				light->last_version++;
-				light->shadow_dirty = false;
+			if (light.shadow_dirty) {
+				light.last_version++;
+				light.shadow_dirty = false;
 			}
 
-			bool redraw = VSG::scene_render->shadow_atlas_update_light(p_shadow_atlas, light->instance, coverage, light->last_version);
+			bool redraw = VSG::scene_render->shadow_atlas_update_light(p_shadow_atlas, light.instance, coverage, light.last_version);
 
 			if (redraw) {
 				//must redraw!
-				light->shadow_dirty = _light_instance_update_shadow(ins, p_cam_transform, p_cam_projection, p_cam_orthogonal, p_shadow_atlas, scenario, p_visible_layers);
+				light.shadow_dirty = _light_instance_update_shadow(ins, p_cam_transform, p_cam_projection, p_cam_orthogonal, p_shadow_atlas, scenario, p_visible_layers);
 			}
 		}
 	}
@@ -2878,14 +2860,14 @@ void VisualServerScene::render_empty_scene(RID p_scenario, RID p_shadow_atlas) {
 }
 
 bool VisualServerScene::_render_reflection_probe_step(RasterizerInstance *p_instance, int p_step) {
-	InstanceReflectionProbeData *reflection_probe = static_cast<InstanceReflectionProbeData *>(p_instance->base_data);
+	InstanceReflectionProbeData &reflection_probe = p_instance->data.reflection;
 	RasterizerScenario *scenario = p_instance->scenario;
 	ERR_FAIL_COND_V(!scenario, true);
 
 	VisualServer::redraw_request(false); //update, so it updates in editor
 
 	if (p_step == 0) {
-		if (!VSG::scene_render->reflection_probe_instance_begin_render(reflection_probe->instance, scenario->reflection_atlas)) {
+		if (!VSG::scene_render->reflection_probe_instance_begin_render(reflection_probe.instance, scenario->reflection_atlas)) {
 			return true; //sorry, all full :(
 		}
 	}
@@ -2933,16 +2915,16 @@ bool VisualServerScene::_render_reflection_probe_step(RasterizerInstance *p_inst
 			shadow_atlas = scenario->reflection_probe_shadow_atlas;
 		}
 
-		_prepare_scene(xform, cm, false, RID(), VSG::storage->reflection_probe_get_cull_mask(p_instance->base), p_instance->scenario->self, shadow_atlas, reflection_probe->instance, reflection_probe->previous_room_id_hint);
+		_prepare_scene(xform, cm, false, RID(), VSG::storage->reflection_probe_get_cull_mask(p_instance->base), p_instance->scenario->self, shadow_atlas, reflection_probe.instance, reflection_probe.previous_room_id_hint);
 
 		bool async_forbidden_backup = VSG::storage->is_shader_async_hidden_forbidden();
 		VSG::storage->set_shader_async_hidden_forbidden(true);
-		_render_scene(xform, cm, 0, false, RID(), p_instance->scenario->self, shadow_atlas, reflection_probe->instance, p_step);
+		_render_scene(xform, cm, 0, false, RID(), p_instance->scenario->self, shadow_atlas, reflection_probe.instance, p_step);
 		VSG::storage->set_shader_async_hidden_forbidden(async_forbidden_backup);
 
 	} else {
 		//do roughness postprocess step until it believes it's done
-		return VSG::scene_render->reflection_probe_instance_postprocess_step(reflection_probe->instance);
+		return VSG::scene_render->reflection_probe_instance_postprocess_step(reflection_probe.instance);
 	}
 
 	return false;
@@ -3017,8 +2999,7 @@ void VisualServerScene::_update_dirty_instance(RasterizerInstance *p_instance) {
 		}
 
 		if ((1 << p_instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) {
-			GeometryInstanceData *geom = static_cast<GeometryInstanceData *>(p_instance->base_data);
-
+			GeometryInstanceData &geom = p_instance->data.geometry;
 			bool can_cast_shadows = true;
 			bool is_animated = false;
 
@@ -3129,17 +3110,17 @@ void VisualServerScene::_update_dirty_instance(RasterizerInstance *p_instance) {
 				is_animated = is_animated || VSG::storage->material_is_animated(p_instance->material_overlay);
 			}
 
-			if (can_cast_shadows != geom->can_cast_shadows) {
+			if (can_cast_shadows != geom.can_cast_shadows) {
 				//ability to cast shadows change, let lights now
-				for (List<RasterizerInstance *>::Element *E = geom->lighting.front(); E; E = E->next()) {
-					InstanceLightData *light = static_cast<InstanceLightData *>(E->get()->base_data);
-					light->shadow_dirty = true;
+				for (List<RasterizerInstance *>::Element *E = geom.lighting.front(); E; E = E->next()) {
+					InstanceLightData &light = E->get()->data.light;
+					light.shadow_dirty = true;
 				}
 
-				geom->can_cast_shadows = can_cast_shadows;
+				geom.can_cast_shadows = can_cast_shadows;
 			}
 
-			geom->material_is_animated = is_animated;
+			geom.material_is_animated = is_animated;
 		}
 	}
 

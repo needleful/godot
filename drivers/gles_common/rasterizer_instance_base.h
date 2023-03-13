@@ -160,11 +160,7 @@ struct RasterizerScenario : RID_Data {
 	~RasterizerScenario() { memdelete(sps); }
 };
 
-struct RasterizerInstanceData {
-	~RasterizerInstanceData() {}
-};
-
-struct GeometryInstanceData : public RasterizerInstanceData {
+struct GeometryInstanceData {
 	List<RasterizerInstance *> lighting;
 	List<RasterizerInstance *> reflection_probes;
 
@@ -181,7 +177,7 @@ struct GeometryInstanceData : public RasterizerInstanceData {
 	}
 };
 
-struct InstanceReflectionProbeData : public RasterizerInstanceData {
+struct InstanceReflectionProbeData {
 	struct PairInfo {
 		List<RasterizerInstance *>::Element *L; //reflection iterator in geometry
 		RasterizerInstance *geometry;
@@ -205,7 +201,7 @@ struct InstanceReflectionProbeData : public RasterizerInstanceData {
 	}
 };
 
-struct InstanceLightData : public RasterizerInstanceData {
+struct InstanceLightData {
 	struct PairInfo {
 		List<RasterizerInstance *>::Element *L; //light iterator in geometry
 		RasterizerInstance *geometry;
@@ -262,6 +258,7 @@ struct RasterizerInstance : RID_Data {
 	bool mirror : 1;
 	bool receive_shadows : 1;
 	bool visible : 1;
+	bool baked_light : 1; //this flag is only to know if it actually did use baked light
 	bool redraw_if_visible : 1;
 
 	bool on_interpolate_list : 1;
@@ -278,6 +275,11 @@ struct RasterizerInstance : RID_Data {
 
 	SelfList<RasterizerInstance> dependency_item;
 
+	RasterizerInstance *lightmap_capture;
+	RID lightmap;
+	Vector<Color> lightmap_capture_data; //in a array (12 values) to avoid wasting space if unused. Alpha is unused, but needed to send to shader
+	int lightmap_slice;
+	Rect2 lightmap_uv_rect;
 	RID self;
 	//scenario stuff
 	SpatialPartitionID spatial_partition_id;
@@ -319,7 +321,13 @@ struct RasterizerInstance : RID_Data {
 
 	uint64_t version; // changes to this, and changes to base increase version
 
-	RasterizerInstanceData *base_data;
+	union BaseData {
+		GeometryInstanceData geometry;
+		InstanceReflectionProbeData reflection;
+		InstanceLightData light;
+		BaseData() {}
+		~BaseData() {}
+	} data;
 
 	void base_removed();
 
@@ -335,7 +343,11 @@ struct RasterizerInstance : RID_Data {
 		visible = true;
 		depth_layer = 0;
 		layer_mask = 1;
+		baked_light = false;
 		redraw_if_visible = false;
+		lightmap_capture = nullptr;
+		lightmap_slice = -1;
+		lightmap_uv_rect = Rect2(0, 0, 1, 1);
 		on_interpolate_list = false;
 		on_interpolate_transform_list = false;
 		interpolated = true;
@@ -368,7 +380,6 @@ struct RasterizerInstance : RID_Data {
 		last_render_pass = 0;
 		last_frame_pass = 0;
 		version = 1;
-		base_data = nullptr;
 
 		custom_aabb = nullptr;
 		sorting_offset = 0.0f;
@@ -376,9 +387,6 @@ struct RasterizerInstance : RID_Data {
 	}
 
 	~RasterizerInstance() {
-		if (base_data) {
-			memdelete(base_data);
-		}
 		if (custom_aabb) {
 			memdelete(custom_aabb);
 		}
