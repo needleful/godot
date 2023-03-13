@@ -161,47 +161,41 @@ struct RasterizerScenario : RID_Data {
 };
 
 struct RasterizerInstanceData {
-	virtual ~RasterizerInstanceData() {}
+	~RasterizerInstanceData() {}
 };
 
 struct GeometryInstanceData : public RasterizerInstanceData {
 	List<RasterizerInstance *> lighting;
+	List<RasterizerInstance *> reflection_probes;
+
 	bool lighting_dirty;
 	bool can_cast_shadows;
 	bool material_is_animated;
-
-	List<RasterizerInstance *> reflection_probes;
 	bool reflection_dirty;
-
-	List<RasterizerInstance *> gi_probes;
-	bool gi_probes_dirty;
-
-	List<RasterizerInstance *> lightmap_captures;
 
 	GeometryInstanceData() {
 		lighting_dirty = true;
 		reflection_dirty = true;
 		can_cast_shadows = true;
 		material_is_animated = true;
-		gi_probes_dirty = true;
 	}
 };
 
 struct InstanceReflectionProbeData : public RasterizerInstanceData {
-	RasterizerInstance *owner;
-
 	struct PairInfo {
 		List<RasterizerInstance *>::Element *L; //reflection iterator in geometry
 		RasterizerInstance *geometry;
 	};
+
+	RasterizerInstance *owner;
+	SelfList<InstanceReflectionProbeData> update_list;
 	List<PairInfo> geometries;
 
 	RID instance;
-	bool reflection_dirty;
-	SelfList<InstanceReflectionProbeData> update_list;
 
-	int render_step;
 	int32_t previous_room_id_hint;
+	int render_step;
+	bool reflection_dirty;
 
 	InstanceReflectionProbeData() :
 			update_list(this) {
@@ -217,36 +211,19 @@ struct InstanceLightData : public RasterizerInstanceData {
 		RasterizerInstance *geometry;
 	};
 
-	RID instance;
-	uint64_t last_version;
+	List<PairInfo> geometries;
 	List<RasterizerInstance *>::Element *D; // directional light in scenario
 
-	bool shadow_dirty;
-
-	List<PairInfo> geometries;
-
-	RasterizerInstance *baked_light;
+	RID instance;
+	uint64_t last_version;
 	int32_t previous_room_id_hint;
+	bool shadow_dirty;
 
 	InstanceLightData() {
 		shadow_dirty = true;
 		D = nullptr;
 		last_version = 0;
-		baked_light = nullptr;
 		previous_room_id_hint = -1;
-	}
-};
-
-struct InstanceLightmapCaptureData : public RasterizerInstanceData {
-	struct PairInfo {
-		List<RasterizerInstance *>::Element *L; //iterator in geometry
-		RasterizerInstance *geometry;
-	};
-	List<PairInfo> geometries;
-
-	Set<RasterizerInstance *> users;
-
-	InstanceLightmapCaptureData() {
 	}
 };
 
@@ -276,7 +253,6 @@ struct RasterizerInstance : RID_Data {
 	Vector<RID> materials;
 	Vector<RID> light_instances;
 	Vector<RID> reflection_probe_instances;
-	Vector<RID> gi_probe_instances;
 
 	PoolVector<float> blend_values;
 
@@ -286,7 +262,6 @@ struct RasterizerInstance : RID_Data {
 	bool mirror : 1;
 	bool receive_shadows : 1;
 	bool visible : 1;
-	bool baked_light : 1; //this flag is only to know if it actually did use baked light
 	bool redraw_if_visible : 1;
 
 	bool on_interpolate_list : 1;
@@ -303,11 +278,6 @@ struct RasterizerInstance : RID_Data {
 
 	SelfList<RasterizerInstance> dependency_item;
 
-	RasterizerInstance *lightmap_capture;
-	RID lightmap;
-	Vector<Color> lightmap_capture_data; //in a array (12 values) to avoid wasting space if unused. Alpha is unused, but needed to send to shader
-	int lightmap_slice;
-	Rect2 lightmap_uv_rect;
 	RID self;
 	//scenario stuff
 	SpatialPartitionID spatial_partition_id;
@@ -365,11 +335,7 @@ struct RasterizerInstance : RID_Data {
 		visible = true;
 		depth_layer = 0;
 		layer_mask = 1;
-		baked_light = false;
 		redraw_if_visible = false;
-		lightmap_capture = nullptr;
-		lightmap_slice = -1;
-		lightmap_uv_rect = Rect2(0, 0, 1, 1);
 		on_interpolate_list = false;
 		on_interpolate_transform_list = false;
 		interpolated = true;

@@ -196,10 +196,6 @@ bool ResourceImporterScene::get_option_visibility(const String &p_option, const 
 		return false;
 	}
 
-	if (p_option == "meshes/lightmap_texel_size" && int(p_options["meshes/light_baking"]) < 2) {
-		return false;
-	}
-
 	return true;
 }
 
@@ -289,10 +285,10 @@ static void _gen_shape_list(const Ref<Mesh> &mesh, List<Ref<Shape>> &r_shape_lis
 	}
 }
 
-Node *ResourceImporterScene::_fix_node(Node *p_node, Node *p_root, Map<Ref<Mesh>, List<Ref<Shape>>> &collision_map, LightBakeMode p_light_bake_mode, List<Pair<NodePath, Node *>> &r_node_renames) {
+Node *ResourceImporterScene::_fix_node(Node *p_node, Node *p_root, Map<Ref<Mesh>, List<Ref<Shape>>> &collision_map, List<Pair<NodePath, Node *>> &r_node_renames) {
 	// Children first.
 	for (int i = 0; i < p_node->get_child_count(); i++) {
-		Node *r = _fix_node(p_node->get_child(i), p_root, collision_map, p_light_bake_mode, r_node_renames);
+		Node *r = _fix_node(p_node->get_child(i), p_root, collision_map, r_node_renames);
 		if (!r) {
 			i--; // Was erased.
 		}
@@ -328,22 +324,6 @@ Node *ResourceImporterScene::_fix_node(Node *p_node, Node *p_root, Map<Ref<Mesh>
 					mat->set_flag(SpatialMaterial::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 					mat->set_flag(SpatialMaterial::FLAG_SRGB_VERTEX_COLOR, true);
 					mat->set_name(_fixstr(mat->get_name(), "vcol"));
-				}
-			}
-		}
-
-		if (p_light_bake_mode != LIGHT_BAKE_DISABLED) {
-			mi->set_flag(GeometryInstance::FLAG_USE_BAKED_LIGHT, true);
-
-			if (m.is_valid()) {
-				int surfaces = m->get_surface_count();
-				for (int i = 0; i < surfaces; i++) {
-					Array arrays = m->surface_get_arrays(i);
-					PoolVector<Vector2> uv2 = arrays[Mesh::ARRAY_TEX_UV2];
-					if (uv2.size() == 0) {
-						m->lightmap_unwrap();
-						break;
-					}
 				}
 			}
 		}
@@ -1165,8 +1145,7 @@ void ResourceImporterScene::get_import_options(List<ImportOption> *r_options, in
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "meshes/compress", PROPERTY_HINT_FLAGS, "Vertex,Normal,Tangent,Color,TexUV,TexUV2,Bones,Weights,Index"), VS::ARRAY_COMPRESS_DEFAULT >> VS::ARRAY_COMPRESS_BASE));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "meshes/ensure_tangents"), true));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "meshes/storage", PROPERTY_HINT_ENUM, "Built-In,Files (.mesh),Files (.tres)"), meshes_out ? 1 : 0));
-	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "meshes/light_baking", PROPERTY_HINT_ENUM, "Disabled,Enable,Gen Lightmaps", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED), 0));
-	r_options->push_back(ImportOption(PropertyInfo(Variant::REAL, "meshes/lightmap_texel_size", PROPERTY_HINT_RANGE, "0.001,100,0.001"), 0.1));
+	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "meshes/light_baking", PROPERTY_HINT_ENUM, "Disabled,Enable", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED), 0));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "skins/use_named_skins"), true));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "external_files/store_in_subdir"), false));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "animation/import", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED), true));
@@ -1380,7 +1359,7 @@ Error ResourceImporterScene::import(const String &p_source_file, const String &p
 
 	Map<Ref<Mesh>, List<Ref<Shape>>> collision_map;
 	List<Pair<NodePath, Node *>> node_renames;
-	scene = _fix_node(scene, scene, collision_map, LightBakeMode(light_bake_mode), node_renames);
+	scene = _fix_node(scene, scene, collision_map, node_renames);
 
 	if (use_optimizer) {
 		_optimize_animations(scene, anim_optimizer_linerr, anim_optimizer_angerr, anim_optimizer_maxang);
@@ -1457,58 +1436,7 @@ Error ResourceImporterScene::import(const String &p_source_file, const String &p
 			}
 		}
 
-		float texel_size = p_options["meshes/lightmap_texel_size"];
-		texel_size = MAX(0.001, texel_size);
-
 		Map<String, unsigned int> used_meshes;
-
-		EditorProgress progress2("gen_lightmaps", TTR("Generating Lightmaps"), meshes.size());
-		int step = 0;
-		for (Map<Ref<ArrayMesh>, Transform>::Element *E = meshes.front(); E; E = E->next()) {
-			Ref<ArrayMesh> mesh = E->key();
-			String name = mesh->get_name();
-			if (name == "") { //should not happen but..
-				name = "Mesh " + itos(step);
-			}
-
-			progress2.step(TTR("Generating for Mesh:") + " " + name + " (" + itos(step) + "/" + itos(meshes.size()) + ")", step);
-
-			int *ret_cache_data = cache_data;
-			unsigned int ret_cache_size = cache_size;
-			bool ret_used_cache = true; // Tell the unwrapper to use the cache
-			Error err2 = mesh->lightmap_unwrap_cached(ret_cache_data, ret_cache_size, ret_used_cache, E->get(), texel_size);
-
-			if (err2 != OK) {
-				EditorNode::add_io_error("Mesh '" + name + "' failed lightmap generation. Please fix geometry.");
-			} else {
-				String hash = String::md5((unsigned char *)ret_cache_data);
-				used_meshes.insert(hash, ret_cache_size);
-
-				if (!ret_used_cache) {
-					// Cache was not used, add the generated entry to the current cache
-
-					unsigned int new_cache_size = cache_size + ret_cache_size + (cache_size == 0 ? 4 : 0);
-					int *new_cache_data = (int *)memalloc(new_cache_size);
-
-					if (cache_size == 0) {
-						// Cache was empty
-						new_cache_data[0] = 0;
-						cache_size = 4;
-					} else {
-						memcpy(new_cache_data, cache_data, cache_size);
-						memfree(cache_data);
-					}
-
-					memcpy(&new_cache_data[cache_size / sizeof(int)], ret_cache_data, ret_cache_size);
-
-					cache_data = new_cache_data;
-					cache_size = new_cache_size;
-
-					cache_data[0]++; // Increase entry count
-				}
-			}
-			step++;
-		}
 
 		Error err2;
 		FileAccess *file = FileAccess::open(cache_file_path, FileAccess::WRITE, &err2);

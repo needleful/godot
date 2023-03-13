@@ -275,10 +275,6 @@
 		<member name="editors/3d/grid_yz_plane" type="bool" setter="" getter="">
 			If [code]true[/code], render the grid on an YZ plane. This can be useful for 3D side-scrolling games.
 		</member>
-		<member name="editors/3d/lightmap_baking_number_of_cpu_threads" type="int" setter="" getter="">
-			The number of CPU threads to use for baking lightmaps with [BakedLightmap]. A value of [code]0[/code] will use all CPU logical cores, while positive values will set the maximum number of CPU threads that can be used when baking lightmaps. Negative values will use all CPU cores [i]minus[/i] the amount specified in the negative number.
-			Using less CPU cores than the total amount of cores available will slow down lightmap baking, but will allow other tasks on the PC to be more reactive while lightmaps are baking.
-		</member>
 		<member name="editors/3d/navigation/emulate_3_button_mouse" type="bool" setter="" getter="">
 			If [code]true[/code], enables 3-button mouse emulation mode. This is useful on laptops when using a trackpad.
 			When 3-button mouse emulation mode is enabled, the pan, zoom and orbit modifiers can always be used in the 3D editor viewport, even when not holding down any mouse button.

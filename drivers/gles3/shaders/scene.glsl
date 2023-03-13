@@ -23,8 +23,6 @@ ARRAY_WEIGHTS=7,
 ARRAY_INDEX=8,
 */
 
-// hack to use uv if no uv present so it works with lightmap
-
 /* INPUT ATTRIBS */
 
 layout(location = 0) in highp vec4 vertex_attrib;
@@ -52,10 +50,6 @@ layout(location = 4) in vec2 uv_attrib;
 
 #if defined(ENABLE_UV2_INTERP)
 layout(location = 5) in vec2 uv2_attrib;
-#else
-#ifdef USE_LIGHTMAP //ubershader-skip
-layout(location = 5) in vec2 uv2_attrib;
-#endif //ubershader-skip
 #endif
 
 #ifdef USE_SKELETON //ubershader-skip
@@ -126,10 +120,6 @@ layout(std140) uniform SceneData { // ubo:0
 };
 
 uniform highp mat4 world_transform;
-
-#ifdef USE_LIGHTMAP //ubershader-skip
-uniform highp vec4 lightmap_uv_rect;
-#endif //ubershader-skip
 
 #ifdef USE_LIGHT_DIRECTIONAL //ubershader-skip
 
@@ -313,10 +303,6 @@ out vec2 uv_interp;
 
 #if defined(ENABLE_UV2_INTERP)
 out vec2 uv2_interp;
-#else
-#ifdef USE_LIGHTMAP //ubershader-skip
-out vec2 uv2_interp;
-#endif //ubershader-skip
 #endif
 
 #if defined(ENABLE_TANGENT_INTERP) || defined(ENABLE_NORMALMAP) || defined(LIGHT_USE_ANISOTROPY)
@@ -408,13 +394,9 @@ void main() {
 	uv_interp = uv_attrib;
 #endif
 
-#ifdef USE_LIGHTMAP //ubershader-runtime
-	uv2_interp = lightmap_uv_rect.zw * uv2_attrib + lightmap_uv_rect.xy;
-#else //ubershader-runtime
 #if defined(ENABLE_UV2_INTERP)
 	uv2_interp = uv2_attrib;
 #endif
-#endif //ubershader-runtime
 
 #if defined(OVERRIDE_POSITION)
 	highp vec4 position;
@@ -648,9 +630,6 @@ VERTEX_SHADER_CODE
 
 #if defined(IS_UBERSHADER)
 uniform highp int ubershader_flags;
-// These are more performant and make the ubershaderification simpler
-#define VCT_QUALITY_HIGH
-#define USE_LIGHTMAP_FILTER_BICUBIC
 #endif
 
 /* texture unit usage, N is max_texture_unity-N
@@ -664,8 +643,6 @@ uniform highp int ubershader_flags;
 7-irradiance
 8-screen
 9-depth
-10-probe1, lightmap
-11-probe2, lightmap_array
 
 */
 
@@ -687,10 +664,6 @@ in vec2 uv_interp;
 
 #if defined(ENABLE_UV2_INTERP)
 in vec2 uv2_interp;
-#else
-#ifdef USE_LIGHTMAP //ubershader-skip
-in vec2 uv2_interp;
-#endif //ubershader-skip
 #endif
 
 #if defined(ENABLE_TANGENT_INTERP) || defined(ENABLE_NORMALMAP) || defined(LIGHT_USE_ANISOTROPY)
@@ -1491,331 +1464,7 @@ void reflection_process(int idx, vec3 vertex, vec3 normal, vec3 binormal, vec3 t
 
 		reflection_accum += reflection;
 	}
-#ifndef USE_LIGHTMAP //ubershader-runtime
-#ifndef USE_LIGHTMAP_CAPTURE //ubershader-runtime
-	if (reflections[idx].ambient.a > 0.0) { //compute ambient using skybox
-
-		vec3 local_amb_vec = (reflections[idx].local_matrix * vec4(normal, 0.0)).xyz;
-
-		vec3 splane = normalize(local_amb_vec);
-		vec4 clamp_rect = reflections[idx].atlas_clamp;
-
-		splane.z *= -1.0;
-		if (splane.z >= 0.0) {
-			splane.z += 1.0;
-			clamp_rect.y += clamp_rect.w;
-		} else {
-			splane.z = 1.0 - splane.z;
-			splane.y = -splane.y;
-		}
-
-		splane.xy /= splane.z;
-		splane.xy = splane.xy * 0.5 + 0.5;
-
-		splane.xy = splane.xy * clamp_rect.zw + clamp_rect.xy;
-		splane.xy = clamp(splane.xy, clamp_rect.xy, clamp_rect.xy + clamp_rect.zw);
-
-		highp vec4 ambient_out;
-		ambient_out.a = blend;
-		ambient_out.rgb = textureLod(reflection_atlas, splane.xy, 5.0).rgb;
-		ambient_out.rgb = mix(reflections[idx].ambient.rgb, ambient_out.rgb, reflections[idx].ambient.a);
-		if (reflections[idx].params.z < 0.5) {
-			ambient_out.rgb = mix(ambient, ambient_out.rgb, blend);
-		}
-
-		ambient_out.rgb *= ambient_out.a;
-		ambient_accum += ambient_out;
-	} else {
-		highp vec4 ambient_out;
-		ambient_out.a = blend;
-		ambient_out.rgb = reflections[idx].ambient.rgb;
-		if (reflections[idx].params.z < 0.5) {
-			ambient_out.rgb = mix(ambient, ambient_out.rgb, blend);
-		}
-		ambient_out.rgb *= ambient_out.a;
-		ambient_accum += ambient_out;
-	}
-#endif //ubershader-runtime
-#endif //ubershader-runtime
 }
-
-#ifdef USE_LIGHTMAP //ubershader-skip
-#ifdef USE_LIGHTMAP_LAYERED //ubershader-skip
-uniform mediump sampler2DArray lightmap_array; //texunit:-11
-uniform int lightmap_layer;
-#else //ubershader-skip
-uniform mediump sampler2D lightmap; //texunit:-10
-#endif //ubershader-skip
-
-uniform mediump float lightmap_energy;
-
-#ifdef USE_LIGHTMAP_FILTER_BICUBIC
-uniform vec2 lightmap_texture_size;
-
-// w0, w1, w2, and w3 are the four cubic B-spline basis functions
-float w0(float a) {
-	return (1.0 / 6.0) * (a * (a * (-a + 3.0) - 3.0) + 1.0);
-}
-
-float w1(float a) {
-	return (1.0 / 6.0) * (a * a * (3.0 * a - 6.0) + 4.0);
-}
-
-float w2(float a) {
-	return (1.0 / 6.0) * (a * (a * (-3.0 * a + 3.0) + 3.0) + 1.0);
-}
-
-float w3(float a) {
-	return (1.0 / 6.0) * (a * a * a);
-}
-
-// g0 and g1 are the two amplitude functions
-float g0(float a) {
-	return w0(a) + w1(a);
-}
-
-float g1(float a) {
-	return w2(a) + w3(a);
-}
-
-// h0 and h1 are the two offset functions
-float h0(float a) {
-	return -1.0 + w1(a) / (w0(a) + w1(a));
-}
-
-float h1(float a) {
-	return 1.0 + w3(a) / (w2(a) + w3(a));
-}
-
-vec4 texture_bicubic(sampler2D tex, vec2 uv) {
-	vec2 texel_size = vec2(1.0) / lightmap_texture_size;
-
-	uv = uv * lightmap_texture_size + vec2(0.5);
-
-	vec2 iuv = floor(uv);
-	vec2 fuv = fract(uv);
-
-	float g0x = g0(fuv.x);
-	float g1x = g1(fuv.x);
-	float h0x = h0(fuv.x);
-	float h1x = h1(fuv.x);
-	float h0y = h0(fuv.y);
-	float h1y = h1(fuv.y);
-
-	vec2 p0 = (vec2(iuv.x + h0x, iuv.y + h0y) - vec2(0.5)) * texel_size;
-	vec2 p1 = (vec2(iuv.x + h1x, iuv.y + h0y) - vec2(0.5)) * texel_size;
-	vec2 p2 = (vec2(iuv.x + h0x, iuv.y + h1y) - vec2(0.5)) * texel_size;
-	vec2 p3 = (vec2(iuv.x + h1x, iuv.y + h1y) - vec2(0.5)) * texel_size;
-
-	return (g0(fuv.y) * (g0x * texture(tex, p0) + g1x * texture(tex, p1))) +
-			(g1(fuv.y) * (g0x * texture(tex, p2) + g1x * texture(tex, p3)));
-}
-
-vec4 textureArray_bicubic(sampler2DArray tex, vec3 uv) {
-	vec2 texel_size = vec2(1.0) / lightmap_texture_size;
-
-	uv.xy = uv.xy * lightmap_texture_size + vec2(0.5);
-
-	vec2 iuv = floor(uv.xy);
-	vec2 fuv = fract(uv.xy);
-
-	float g0x = g0(fuv.x);
-	float g1x = g1(fuv.x);
-	float h0x = h0(fuv.x);
-	float h1x = h1(fuv.x);
-	float h0y = h0(fuv.y);
-	float h1y = h1(fuv.y);
-
-	vec2 p0 = (vec2(iuv.x + h0x, iuv.y + h0y) - vec2(0.5)) * texel_size;
-	vec2 p1 = (vec2(iuv.x + h1x, iuv.y + h0y) - vec2(0.5)) * texel_size;
-	vec2 p2 = (vec2(iuv.x + h0x, iuv.y + h1y) - vec2(0.5)) * texel_size;
-	vec2 p3 = (vec2(iuv.x + h1x, iuv.y + h1y) - vec2(0.5)) * texel_size;
-
-	return (g0(fuv.y) * (g0x * texture(tex, vec3(p0, uv.z)) + g1x * texture(tex, vec3(p1, uv.z)))) +
-			(g1(fuv.y) * (g0x * texture(tex, vec3(p2, uv.z)) + g1x * texture(tex, vec3(p3, uv.z))));
-}
-
-#define LIGHTMAP_TEXTURE_SAMPLE(m_tex, m_uv) texture_bicubic(m_tex, m_uv)
-#define LIGHTMAP_TEXTURE_LAYERED_SAMPLE(m_tex, m_uv) textureArray_bicubic(m_tex, m_uv)
-
-#else //!USE_LIGHTMAP_FILTER_BICUBIC
-#define LIGHTMAP_TEXTURE_SAMPLE(m_tex, m_uv) texture(m_tex, m_uv)
-#define LIGHTMAP_TEXTURE_LAYERED_SAMPLE(m_tex, m_uv) texture(m_tex, m_uv)
-
-#endif //USE_LIGHTMAP_FILTER_BICUBIC
-#endif //ubershader-skip
-
-#ifdef USE_LIGHTMAP_CAPTURE //ubershader-skip
-uniform mediump vec4[12] lightmap_captures;
-#endif //ubershader-skip
-
-#ifdef USE_GI_PROBES //ubershader-skip
-
-#if !defined(UBERSHADER_COMPAT)
-uniform mediump sampler3D gi_probe1; //texunit:-10
-#else
-uniform mediump sampler3D gi_probe1_uber; //texunit:-12
-#define gi_probe1 gi_probe1_uber
-#endif
-uniform highp mat4 gi_probe_xform1;
-uniform highp vec3 gi_probe_bounds1;
-uniform highp vec3 gi_probe_cell_size1;
-uniform highp float gi_probe_multiplier1;
-uniform highp float gi_probe_bias1;
-uniform highp float gi_probe_normal_bias1;
-uniform bool gi_probe_blend_ambient1;
-
-#if !defined(UBERSHADER_COMPAT)
-uniform mediump sampler3D gi_probe2; //texunit:-11
-#else
-uniform mediump sampler3D gi_probe2_uber; //texunit:-13
-#define gi_probe2 gi_probe2_uber
-#endif
-uniform highp mat4 gi_probe_xform2;
-uniform highp vec3 gi_probe_bounds2;
-uniform highp vec3 gi_probe_cell_size2;
-uniform highp float gi_probe_multiplier2;
-uniform highp float gi_probe_bias2;
-uniform highp float gi_probe_normal_bias2;
-uniform bool gi_probe2_enabled;
-uniform bool gi_probe_blend_ambient2;
-
-vec3 voxel_cone_trace(mediump sampler3D probe, vec3 cell_size, vec3 pos, vec3 ambient, bool blend_ambient, vec3 direction, float tan_half_angle, float max_distance, float p_bias) {
-	float dist = p_bias; //1.0; //dot(direction,mix(vec3(-1.0),vec3(1.0),greaterThan(direction,vec3(0.0))))*2.0;
-	float alpha = 0.0;
-	vec3 color = vec3(0.0);
-
-	while (dist < max_distance && alpha < 0.95) {
-		float diameter = max(1.0, 2.0 * tan_half_angle * dist);
-		vec4 scolor = textureLod(probe, (pos + dist * direction) * cell_size, log2(diameter));
-		float a = (1.0 - alpha);
-		color += scolor.rgb * a;
-		alpha += a * scolor.a;
-		dist += diameter * 0.5;
-	}
-
-	if (blend_ambient) {
-		color.rgb = mix(ambient, color.rgb, min(1.0, alpha / 0.95));
-	}
-
-	return color;
-}
-
-void gi_probe_compute(mediump sampler3D probe, mat4 probe_xform, vec3 bounds, vec3 cell_size, vec3 pos, vec3 ambient, vec3 environment, bool blend_ambient, float multiplier, mat3 normal_mtx, vec3 ref_vec, float roughness, float p_bias, float p_normal_bias, inout vec4 out_spec, inout vec4 out_diff) {
-	vec3 probe_pos = (probe_xform * vec4(pos, 1.0)).xyz;
-	vec3 ref_pos = (probe_xform * vec4(pos + ref_vec, 1.0)).xyz;
-	ref_vec = normalize(ref_pos - probe_pos);
-
-	probe_pos += (probe_xform * vec4(normal_mtx[2], 0.0)).xyz * p_normal_bias;
-
-	/*	out_diff.rgb = voxel_cone_trace(probe,cell_size,probe_pos,normalize((probe_xform * vec4(ref_vec,0.0)).xyz),0.0 ,100.0);
-	out_diff.a = 1.0;
-	return;*/
-	//out_diff = vec4(textureLod(probe,probe_pos*cell_size,3.0).rgb,1.0);
-	//return;
-
-	//this causes corrupted pixels, i have no idea why..
-	if (any(bvec2(any(lessThan(probe_pos, vec3(0.0))), any(greaterThan(probe_pos, bounds))))) {
-		return;
-	}
-
-	vec3 blendv = abs(probe_pos / bounds * 2.0 - 1.0);
-	float blend = clamp(1.0 - max(blendv.x, max(blendv.y, blendv.z)), 0.0, 1.0);
-	//float blend=1.0;
-
-	float max_distance = length(bounds);
-
-	//radiance
-#ifdef VCT_QUALITY_HIGH
-
-#define MAX_CONE_DIRS 6
-	vec3 cone_dirs[MAX_CONE_DIRS] = vec3[](
-			vec3(0.0, 0.0, 1.0),
-			vec3(0.866025, 0.0, 0.5),
-			vec3(0.267617, 0.823639, 0.5),
-			vec3(-0.700629, 0.509037, 0.5),
-			vec3(-0.700629, -0.509037, 0.5),
-			vec3(0.267617, -0.823639, 0.5));
-
-	float cone_weights[MAX_CONE_DIRS] = float[](0.25, 0.15, 0.15, 0.15, 0.15, 0.15);
-	float cone_angle_tan = 0.577;
-	float min_ref_tan = 0.0;
-#else
-
-#define MAX_CONE_DIRS 4
-
-	vec3 cone_dirs[MAX_CONE_DIRS] = vec3[](
-			vec3(0.707107, 0.0, 0.707107),
-			vec3(0.0, 0.707107, 0.707107),
-			vec3(-0.707107, 0.0, 0.707107),
-			vec3(0.0, -0.707107, 0.707107));
-
-	float cone_weights[MAX_CONE_DIRS] = float[](0.25, 0.25, 0.25, 0.25);
-	float cone_angle_tan = 0.98269;
-	max_distance *= 0.5;
-	float min_ref_tan = 0.2;
-
-#endif
-	vec3 light = vec3(0.0);
-	for (int i = 0; i < MAX_CONE_DIRS; i++) {
-		vec3 dir = normalize((probe_xform * vec4(pos + normal_mtx * cone_dirs[i], 1.0)).xyz - probe_pos);
-		light += cone_weights[i] * voxel_cone_trace(probe, cell_size, probe_pos, ambient, blend_ambient, dir, cone_angle_tan, max_distance, p_bias);
-	}
-
-	light *= multiplier;
-
-	out_diff += vec4(light * blend, blend);
-
-	//irradiance
-
-	vec3 irr_light = voxel_cone_trace(probe, cell_size, probe_pos, environment, blend_ambient, ref_vec, max(min_ref_tan, tan(roughness * 0.5 * M_PI * 0.99)), max_distance, p_bias);
-
-	irr_light *= multiplier;
-	//irr_light=vec3(0.0);
-
-	out_spec += vec4(irr_light * blend, blend);
-}
-
-void gi_probes_compute(vec3 pos, vec3 normal, float roughness, inout vec3 out_specular, inout vec3 out_ambient) {
-	roughness = roughness * roughness;
-
-	vec3 ref_vec = normalize(reflect(normalize(pos), normal));
-
-	//find arbitrary tangent and bitangent, then build a matrix
-	vec3 v0 = abs(normal.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(0.0, 1.0, 0.0);
-	vec3 tangent = normalize(cross(v0, normal));
-	vec3 bitangent = normalize(cross(tangent, normal));
-	mat3 normal_mat = mat3(tangent, bitangent, normal);
-
-	vec4 diff_accum = vec4(0.0);
-	vec4 spec_accum = vec4(0.0);
-
-	vec3 ambient = out_ambient;
-	out_ambient = vec3(0.0);
-
-	vec3 environment = out_specular;
-
-	out_specular = vec3(0.0);
-
-	gi_probe_compute(gi_probe1, gi_probe_xform1, gi_probe_bounds1, gi_probe_cell_size1, pos, ambient, environment, gi_probe_blend_ambient1, gi_probe_multiplier1, normal_mat, ref_vec, roughness, gi_probe_bias1, gi_probe_normal_bias1, spec_accum, diff_accum);
-
-	if (gi_probe2_enabled) {
-		gi_probe_compute(gi_probe2, gi_probe_xform2, gi_probe_bounds2, gi_probe_cell_size2, pos, ambient, environment, gi_probe_blend_ambient2, gi_probe_multiplier2, normal_mat, ref_vec, roughness, gi_probe_bias2, gi_probe_normal_bias2, spec_accum, diff_accum);
-	}
-
-	if (diff_accum.a > 0.0) {
-		diff_accum.rgb /= diff_accum.a;
-	}
-
-	if (spec_accum.a > 0.0) {
-		spec_accum.rgb /= spec_accum.a;
-	}
-
-	out_specular += spec_accum.rgb;
-	out_ambient += diff_accum.rgb;
-}
-
-#endif //ubershader-skip
 
 void main() {
 #ifdef RENDER_DEPTH_DUAL_PARABOLOID //ubershader-runtime
@@ -1874,10 +1523,6 @@ void main() {
 
 #if defined(ENABLE_UV2_INTERP)
 	vec2 uv2 = uv2_interp;
-#else
-#ifdef USE_LIGHTMAP //ubershader-skip
-	vec2 uv2 = uv2_interp;
-#endif //ubershader-skip
 #endif
 
 #if defined(ENABLE_COLOR_INTERP)
@@ -1993,22 +1638,6 @@ FRAGMENT_SHADER_CODE
 		env_reflection_light = radiance;
 		env_reflection_light *= horizon * horizon;
 	}
-#ifndef USE_LIGHTMAP //ubershader-runtime
-	{
-		vec3 norm = normal;
-		norm = normalize((radiance_inverse_xform * vec4(norm, 0.0)).xyz);
-		norm.xy /= 1.0 + abs(norm.z);
-		norm.xy = norm.xy * vec2(0.5, 0.25) + vec2(0.5, 0.25);
-		if (norm.z > 0.0001) {
-			norm.y = 0.5 - norm.y + 0.5;
-		}
-
-		vec3 env_ambient = texture(irradiance_map, norm.xy).rgb * bg_energy;
-		env_ambient *= 1.0 - F;
-
-		ambient_light = mix(ambient_light_color.rgb, env_ambient, radiance_ambient_contribution);
-	}
-#endif //ubershader-runtime
 #endif //AMBIENT_LIGHT_DISABLED
 
 #else //ubershader-runtime
@@ -2030,55 +1659,6 @@ FRAGMENT_SHADER_CODE
 	specular_blob_intensity *= specular * 2.0;
 #endif
 
-#ifdef USE_GI_PROBES //ubershader-runtime
-	gi_probes_compute(vertex, normal, roughness, env_reflection_light, ambient_light);
-
-#endif //ubershader-runtime
-
-#ifdef USE_LIGHTMAP //ubershader-runtime
-#ifdef USE_LIGHTMAP_LAYERED //ubershader-runtime
-	ambient_light = LIGHTMAP_TEXTURE_LAYERED_SAMPLE(lightmap_array, vec3(uv2, float(lightmap_layer))).rgb * lightmap_energy;
-#else //ubershader-runtime
-	ambient_light = LIGHTMAP_TEXTURE_SAMPLE(lightmap, uv2).rgb * lightmap_energy;
-#endif //ubershader-runtime
-#endif //ubershader-runtime
-
-#ifdef USE_LIGHTMAP_CAPTURE //ubershader-runtime
-	{
-		vec3 cone_dirs[12] = vec3[](
-				vec3(0.0, 0.0, 1.0),
-				vec3(0.866025, 0.0, 0.5),
-				vec3(0.267617, 0.823639, 0.5),
-				vec3(-0.700629, 0.509037, 0.5),
-				vec3(-0.700629, -0.509037, 0.5),
-				vec3(0.267617, -0.823639, 0.5),
-				vec3(0.0, 0.0, -1.0),
-				vec3(0.866025, 0.0, -0.5),
-				vec3(0.267617, 0.823639, -0.5),
-				vec3(-0.700629, 0.509037, -0.5),
-				vec3(-0.700629, -0.509037, -0.5),
-				vec3(0.267617, -0.823639, -0.5));
-
-		vec3 local_normal = normalize(camera_matrix * vec4(normal, 0.0)).xyz;
-		vec4 captured = vec4(0.0);
-		float sum = 0.0;
-		for (int i = 0; i < 12; i++) {
-			float amount = max(0.0, dot(local_normal, cone_dirs[i])); //not correct, but creates a nice wrap around effect
-			captured += lightmap_captures[i] * amount;
-			sum += amount;
-		}
-
-		captured /= sum;
-
-		// Alpha channel is used to indicate if dynamic objects keep the environment lighting
-		if (lightmap_captures[0].a > 0.5) {
-			ambient_light += captured.rgb;
-		} else {
-			ambient_light = captured.rgb;
-		}
-	}
-#endif //ubershader-runtime
-
 #ifdef USE_FORWARD_LIGHTING //ubershader-runtime
 
 	highp vec4 reflection_accum = vec4(0.0, 0.0, 0.0, 0.0);
@@ -2092,13 +1672,6 @@ FRAGMENT_SHADER_CODE
 	} else {
 		specular_light += env_reflection_light;
 	}
-#ifndef USE_LIGHTMAP //ubershader-runtime
-#ifndef USE_LIGHTMAP_CAPTURE //ubershader-runtime
-	if (ambient_accum.a > 0.0) {
-		ambient_light = ambient_accum.rgb / ambient_accum.a;
-	}
-#endif //ubershader-runtime
-#endif //ubershader-runtime
 #endif //ubershader-runtime
 
 	{

@@ -184,8 +184,6 @@ public:
 	void instance_set_blend_shape_weight(RID p_instance, int p_shape, float p_weight);
 	void instance_set_surface_material(RID p_instance, int p_surface, RID p_material);
 	void instance_set_visible(RID p_instance, bool p_visible);
-	void instance_set_use_lightmap(RID p_instance, RID p_lightmap_instance, RID p_lightmap, int p_lightmap_slice, const Rect2 &p_lightmap_uv_rect);
-
 	void instance_set_custom_aabb(RID p_instance, AABB p_aabb);
 
 	void instance_attach_skeleton(RID p_instance, RID p_skeleton);
@@ -394,8 +392,6 @@ public:
 	_FORCE_INLINE_ void _update_instance(RasterizerInstance *p_instance);
 	_FORCE_INLINE_ void _update_instance_aabb(RasterizerInstance *p_instance);
 	_FORCE_INLINE_ void _update_dirty_instance(RasterizerInstance *p_instance);
-	_FORCE_INLINE_ void _update_instance_lightmap_captures(RasterizerInstance *p_instance);
-
 	_FORCE_INLINE_ bool _light_instance_update_shadow(RasterizerInstance *p_instance, const Transform p_cam_transform, const CameraMatrix &p_cam_projection, bool p_cam_orthogonal, RID p_shadow_atlas, RasterizerScenario *p_scenario, uint32_t p_visible_layers = 0xFFFFFF);
 
 	void _prepare_scene(const Transform p_cam_transform, const CameraMatrix &p_cam_projection, bool p_cam_orthogonal, RID p_force_environment, uint32_t p_visible_layers, RID p_scenario, RID p_shadow_atlas, RID p_reflection_probe, int32_t &r_previous_room_id_hint);
@@ -409,31 +405,6 @@ public:
 	// interpolation
 	void update_interpolation_tick(bool p_process = true);
 	void update_interpolation_frame(bool p_process = true);
-
-	//probes
-	struct GIProbeDataHeader {
-		uint32_t version;
-		uint32_t cell_subdiv;
-		uint32_t width;
-		uint32_t height;
-		uint32_t depth;
-		uint32_t cell_count;
-		uint32_t leaf_cell_count;
-	};
-
-	struct GIProbeDataCell {
-		uint32_t children[8];
-		uint32_t albedo;
-		uint32_t emission;
-		uint32_t normal;
-		uint32_t level_alpha;
-	};
-
-	enum {
-		GI_UPDATE_STAGE_CHECK,
-		GI_UPDATE_STAGE_LIGHTING,
-		GI_UPDATE_STAGE_UPLOADING,
-	};
 
 	bool probe_bake_thread_exit;
 	Thread probe_bake_thread;
