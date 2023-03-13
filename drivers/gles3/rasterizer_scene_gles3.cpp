@@ -32,6 +32,7 @@
 
 #include "core/math/math_funcs.h"
 #include "core/os/os.h"
+#include "core/profiler.h"
 #include "core/project_settings.h"
 #include "rasterizer_canvas_gles3.h"
 #include "servers/camera/camera_feed.h"
@@ -2039,6 +2040,7 @@ _FORCE_INLINE_ GLenum RasterizerSceneGLES3::_get_stencil_op(ShaderLanguage::Sten
 }
 
 void RasterizerSceneGLES3::_render_list(RenderList::Element **p_elements, int p_element_count, const Transform &p_view_transform, const CameraMatrix &p_projection, RasterizerStorageGLES3::Sky *p_sky, bool p_reverse_cull, bool p_alpha_pass, bool p_shadow, bool p_directional_add, bool p_directional_shadows) {
+	ProfileMarker _pfm{ p_shadow ? "_render_list (shadows)" : "_render_list" };
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, state.scene_ubo); //bind globals ubo
 
 	bool use_radiance_map = false;
@@ -2897,6 +2899,7 @@ void RasterizerSceneGLES3::_setup_directional_light(int p_index, const Transform
 }
 
 void RasterizerSceneGLES3::_setup_lights(RID *p_light_cull_result, int p_light_cull_count, const Transform &p_camera_inverse_transform, const CameraMatrix &p_camera_projection, RID p_shadow_atlas) {
+	PROFILE
 	state.omni_light_count = 0;
 	state.spot_light_count = 0;
 	state.directional_light_count = 0;
@@ -3108,6 +3111,7 @@ void RasterizerSceneGLES3::_setup_lights(RID *p_light_cull_result, int p_light_c
 }
 
 void RasterizerSceneGLES3::_setup_reflections(RID *p_reflection_probe_cull_result, int p_reflection_probe_cull_count, const Transform &p_camera_inverse_transform, const CameraMatrix &p_camera_projection, RID p_reflection_atlas, Environment *p_env) {
+	PROFILE
 	state.reflection_probe_count = 0;
 
 	for (int i = 0; i < p_reflection_probe_cull_count; i++) {
@@ -3235,6 +3239,7 @@ void RasterizerSceneGLES3::_copy_texture_to_front_buffer(GLuint p_texture) {
 }
 
 void RasterizerSceneGLES3::_fill_render_list(RasterizerInstanceBase **p_cull_result, int p_cull_count, bool p_depth_pass, bool p_shadow_pass) {
+	PROFILE
 	current_geometry_index = 0;
 	current_material_index = 0;
 	state.used_sss = false;
@@ -4302,7 +4307,7 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 
 	if (use_depth_prepass) {
 		//pre z pass
-
+		ProfileMarker pf("render_scene (Depth Prepass)");
 		glDisable(GL_BLEND);
 		glDepthMask(GL_TRUE);
 		glEnable(GL_DEPTH_TEST);

@@ -3308,6 +3308,7 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 }
 
 void VisualServerScene::_render_scene(const Transform p_cam_transform, const CameraMatrix &p_cam_projection, const int p_eye, bool p_cam_orthogonal, RID p_force_environment, RID p_scenario, RID p_shadow_atlas, RID p_reflection_probe, int p_reflection_probe_pass) {
+	PROFILE
 	Scenario *scenario = scenario_owner.getornull(p_scenario);
 
 	/* ENVIRONMENT */
@@ -3342,6 +3343,7 @@ void VisualServerScene::render_empty_scene(RID p_scenario, RID p_shadow_atlas) {
 }
 
 bool VisualServerScene::_render_reflection_probe_step(Instance *p_instance, int p_step) {
+	PROFILE
 	InstanceReflectionProbeData *reflection_probe = static_cast<InstanceReflectionProbeData *>(p_instance->base_data);
 	Scenario *scenario = p_instance->scenario;
 	ERR_FAIL_COND_V(!scenario, true);
@@ -4296,73 +4298,6 @@ void VisualServerScene::render_probes() {
 		}
 
 		ref_probe = next;
-	}
-
-	/* GI PROBES */
-
-	SelfList<InstanceGIProbeData> *gi_probe = gi_probe_update_list.first();
-
-	while (gi_probe) {
-		SelfList<InstanceGIProbeData> *next = gi_probe->next();
-
-		InstanceGIProbeData *probe = gi_probe->self();
-		Instance *instance_probe = probe->owner;
-
-		//check if probe must be setup, but don't do if on the lighting thread
-
-		bool force_lighting = false;
-
-		if (probe->invalid || (probe->dynamic.updating_stage == GI_UPDATE_STAGE_CHECK && probe->base_version != VSG::storage->gi_probe_get_version(instance_probe->base))) {
-			_setup_gi_probe(instance_probe);
-			force_lighting = true;
-		}
-
-		float propagate = VSG::storage->gi_probe_get_propagation(instance_probe->base);
-
-		if (probe->dynamic.propagate != propagate) {
-			probe->dynamic.propagate = propagate;
-			force_lighting = true;
-		}
-
-		if (!probe->invalid && probe->dynamic.enabled) {
-			switch (probe->dynamic.updating_stage) {
-				case GI_UPDATE_STAGE_CHECK: {
-					if (_check_gi_probe(instance_probe) || force_lighting) { //send to lighting thread
-
-#ifndef NO_THREADS
-						probe_bake_mutex.lock();
-						probe->dynamic.updating_stage = GI_UPDATE_STAGE_LIGHTING;
-						probe_bake_list.push_back(instance_probe);
-						probe_bake_mutex.unlock();
-						probe_bake_sem.post();
-
-#else
-
-						_bake_gi_probe(instance_probe);
-#endif
-					}
-				} break;
-				case GI_UPDATE_STAGE_LIGHTING: {
-					//do none, wait til done!
-
-				} break;
-				case GI_UPDATE_STAGE_UPLOADING: {
-					//uint64_t us = OS::get_singleton()->get_ticks_usec();
-
-					for (int i = 0; i < (int)probe->dynamic.mipmaps_3d.size(); i++) {
-						PoolVector<uint8_t>::Read r = probe->dynamic.mipmaps_3d[i].read();
-						VSG::storage->gi_probe_dynamic_data_update(probe->dynamic.probe_data, 0, probe->dynamic.grid_size[2] >> i, i, r.ptr());
-					}
-
-					probe->dynamic.updating_stage = GI_UPDATE_STAGE_CHECK;
-
-					//print_line("UPLOAD TIME: " + rtos((OS::get_singleton()->get_ticks_usec() - us) / 1000000.0));
-				} break;
-			}
-		}
-		//_update_gi_probe(gi_probe->self()->owner);
-
-		gi_probe = next;
 	}
 }
 

@@ -37,20 +37,10 @@ private:
 };
 
 #ifdef DEBUG_ENABLED
-
-#ifdef __FUNCDNAME__
-
-#define PROFILE \
-	ProfileMarker __mk__{ __FUNCDNAME__ };
-#else
-
 #define PROFILE \
 	ProfileMarker __mk__{ __func__ };
 
-#endif // __FUNCDNAME__
-
 #else
-
 #define PROFILE
 
 #endif // DEBUG_ENABLED

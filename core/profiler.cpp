@@ -3,8 +3,9 @@
 #include "profiler.h"
 
 #define WIN32_LEAN_AND_MEAN
-#include <profileapi.h>
 #include <windows.h>
+#undef WIN32_LEAN_AND_MEAN
+#include <profileapi.h>
 
 #include "core/io/logger.h"
 #include "core/os/memory.h"

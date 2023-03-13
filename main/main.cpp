@@ -2446,7 +2446,7 @@ bool Main::iteration() {
 	}
 #endif
 
-	if (frames % 256 == 0 || frame_time > 20000) {
+	if (frames % 2048 == 0 || frame_time > 30000) {
 		profiler_manager->log_and_wipe(frame_time, profile_logger);
 	} else {
 		profiler_manager->log_and_wipe(frame_time, nullptr);
