@@ -59,7 +59,6 @@
 #include "camera_server.h"
 #include "navigation_2d_server.h"
 #include "navigation_server.h"
-#include "physics/physics_server_sw.h"
 #include "physics_2d/physics_2d_server_sw.h"
 #include "physics_2d/physics_2d_server_wrap_mt.h"
 #include "physics_2d_server.h"
@@ -88,10 +87,6 @@ static void _debugger_get_resource_usage(List<ScriptDebuggerRemote::ResourceUsag
 }
 
 ShaderTypes *shader_types = nullptr;
-
-PhysicsServer *_createGodotPhysicsCallback() {
-	return memnew(PhysicsServerSW);
-}
 
 Physics2DServer *_createGodotPhysics2DCallback() {
 	return Physics2DServerWrapMT::init_server<Physics2DServerSW>();
@@ -199,9 +194,6 @@ void register_server_types() {
 	// Physics 3D
 	GLOBAL_DEF(PhysicsServerManager::setting_property_name, "DEFAULT");
 	ProjectSettings::get_singleton()->set_custom_property_info(PhysicsServerManager::setting_property_name, PropertyInfo(Variant::STRING, PhysicsServerManager::setting_property_name, PROPERTY_HINT_ENUM, "DEFAULT"));
-
-	PhysicsServerManager::register_server("GodotPhysics", &_createGodotPhysicsCallback);
-	PhysicsServerManager::set_default_server("GodotPhysics");
 }
 
 void unregister_server_types() {
