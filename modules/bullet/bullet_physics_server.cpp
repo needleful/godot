@@ -34,6 +34,7 @@
 #include "cone_twist_joint_bullet.h"
 #include "core/class_db.h"
 #include "core/error_macros.h"
+#include "core/profiler.h"
 #include "core/ustring.h"
 #include "generic_6dof_joint_bullet.h"
 #include "hinge_joint_bullet.h"
@@ -1548,6 +1549,7 @@ void BulletPhysicsServer::init() {
 }
 
 void BulletPhysicsServer::step(float p_deltaTime) {
+	PROFILE
 	if (!active) {
 		return;
 	}

@@ -43,6 +43,7 @@
 #include "core/os/input.h"
 #include "core/os/os.h"
 #include "core/os/time.h"
+#include "core/profiler.h"
 #include "core/project_settings.h"
 #include "core/register_core_types.h"
 #include "core/script_debugger_local.h"
@@ -163,6 +164,10 @@ static int frame_delay = 0;
 static bool disable_render_loop = false;
 static int fixed_fps = -1;
 static bool print_fps = false;
+
+// Profiling
+static Logger *profile_logger = nullptr;
+static ProfilerManager *profiler_manager = nullptr;
 
 /* Helper methods */
 
@@ -394,6 +399,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 #if defined(DEBUG_ENABLED) && !defined(NO_THREADS)
 	check_lockless_atomics();
 #endif
+	profiler_manager = memnew(ProfilerManager());
 
 	RID_OwnerBase::init_rid();
 
@@ -1064,6 +1070,8 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		String base_path = GLOBAL_GET("logging/file_logging/log_path");
 		int max_files = GLOBAL_GET("logging/file_logging/max_log_files");
 		OS::get_singleton()->add_logger(memnew(RotatedFileLogger(base_path, max_files)));
+
+		profile_logger = memnew(RotatedFileLogger("user://logs/profiler.log", 5));
 	}
 
 	if (main_args.size() == 0 && String(GLOBAL_DEF("application/run/main_scene", "")) == "") {
@@ -2437,6 +2445,12 @@ bool Main::iteration() {
 		}
 	}
 #endif
+
+	if (frames % 256 == 0 || frame_time > 20000) {
+		profiler_manager->log_and_wipe(frame_time, profile_logger);
+	} else {
+		profiler_manager->log_and_wipe(frame_time, nullptr);
+	}
 
 	return exit || auto_quit;
 }

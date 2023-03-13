@@ -30,6 +30,7 @@
 
 #include "visual_server_viewport.h"
 
+#include "core/profiler.h"
 #include "core/project_settings.h"
 #include "visual_server_canvas.h"
 #include "visual_server_globals.h"
@@ -254,6 +255,7 @@ void VisualServerViewport::_draw_viewport(Viewport *p_viewport, ARVRInterface::E
 }
 
 void VisualServerViewport::draw_viewports() {
+	PROFILE
 	// get our arvr interface in case we need it
 	Ref<ARVRInterface> arvr_interface;
 

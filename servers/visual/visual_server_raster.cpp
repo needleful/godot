@@ -32,6 +32,7 @@
 
 #include "core/io/marshalls.h"
 #include "core/os/os.h"
+#include "core/profiler.h"
 #include "core/project_settings.h"
 #include "core/sort_array.h"
 #include "visual_server_canvas.h"
@@ -59,6 +60,7 @@ void VisualServerRaster::black_bars_set_images(RID p_left, RID p_top, RID p_righ
 }
 
 void VisualServerRaster::_draw_margins() {
+	PROFILE
 	VSG::canvas_render->draw_window_margins(black_margin, black_image);
 };
 
@@ -102,6 +104,7 @@ void VisualServerRaster::request_frame_drawn_callback(Object *p_where, const Str
 }
 
 void VisualServerRaster::draw(bool p_swap_buffers, double frame_step) {
+	PROFILE
 	//needs to be done before changes is reset to 0, to not force the editor to redraw
 	VS::get_singleton()->emit_signal("frame_pre_draw");
 

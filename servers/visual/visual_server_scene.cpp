@@ -32,6 +32,7 @@
 
 #include "core/math/transform_interpolator.h"
 #include "core/os/os.h"
+#include "core/profiler.h"
 #include "visual_server_globals.h"
 #include "visual_server_raster.h"
 
@@ -4256,6 +4257,7 @@ bool VisualServerScene::_check_gi_probe(Instance *p_gi_probe) {
 }
 
 void VisualServerScene::render_probes() {
+	PROFILE
 	/* REFLECTION PROBES */
 
 	SelfList<InstanceReflectionProbeData> *ref_probe = reflection_probe_render_list.first();
@@ -4526,6 +4528,7 @@ void VisualServerScene::_update_dirty_instance(Instance *p_instance) {
 }
 
 void VisualServerScene::update_dirty_instances() {
+	PROFILE
 	VSG::storage->update_dirty_resources();
 
 	// this is just to get access to scenario so we can update the spatial partitioning scheme
