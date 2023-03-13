@@ -33,6 +33,7 @@ struct RasterizerInstanceBase : RID_Data {
 	Vector<RID> materials;
 	Vector<RID> light_instances;
 	Vector<RID> reflection_probe_instances;
+	Vector<RID> gi_probe_instances;
 
 	PoolVector<float> blend_values;
 
@@ -42,6 +43,7 @@ struct RasterizerInstanceBase : RID_Data {
 	bool mirror : 1;
 	bool receive_shadows : 1;
 	bool visible : 1;
+	bool baked_light : 1; //this flag is only to know if it actually did use baked light
 	bool redraw_if_visible : 1;
 
 	bool on_interpolate_list : 1;
@@ -58,6 +60,12 @@ struct RasterizerInstanceBase : RID_Data {
 
 	SelfList<RasterizerInstanceBase> dependency_item;
 
+	RasterizerInstanceBase *lightmap_capture;
+	RID lightmap;
+	Vector<Color> lightmap_capture_data; //in a array (12 values) to avoid wasting space if unused. Alpha is unused, but needed to send to shader
+	int lightmap_slice;
+	Rect2 lightmap_uv_rect;
+
 	virtual void base_removed() = 0;
 	virtual void base_changed(bool p_aabb, bool p_materials) = 0;
 	RasterizerInstanceBase() :
@@ -68,7 +76,11 @@ struct RasterizerInstanceBase : RID_Data {
 		visible = true;
 		depth_layer = 0;
 		layer_mask = 1;
+		baked_light = false;
 		redraw_if_visible = false;
+		lightmap_capture = nullptr;
+		lightmap_slice = -1;
+		lightmap_uv_rect = Rect2(0, 0, 1, 1);
 		on_interpolate_list = false;
 		on_interpolate_transform_list = false;
 		interpolated = true;

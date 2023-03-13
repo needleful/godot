@@ -1031,6 +1031,179 @@
 				Returns the id of a white texture. Creates one if none exists.
 			</description>
 		</method>
+		<method name="gi_probe_create">
+			<return type="RID" />
+			<description>
+				Creates a GI probe and adds it to the VisualServer. It can be accessed with the RID that is returned. This RID will be used in all [code]gi_probe_*[/code] VisualServer functions.
+				Once finished with your RID, you will want to free the RID using the VisualServer's [method free_rid] static method.
+				To place in a scene, attach this GI probe to an instance using [method instance_set_base] using the returned RID.
+			</description>
+		</method>
+		<method name="gi_probe_get_bias" qualifiers="const">
+			<return type="float" />
+			<argument index="0" name="probe" type="RID" />
+			<description>
+				Returns the bias value for the GI probe. Bias is used to avoid self occlusion. Equivalent to [member GIProbeData.bias].
+			</description>
+		</method>
+		<method name="gi_probe_get_bounds" qualifiers="const">
+			<return type="AABB" />
+			<argument index="0" name="probe" type="RID" />
+			<description>
+				Returns the axis-aligned bounding box that covers the full extent of the GI probe.
+			</description>
+		</method>
+		<method name="gi_probe_get_cell_size" qualifiers="const">
+			<return type="float" />
+			<argument index="0" name="probe" type="RID" />
+			<description>
+				Returns the cell size set by [method gi_probe_set_cell_size].
+			</description>
+		</method>
+		<method name="gi_probe_get_dynamic_data" qualifiers="const">
+			<return type="PoolIntArray" />
+			<argument index="0" name="probe" type="RID" />
+			<description>
+				Returns the data used by the GI probe.
+			</description>
+		</method>
+		<method name="gi_probe_get_dynamic_range" qualifiers="const">
+			<return type="int" />
+			<argument index="0" name="probe" type="RID" />
+			<description>
+				Returns the dynamic range set for this GI probe. Equivalent to [member GIProbe.dynamic_range].
+			</description>
+		</method>
+		<method name="gi_probe_get_energy" qualifiers="const">
+			<return type="float" />
+			<argument index="0" name="probe" type="RID" />
+			<description>
+				Returns the energy multiplier for this GI probe. Equivalent to [member GIProbe.energy].
+			</description>
+		</method>
+		<method name="gi_probe_get_normal_bias" qualifiers="const">
+			<return type="float" />
+			<argument index="0" name="probe" type="RID" />
+			<description>
+				Returns the normal bias for this GI probe. Equivalent to [member GIProbe.normal_bias].
+			</description>
+		</method>
+		<method name="gi_probe_get_propagation" qualifiers="const">
+			<return type="float" />
+			<argument index="0" name="probe" type="RID" />
+			<description>
+				Returns the propagation value for this GI probe. Equivalent to [member GIProbe.propagation].
+			</description>
+		</method>
+		<method name="gi_probe_get_to_cell_xform" qualifiers="const">
+			<return type="Transform" />
+			<argument index="0" name="probe" type="RID" />
+			<description>
+				Returns the Transform set by [method gi_probe_set_to_cell_xform].
+			</description>
+		</method>
+		<method name="gi_probe_is_compressed" qualifiers="const">
+			<return type="bool" />
+			<argument index="0" name="probe" type="RID" />
+			<description>
+				Returns [code]true[/code] if the GI probe data associated with this GI probe is compressed. Equivalent to [member GIProbe.compress].
+			</description>
+		</method>
+		<method name="gi_probe_is_interior" qualifiers="const">
+			<return type="bool" />
+			<argument index="0" name="probe" type="RID" />
+			<description>
+				Returns [code]true[/code] if the GI probe is set to interior, meaning it does not account for sky light. Equivalent to [member GIProbe.interior].
+			</description>
+		</method>
+		<method name="gi_probe_set_bias">
+			<return type="void" />
+			<argument index="0" name="probe" type="RID" />
+			<argument index="1" name="bias" type="float" />
+			<description>
+				Sets the bias value to avoid self-occlusion. Equivalent to [member GIProbe.bias].
+			</description>
+		</method>
+		<method name="gi_probe_set_bounds">
+			<return type="void" />
+			<argument index="0" name="probe" type="RID" />
+			<argument index="1" name="bounds" type="AABB" />
+			<description>
+				Sets the axis-aligned bounding box that covers the extent of the GI probe.
+			</description>
+		</method>
+		<method name="gi_probe_set_cell_size">
+			<return type="void" />
+			<argument index="0" name="probe" type="RID" />
+			<argument index="1" name="range" type="float" />
+			<description>
+				Sets the size of individual cells within the GI probe.
+			</description>
+		</method>
+		<method name="gi_probe_set_compress">
+			<return type="void" />
+			<argument index="0" name="probe" type="RID" />
+			<argument index="1" name="enable" type="bool" />
+			<description>
+				Sets the compression setting for the GI probe data. Compressed data will take up less space but may look worse. Equivalent to [member GIProbe.compress].
+			</description>
+		</method>
+		<method name="gi_probe_set_dynamic_data">
+			<return type="void" />
+			<argument index="0" name="probe" type="RID" />
+			<argument index="1" name="data" type="PoolIntArray" />
+			<description>
+				Sets the data to be used in the GI probe for lighting calculations. Normally this is created and called internally within the [GIProbe] node. You should not try to set this yourself.
+			</description>
+		</method>
+		<method name="gi_probe_set_dynamic_range">
+			<return type="void" />
+			<argument index="0" name="probe" type="RID" />
+			<argument index="1" name="range" type="int" />
+			<description>
+				Sets the dynamic range of the GI probe. Dynamic range sets the limit for how bright lights can be. A smaller range captures greater detail but limits how bright lights can be. Equivalent to [member GIProbe.dynamic_range].
+			</description>
+		</method>
+		<method name="gi_probe_set_energy">
+			<return type="void" />
+			<argument index="0" name="probe" type="RID" />
+			<argument index="1" name="energy" type="float" />
+			<description>
+				Sets the energy multiplier for this GI probe. A higher energy makes the indirect light from the GI probe brighter. Equivalent to [member GIProbe.energy].
+			</description>
+		</method>
+		<method name="gi_probe_set_interior">
+			<return type="void" />
+			<argument index="0" name="probe" type="RID" />
+			<argument index="1" name="enable" type="bool" />
+			<description>
+				Sets the interior value of this GI probe. A GI probe set to interior does not include the sky when calculating lighting. Equivalent to [member GIProbe.interior].
+			</description>
+		</method>
+		<method name="gi_probe_set_normal_bias">
+			<return type="void" />
+			<argument index="0" name="probe" type="RID" />
+			<argument index="1" name="bias" type="float" />
+			<description>
+				Sets the normal bias for this GI probe. Normal bias behaves similar to the other form of bias and may help reduce self-occlusion. Equivalent to [member GIProbe.normal_bias].
+			</description>
+		</method>
+		<method name="gi_probe_set_propagation">
+			<return type="void" />
+			<argument index="0" name="probe" type="RID" />
+			<argument index="1" name="propagation" type="float" />
+			<description>
+				Sets the propagation of light within this GI probe. Equivalent to [member GIProbe.propagation].
+			</description>
+		</method>
+		<method name="gi_probe_set_to_cell_xform">
+			<return type="void" />
+			<argument index="0" name="probe" type="RID" />
+			<argument index="1" name="xform" type="Transform" />
+			<description>
+				Sets the to cell [Transform] for this GI probe.
+			</description>
+		</method>
 		<method name="has_changed" qualifiers="const">
 			<return type="bool" />
 			<argument index="0" name="queried_priority" type="int" enum="VisualServer.ChangedPriority" default="0" />
@@ -1260,7 +1433,7 @@
 			<argument index="0" name="instance" type="RID" />
 			<argument index="1" name="base" type="RID" />
 			<description>
-				Sets the base of the instance. A base can be any of the 3D objects that are created in the VisualServer that can be displayed. For example, any of the light types, mesh, multimesh, immediate geometry, particle system, and reflection probe are all types that can be set as the base of an instance in order to be displayed in the scenario.
+				Sets the base of the instance. A base can be any of the 3D objects that are created in the VisualServer that can be displayed. For example, any of the light types, mesh, multimesh, immediate geometry, particle system, reflection probe, lightmap capture, and the GI probe are all types that can be set as the base of an instance in order to be displayed in the scenario.
 			</description>
 		</method>
 		<method name="instance_set_blend_shape_weight">
@@ -1335,6 +1508,17 @@
 			<argument index="1" name="transform" type="Transform" />
 			<description>
 				Sets the world space transform of the instance. Equivalent to [member Spatial.transform].
+			</description>
+		</method>
+		<method name="instance_set_use_lightmap">
+			<return type="void" />
+			<argument index="0" name="instance" type="RID" />
+			<argument index="1" name="lightmap_instance" type="RID" />
+			<argument index="2" name="lightmap" type="RID" />
+			<argument index="3" name="lightmap_slice" type="int" default="-1" />
+			<argument index="4" name="lightmap_uv_rect" type="Rect2" default="Rect2( 0, 0, 1, 1 )" />
+			<description>
+				Sets the lightmap to use with this instance.
 			</description>
 		</method>
 		<method name="instance_set_visible">
@@ -1476,6 +1660,112 @@
 			<argument index="1" name="color" type="Color" />
 			<description>
 				Sets the color of the shadow cast by the light. Equivalent to [member Light.shadow_color].
+			</description>
+		</method>
+		<method name="light_set_use_gi">
+			<return type="void" />
+			<argument index="0" name="light" type="RID" />
+			<argument index="1" name="enabled" type="bool" />
+			<description>
+				Sets whether GI probes capture light information from this light. [i]Deprecated method.[/i] Use [method light_set_bake_mode] instead.
+			</description>
+		</method>
+		<method name="lightmap_capture_create">
+			<return type="RID" />
+			<description>
+				Creates a lightmap capture and adds it to the VisualServer. It can be accessed with the RID that is returned. This RID will be used in all [code]lightmap_capture_*[/code] VisualServer functions.
+				Once finished with your RID, you will want to free the RID using the VisualServer's [method free_rid] static method.
+				To place in a scene, attach this lightmap capture to an instance using [method instance_set_base] using the returned RID.
+			</description>
+		</method>
+		<method name="lightmap_capture_get_bounds" qualifiers="const">
+			<return type="AABB" />
+			<argument index="0" name="capture" type="RID" />
+			<description>
+				Returns the size of the lightmap capture area.
+			</description>
+		</method>
+		<method name="lightmap_capture_get_energy" qualifiers="const">
+			<return type="float" />
+			<argument index="0" name="capture" type="RID" />
+			<description>
+				Returns the energy multiplier used by the lightmap capture.
+			</description>
+		</method>
+		<method name="lightmap_capture_get_octree" qualifiers="const">
+			<return type="PoolByteArray" />
+			<argument index="0" name="capture" type="RID" />
+			<description>
+				Returns the octree used by the lightmap capture.
+			</description>
+		</method>
+		<method name="lightmap_capture_get_octree_cell_subdiv" qualifiers="const">
+			<return type="int" />
+			<argument index="0" name="capture" type="RID" />
+			<description>
+				Returns the cell subdivision amount used by this lightmap capture's octree.
+			</description>
+		</method>
+		<method name="lightmap_capture_get_octree_cell_transform" qualifiers="const">
+			<return type="Transform" />
+			<argument index="0" name="capture" type="RID" />
+			<description>
+				Returns the cell transform for this lightmap capture's octree.
+			</description>
+		</method>
+		<method name="lightmap_capture_is_interior" qualifiers="const">
+			<return type="bool" />
+			<argument index="0" name="capture" type="RID" />
+			<description>
+				Returns [code]true[/code] if capture is in "interior" mode.
+			</description>
+		</method>
+		<method name="lightmap_capture_set_bounds">
+			<return type="void" />
+			<argument index="0" name="capture" type="RID" />
+			<argument index="1" name="bounds" type="AABB" />
+			<description>
+				Sets the size of the area covered by the lightmap capture. Equivalent to [member BakedLightmapData.bounds].
+			</description>
+		</method>
+		<method name="lightmap_capture_set_energy">
+			<return type="void" />
+			<argument index="0" name="capture" type="RID" />
+			<argument index="1" name="energy" type="float" />
+			<description>
+				Sets the energy multiplier for this lightmap capture. Equivalent to [member BakedLightmapData.energy].
+			</description>
+		</method>
+		<method name="lightmap_capture_set_interior">
+			<return type="void" />
+			<argument index="0" name="capture" type="RID" />
+			<argument index="1" name="interior" type="bool" />
+			<description>
+				Sets the "interior" mode for this lightmap capture. Equivalent to [member BakedLightmapData.interior].
+			</description>
+		</method>
+		<method name="lightmap_capture_set_octree">
+			<return type="void" />
+			<argument index="0" name="capture" type="RID" />
+			<argument index="1" name="octree" type="PoolByteArray" />
+			<description>
+				Sets the octree to be used by this lightmap capture. This function is normally used by the [BakedLightmap] node. Equivalent to [member BakedLightmapData.octree].
+			</description>
+		</method>
+		<method name="lightmap_capture_set_octree_cell_subdiv">
+			<return type="void" />
+			<argument index="0" name="capture" type="RID" />
+			<argument index="1" name="subdiv" type="int" />
+			<description>
+				Sets the subdivision level of this lightmap capture's octree. Equivalent to [member BakedLightmapData.cell_subdiv].
+			</description>
+		</method>
+		<method name="lightmap_capture_set_octree_cell_transform">
+			<return type="void" />
+			<argument index="0" name="capture" type="RID" />
+			<argument index="1" name="xform" type="Transform" />
+			<description>
+				Sets the octree cell transform for this lightmap capture's octree. Equivalent to [member BakedLightmapData.cell_space_transform].
 			</description>
 		</method>
 		<method name="make_sphere_mesh">
@@ -3214,6 +3504,9 @@
 		<constant name="LIGHT_PARAM_INDIRECT_ENERGY" value="1" enum="LightParam">
 			Secondary multiplier used with indirect light (light bounces).
 		</constant>
+		<constant name="LIGHT_PARAM_SIZE" value="2" enum="LightParam">
+			The light's size, currently only used for soft shadows in baked lightmaps.
+		</constant>
 		<constant name="LIGHT_PARAM_SPECULAR" value="3" enum="LightParam">
 			The light's influence on specularity.
 		</constant>
@@ -3408,6 +3701,12 @@
 		</constant>
 		<constant name="INSTANCE_REFLECTION_PROBE" value="6" enum="InstanceType">
 			The instance is a reflection probe.
+		</constant>
+		<constant name="INSTANCE_GI_PROBE" value="7" enum="InstanceType">
+			The instance is a GI probe.
+		</constant>
+		<constant name="INSTANCE_LIGHTMAP_CAPTURE" value="8" enum="InstanceType">
+			The instance is a lightmap capture.
 		</constant>
 		<constant name="INSTANCE_MAX" value="9" enum="InstanceType">
 			Represents the size of the [enum InstanceType] enum.

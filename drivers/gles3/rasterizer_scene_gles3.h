@@ -650,6 +650,29 @@ public:
 
 	bool light_instances_can_render_shadow_cube() const { return true; }
 
+	/* REFLECTION INSTANCE */
+
+	struct GIProbeInstance : public RID_Data {
+		RID data;
+		RasterizerStorageGLES3::GIProbe *probe;
+		GLuint tex_cache;
+		Vector3 cell_size_cache;
+		Vector3 bounds;
+		Transform transform_to_data;
+
+		GIProbeInstance() :
+				probe(nullptr),
+				tex_cache(0) {
+		}
+	};
+
+	mutable RID_Owner<GIProbeInstance> gi_probe_instance_owner;
+
+	RID gi_probe_instance_create();
+	void gi_probe_instance_set_light_data(RID p_probe, RID p_base, RID p_data);
+	void gi_probe_instance_set_transform_to_data(RID p_probe, const Transform &p_xform);
+	void gi_probe_instance_set_bounds(RID p_probe, const Vector3 &p_bounds);
+
 	/* RENDER LIST */
 
 	struct RenderList {
@@ -670,6 +693,10 @@ public:
 //64 bits unsupported in MSVC
 #define SORT_KEY_UNSHADED_FLAG (uint64_t(1) << 50)
 #define SORT_KEY_NO_DIRECTIONAL_FLAG (uint64_t(1) << 49)
+#define SORT_KEY_LIGHTMAP_CAPTURE_FLAG (uint64_t(1) << 48)
+#define SORT_KEY_LIGHTMAP_LAYERED_FLAG (uint64_t(1) << 47)
+#define SORT_KEY_LIGHTMAP_FLAG (uint64_t(1) << 46)
+#define SORT_KEY_GI_PROBES_FLAG (uint64_t(1) << 45)
 #define SORT_KEY_VERTEX_LIT_FLAG (uint64_t(1) << 44)
 			SORT_KEY_SHADING_SHIFT = 44,
 			SORT_KEY_SHADING_MASK = 127,

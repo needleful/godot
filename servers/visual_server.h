@@ -31,16 +31,13 @@
 #ifndef VISUAL_SERVER_H
 #define VISUAL_SERVER_H
 
-#include "core/command_queue_mt.h"
 #include "core/image.h"
 #include "core/math/bsp_tree.h"
 #include "core/math/geometry.h"
 #include "core/math/octree.h"
 #include "core/math/transform_2d.h"
 #include "core/object.h"
-#include "core/os/thread.h"
 #include "core/rid.h"
-#include "core/safe_refcount.h"
 #include "core/variant.h"
 
 class VisualServerCallbacks;
@@ -468,6 +465,13 @@ public:
 	void light_set_cull_mask(RID p_light, uint32_t p_mask);
 	void light_set_reverse_cull_face_mode(RID p_light, bool p_enabled);
 
+	// bake mode
+	enum LightBakeMode {
+		LIGHT_BAKE_DISABLED,
+		LIGHT_BAKE_INDIRECT,
+		LIGHT_BAKE_ALL
+	};
+
 	// omni light
 	enum LightOmniShadowMode {
 		LIGHT_OMNI_SHADOW_DUAL_PARABOLOID,
@@ -524,6 +528,59 @@ public:
 	void reflection_probe_set_enable_shadows(RID p_probe, bool p_enable);
 	void reflection_probe_set_cull_mask(RID p_probe, uint32_t p_layers);
 	void reflection_probe_set_resolution(RID p_probe, int p_resolution);
+
+	/* GI PROBE API */
+
+	RID gi_probe_create();
+
+	void gi_probe_set_bounds(RID p_probe, const AABB &p_bounds);
+	AABB gi_probe_get_bounds(RID p_probe) const;
+
+	void gi_probe_set_cell_size(RID p_probe, float p_range);
+	float gi_probe_get_cell_size(RID p_probe) const;
+
+	void gi_probe_set_to_cell_xform(RID p_probe, const Transform &p_xform);
+	Transform gi_probe_get_to_cell_xform(RID p_probe) const;
+
+	void gi_probe_set_dynamic_data(RID p_probe, const PoolVector<int> &p_data);
+	PoolVector<int> gi_probe_get_dynamic_data(RID p_probe) const;
+
+	void gi_probe_set_dynamic_range(RID p_probe, int p_range);
+	int gi_probe_get_dynamic_range(RID p_probe) const;
+
+	void gi_probe_set_energy(RID p_probe, float p_range);
+	float gi_probe_get_energy(RID p_probe) const;
+
+	void gi_probe_set_bias(RID p_probe, float p_range);
+	float gi_probe_get_bias(RID p_probe) const;
+
+	void gi_probe_set_normal_bias(RID p_probe, float p_range);
+	float gi_probe_get_normal_bias(RID p_probe) const;
+
+	void gi_probe_set_propagation(RID p_probe, float p_range);
+	float gi_probe_get_propagation(RID p_probe) const;
+
+	void gi_probe_set_interior(RID p_probe, bool p_enable);
+	bool gi_probe_is_interior(RID p_probe) const;
+
+	void gi_probe_set_compress(RID p_probe, bool p_enable);
+	bool gi_probe_is_compressed(RID p_probe) const;
+
+	/* LIGHTMAP CAPTURE */
+
+	RID lightmap_capture_create();
+	void lightmap_capture_set_bounds(RID p_capture, const AABB &p_bounds);
+	AABB lightmap_capture_get_bounds(RID p_capture) const;
+	void lightmap_capture_set_octree(RID p_capture, const PoolVector<uint8_t> &p_octree);
+	void lightmap_capture_set_octree_cell_transform(RID p_capture, const Transform &p_xform);
+	Transform lightmap_capture_get_octree_cell_transform(RID p_capture) const;
+	void lightmap_capture_set_octree_cell_subdiv(RID p_capture, int p_subdiv);
+	int lightmap_capture_get_octree_cell_subdiv(RID p_capture) const;
+	PoolVector<uint8_t> lightmap_capture_get_octree(RID p_capture) const;
+	void lightmap_capture_set_energy(RID p_capture, float p_energy);
+	float lightmap_capture_get_energy(RID p_capture) const;
+	void lightmap_capture_set_interior(RID p_capture, bool p_interior);
+	bool lightmap_capture_is_interior(RID p_capture) const;
 
 	/* PARTICLES API */
 
@@ -798,6 +855,8 @@ public:
 		INSTANCE_PARTICLES,
 		INSTANCE_LIGHT,
 		INSTANCE_REFLECTION_PROBE,
+		INSTANCE_GI_PROBE,
+		INSTANCE_LIGHTMAP_CAPTURE,
 		INSTANCE_MAX,
 
 		INSTANCE_GEOMETRY_MASK = (1 << INSTANCE_MESH) | (1 << INSTANCE_MULTIMESH) | (1 << INSTANCE_IMMEDIATE) | (1 << INSTANCE_PARTICLES)
@@ -818,6 +877,8 @@ public:
 	void instance_set_blend_shape_weight(RID p_instance, int p_shape, float p_weight);
 	void instance_set_surface_material(RID p_instance, int p_surface, RID p_material);
 	void instance_set_visible(RID p_instance, bool p_visible);
+
+	void instance_set_use_lightmap(RID p_instance, RID p_lightmap_instance, RID p_lightmap, int p_lightmap_slice, const Rect2 &p_lightmap_uv_rect);
 
 	void instance_set_custom_aabb(RID p_instance, AABB aabb);
 
@@ -915,6 +976,7 @@ public:
 	Array _instances_cull_convex_bind(const Array &p_convex, RID p_scenario = RID()) const;
 
 	enum InstanceFlags {
+		INSTANCE_FLAG_USE_BAKED_LIGHT,
 		INSTANCE_FLAG_DRAW_NEXT_FRAME_IF_VISIBLE,
 		INSTANCE_FLAG_MAX
 	};
@@ -1240,6 +1302,7 @@ VARIANT_ENUM_CAST(VisualServer::MultimeshTransformFormat);
 VARIANT_ENUM_CAST(VisualServer::MultimeshColorFormat);
 VARIANT_ENUM_CAST(VisualServer::MultimeshCustomDataFormat);
 VARIANT_ENUM_CAST(VisualServer::MultimeshPhysicsInterpolationQuality);
+VARIANT_ENUM_CAST(VisualServer::LightBakeMode);
 VARIANT_ENUM_CAST(VisualServer::LightOmniShadowMode);
 VARIANT_ENUM_CAST(VisualServer::LightOmniShadowDetail);
 VARIANT_ENUM_CAST(VisualServer::LightDirectionalShadowMode);

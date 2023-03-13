@@ -94,8 +94,17 @@ class GeometryInstance : public VisualInstance {
 
 public:
 	enum Flags {
+		FLAG_USE_BAKED_LIGHT = VS::INSTANCE_FLAG_USE_BAKED_LIGHT,
 		FLAG_DRAW_NEXT_FRAME_IF_VISIBLE = VS::INSTANCE_FLAG_DRAW_NEXT_FRAME_IF_VISIBLE,
 		FLAG_MAX = VS::INSTANCE_FLAG_MAX,
+	};
+
+	enum LightmapScale {
+		LIGHTMAP_SCALE_1X,
+		LIGHTMAP_SCALE_2X,
+		LIGHTMAP_SCALE_4X,
+		LIGHTMAP_SCALE_8X,
+		LIGHTMAP_SCALE_MAX,
 	};
 
 	enum ShadowCastingSetting {
@@ -107,6 +116,8 @@ public:
 
 private:
 	bool flags[FLAG_MAX];
+	bool generate_lightmap;
+	LightmapScale lightmap_scale;
 	ShadowCastingSetting shadow_casting_setting;
 	Ref<Material> material_override;
 	Ref<Material> material_overlay;
@@ -127,6 +138,12 @@ public:
 
 	void set_cast_shadows_setting(ShadowCastingSetting p_shadow_casting_setting);
 	ShadowCastingSetting get_cast_shadows_setting() const;
+
+	void set_generate_lightmap(bool p_enabled);
+	bool get_generate_lightmap();
+
+	void set_lightmap_scale(LightmapScale p_scale);
+	LightmapScale get_lightmap_scale() const;
 
 	void set_lod_min_distance(float p_dist);
 	float get_lod_min_distance() const;
@@ -155,6 +172,7 @@ public:
 };
 
 VARIANT_ENUM_CAST(GeometryInstance::Flags);
+VARIANT_ENUM_CAST(GeometryInstance::LightmapScale);
 VARIANT_ENUM_CAST(GeometryInstance::ShadowCastingSetting);
 
 #endif // VISUAL_INSTANCE_H
