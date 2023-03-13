@@ -650,29 +650,6 @@ public:
 
 	bool light_instances_can_render_shadow_cube() const { return true; }
 
-	/* REFLECTION INSTANCE */
-
-	struct GIProbeInstance : public RID_Data {
-		RID data;
-		RasterizerStorageGLES3::GIProbe *probe;
-		GLuint tex_cache;
-		Vector3 cell_size_cache;
-		Vector3 bounds;
-		Transform transform_to_data;
-
-		GIProbeInstance() :
-				probe(nullptr),
-				tex_cache(0) {
-		}
-	};
-
-	mutable RID_Owner<GIProbeInstance> gi_probe_instance_owner;
-
-	RID gi_probe_instance_create();
-	void gi_probe_instance_set_light_data(RID p_probe, RID p_base, RID p_data);
-	void gi_probe_instance_set_transform_to_data(RID p_probe, const Transform &p_xform);
-	void gi_probe_instance_set_bounds(RID p_probe, const Vector3 &p_bounds);
-
 	/* RENDER LIST */
 
 	struct RenderList {
@@ -720,7 +697,7 @@ public:
 		int max_lights_per_object;
 
 		struct Element {
-			RasterizerInstanceBase *instance;
+			RasterizerInstance *instance;
 			RasterizerStorageGLES3::Geometry *geometry;
 			RasterizerStorageGLES3::Material *material;
 			RasterizerStorageGLES3::GeometryOwner *owner;
@@ -851,9 +828,9 @@ public:
 
 	void _render_list(RenderList::Element **p_elements, int p_element_count, const Transform &p_view_transform, const CameraMatrix &p_projection, RasterizerStorageGLES3::Sky *p_sky, bool p_reverse_cull, bool p_alpha_pass, bool p_shadow, bool p_directional_add, bool p_directional_shadows);
 
-	_FORCE_INLINE_ void _add_geometry(RasterizerStorageGLES3::Geometry *p_geometry, RasterizerInstanceBase *p_instance, RasterizerStorageGLES3::GeometryOwner *p_owner, int p_material, bool p_depth_pass, bool p_shadow_pass);
+	_FORCE_INLINE_ void _add_geometry(RasterizerStorageGLES3::Geometry *p_geometry, RasterizerInstance *p_instance, RasterizerStorageGLES3::GeometryOwner *p_owner, int p_material, bool p_depth_pass, bool p_shadow_pass);
 
-	_FORCE_INLINE_ void _add_geometry_with_material(RasterizerStorageGLES3::Geometry *p_geometry, RasterizerInstanceBase *p_instance, RasterizerStorageGLES3::GeometryOwner *p_owner, RasterizerStorageGLES3::Material *p_material, bool p_depth_pass, bool p_shadow_pass);
+	_FORCE_INLINE_ void _add_geometry_with_material(RasterizerStorageGLES3::Geometry *p_geometry, RasterizerInstance *p_instance, RasterizerStorageGLES3::GeometryOwner *p_owner, RasterizerStorageGLES3::Material *p_material, bool p_depth_pass, bool p_shadow_pass);
 
 	void _draw_sky(RasterizerStorageGLES3::Sky *p_sky, const CameraMatrix &p_projection, const Transform &p_transform, bool p_vflip, float p_custom_fov, float p_energy, const Basis &p_sky_orientation);
 
@@ -865,7 +842,7 @@ public:
 	void _copy_screen(bool p_invalidate_color = false, bool p_invalidate_depth = false);
 	void _copy_texture_to_front_buffer(GLuint p_texture); //used for debug
 
-	void _fill_render_list(RasterizerInstanceBase **p_cull_result, int p_cull_count, bool p_depth_pass, bool p_shadow_pass);
+	void _fill_render_list(RasterizerInstance **p_cull_result, int p_cull_count, bool p_depth_pass, bool p_shadow_pass);
 
 	void _blur_effect_buffer();
 	void _render_mrts(Environment *env, const CameraMatrix &p_cam_projection);
@@ -875,8 +852,8 @@ public:
 	void _bind_depth_texture();
 
 	bool _element_needs_directional_add(RenderList::Element *e);
-	void render_scene(const Transform &p_cam_transform, const CameraMatrix &p_cam_projection, const int p_eye, bool p_cam_ortogonal, RasterizerInstanceBase **p_cull_result, int p_cull_count, RID *p_light_cull_result, int p_light_cull_count, RID *p_reflection_probe_cull_result, int p_reflection_probe_cull_count, RID p_environment, RID p_shadow_atlas, RID p_reflection_atlas, RID p_reflection_probe, int p_reflection_probe_pass);
-	void render_shadow(RID p_light, RID p_shadow_atlas, int p_pass, RasterizerInstanceBase **p_cull_result, int p_cull_count);
+	void render_scene(const Transform &p_cam_transform, const CameraMatrix &p_cam_projection, const int p_eye, bool p_cam_ortogonal, RasterizerInstance **p_cull_result, int p_cull_count, RID *p_light_cull_result, int p_light_cull_count, RID *p_reflection_probe_cull_result, int p_reflection_probe_cull_count, RID p_environment, RID p_shadow_atlas, RID p_reflection_atlas, RID p_reflection_probe, int p_reflection_probe_pass);
+	void render_shadow(RID p_light, RID p_shadow_atlas, int p_pass, RasterizerInstance **p_cull_result, int p_cull_count);
 	bool free(RID p_rid);
 
 	void set_scene_pass(uint64_t p_pass);

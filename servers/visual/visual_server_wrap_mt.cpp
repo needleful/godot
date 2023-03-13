@@ -123,8 +123,6 @@ void VisualServerWrapMT::finish() {
 	omni_light_free_cached_ids();
 	spot_light_free_cached_ids();
 	reflection_probe_free_cached_ids();
-	gi_probe_free_cached_ids();
-	lightmap_capture_free_cached_ids();
 	particles_free_cached_ids();
 	camera_free_cached_ids();
 	viewport_free_cached_ids();
