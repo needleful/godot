@@ -154,7 +154,7 @@ public:
 	void set_fixed_fps(int p_fixed_fps);
 
 	// advance one frame, return timesteps to take
-	MainFrameTime advance(float p_frame_slice, float p_max_frame_slice);
+	MainFrameTime advance(float p_frame_slice, float p_max_frame_slice, float p_max_physics_time);
 };
 
 #endif // MAIN_TIMER_SYNC_H

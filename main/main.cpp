@@ -2278,7 +2278,7 @@ bool Main::iteration() {
 
 	float time_scale = Engine::get_singleton()->get_time_scale();
 
-	MainFrameTime advance = main_timer_sync.advance(frame_slice, max_frame_slice);
+	MainFrameTime advance = main_timer_sync.advance(frame_slice, max_frame_slice, (float)physics_process_max / 1000000.0);
 	double step = advance.idle_step;
 	double scaled_step = step * time_scale;
 
