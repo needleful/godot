@@ -1257,7 +1257,10 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	}
 
 	Engine::get_singleton()->set_iterations_per_second(GLOBAL_DEF("physics/common/physics_fps", 60));
+	Engine::get_singleton()->set_min_iterations_per_second(GLOBAL_DEF("physics/common/min_physics_fps", 60));
+
 	ProjectSettings::get_singleton()->set_custom_property_info("physics/common/physics_fps", PropertyInfo(Variant::INT, "physics/common/physics_fps", PROPERTY_HINT_RANGE, "1,1000,1"));
+	ProjectSettings::get_singleton()->set_custom_property_info("physics/common/min_physics_fps", PropertyInfo(Variant::INT, "physics/common/min_physics_fps", PROPERTY_HINT_RANGE, "1,1000,1"));
 	Engine::get_singleton()->set_physics_jitter_fix(GLOBAL_DEF("physics/common/physics_jitter_fix", 0.5));
 	Engine::get_singleton()->set_target_fps(GLOBAL_DEF("debug/settings/fps/force_fps", 0));
 	ProjectSettings::get_singleton()->set_custom_property_info("debug/settings/fps/force_fps", PropertyInfo(Variant::INT, "debug/settings/fps/force_fps", PROPERTY_HINT_RANGE, "0,1000,1"));
@@ -2270,14 +2273,16 @@ bool Main::iteration() {
 
 	uint64_t ticks_elapsed = ticks - last_ticks;
 
-	int physics_fps = Engine::get_singleton()->get_iterations_per_second();
-	float frame_slice = 1.0 / physics_fps;
+	float frame_slice = 1.0 / Engine::get_singleton()->get_iterations_per_second();
+	float max_frame_slice = 1.0 / Engine::get_singleton()->get_min_iterations_per_second();
 
 	float time_scale = Engine::get_singleton()->get_time_scale();
 
-	MainFrameTime advance = main_timer_sync.advance(frame_slice, physics_fps);
+	MainFrameTime advance = main_timer_sync.advance(frame_slice, max_frame_slice);
 	double step = advance.idle_step;
 	double scaled_step = step * time_scale;
+
+	Engine::get_singleton()->set_physics_step(advance.physics_step);
 
 	Engine::get_singleton()->_frame_step = step;
 	Engine::get_singleton()->_physics_interpolation_fraction = advance.interpolation_fraction;
@@ -2291,7 +2296,7 @@ bool Main::iteration() {
 
 	static const int max_physics_steps = 8;
 	if (fixed_fps == -1 && advance.physics_steps > max_physics_steps) {
-		step -= (advance.physics_steps - max_physics_steps) * frame_slice;
+		step -= (advance.physics_steps - max_physics_steps) * advance.physics_step;
 		advance.physics_steps = max_physics_steps;
 	}
 
@@ -2311,16 +2316,16 @@ bool Main::iteration() {
 		Physics2DServer::get_singleton()->sync();
 		Physics2DServer::get_singleton()->flush_queries();
 
-		if (OS::get_singleton()->get_main_loop()->iteration(frame_slice * time_scale)) {
+		if (OS::get_singleton()->get_main_loop()->iteration(advance.physics_step * time_scale)) {
 			exit = true;
 			Engine::get_singleton()->_in_physics = false;
 			break;
 		}
 
-		NavigationServer::get_singleton_mut()->process(frame_slice * time_scale);
+		NavigationServer::get_singleton_mut()->process(advance.physics_step * time_scale);
 		message_queue->flush();
 
-		PhysicsServer::get_singleton()->step(frame_slice * time_scale);
+		PhysicsServer::get_singleton()->step(advance.physics_step * time_scale);
 
 #ifdef BT_ENABLE_PROFILE
 		if (profile_logger && (CProfileManager::Get_Time_Since_Reset() > 0.02)) {
@@ -2330,13 +2335,13 @@ bool Main::iteration() {
 #endif
 
 		Physics2DServer::get_singleton()->end_sync();
-		Physics2DServer::get_singleton()->step(frame_slice * time_scale);
+		Physics2DServer::get_singleton()->step(advance.physics_step * time_scale);
 
 		message_queue->flush();
 
 		OS::get_singleton()->get_main_loop()->iteration_end();
 
-		physics_process_ticks = MAX(physics_process_ticks, OS::get_singleton()->get_ticks_usec() - physics_begin); // keep the largest one for reference
+		physics_process_ticks += OS::get_singleton()->get_ticks_usec() - physics_begin; // Total physics time
 		physics_process_max = MAX(OS::get_singleton()->get_ticks_usec() - physics_begin, physics_process_max);
 		Engine::get_singleton()->_physics_frames++;
 
@@ -2399,7 +2404,7 @@ bool Main::iteration() {
 
 	if (script_debugger) {
 		if (script_debugger->is_profiling()) {
-			script_debugger->profiling_set_frame_times(USEC_TO_SEC(frame_time), USEC_TO_SEC(idle_process_ticks), USEC_TO_SEC(physics_process_ticks), frame_slice);
+			script_debugger->profiling_set_frame_times(USEC_TO_SEC(frame_time), USEC_TO_SEC(idle_process_ticks), USEC_TO_SEC(physics_process_ticks), advance.physics_step);
 		}
 		script_debugger->idle_poll();
 	}

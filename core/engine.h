@@ -53,10 +53,12 @@ private:
 	float _frame_step;
 
 	int ips;
+	int min_ips;
 	float physics_jitter_fix;
 	float _fps;
 	int _target_fps;
 	float _time_scale;
+	float _physics_step;
 	bool _gpu_pixel_snap;
 	uint64_t _physics_frames;
 	float _physics_interpolation_fraction;
@@ -76,16 +78,22 @@ private:
 public:
 	static Engine *get_singleton();
 
-	virtual void set_iterations_per_second(int p_ips);
-	virtual int get_iterations_per_second() const;
+	void set_iterations_per_second(int p_ips);
+	int get_iterations_per_second() const;
+
+	void set_min_iterations_per_second(int p_ips);
+	int get_min_iterations_per_second() const;
 
 	void set_physics_jitter_fix(float p_threshold);
 	float get_physics_jitter_fix() const;
 
-	virtual void set_target_fps(int p_fps);
-	virtual int get_target_fps() const;
+	void set_target_fps(int p_fps);
+	int get_target_fps() const;
 
-	virtual float get_frames_per_second() const { return _fps; }
+	void set_physics_step(float p_step);
+	float get_physics_step() const;
+
+	float get_frames_per_second() const { return _fps; }
 
 	uint64_t get_frames_drawn();
 
@@ -130,7 +138,7 @@ public:
 	String get_license_text() const;
 
 	Engine();
-	virtual ~Engine() {}
+	~Engine() {}
 };
 
 #endif // ENGINE_H

@@ -38,6 +38,7 @@
 
 struct MainFrameTime {
 	float idle_step; // time to advance idles for (argument to process())
+	float physics_step;
 	int physics_steps; // number of times to iterate the physics engine
 	float interpolation_fraction; // fraction through the current physics tick
 
@@ -139,12 +140,6 @@ protected:
 	// return value: number of frames back this data is consistent
 	int get_average_physics_steps(float &p_min, float &p_max);
 
-	// advance physics clock by p_idle_step, return appropriate number of steps to simulate
-	MainFrameTime advance_core(float p_frame_slice, int p_iterations_per_second, float p_idle_step);
-
-	// calls advance_core, keeps track of deficit it adds to animaption_step, make sure the deficit sum stays close to zero
-	MainFrameTime advance_checked(float p_frame_slice, int p_iterations_per_second, float p_idle_step);
-
 	// determine wall clock step since last iteration
 	float get_cpu_idle_step();
 
@@ -159,7 +154,7 @@ public:
 	void set_fixed_fps(int p_fixed_fps);
 
 	// advance one frame, return timesteps to take
-	MainFrameTime advance(float p_frame_slice, int p_iterations_per_second);
+	MainFrameTime advance(float p_frame_slice, float p_max_frame_slice);
 };
 
 #endif // MAIN_TIMER_SYNC_H

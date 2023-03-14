@@ -1,4 +1,5 @@
 /*************************************************************************/
+/*************************************************************************/
 /*  engine.cpp                                                           */
 /*************************************************************************/
 /*                       This file is part of:                           */
@@ -43,6 +44,14 @@ int Engine::get_iterations_per_second() const {
 	return ips;
 }
 
+void Engine::set_min_iterations_per_second(int p_ips) {
+	ERR_FAIL_COND_MSG(p_ips <= 0, "Engine iterations per second must be greater than 0.");
+	min_ips = p_ips;
+}
+int Engine::get_min_iterations_per_second() const {
+	return min_ips;
+}
+
 void Engine::set_physics_jitter_fix(float p_threshold) {
 	if (p_threshold < 0) {
 		p_threshold = 0;
@@ -52,6 +61,15 @@ void Engine::set_physics_jitter_fix(float p_threshold) {
 
 float Engine::get_physics_jitter_fix() const {
 	return physics_jitter_fix;
+}
+
+void Engine::set_physics_step(float p_step) {
+	ERR_FAIL_COND_MSG(p_step <= 0, "Engine physics step must be greater than zero");
+	_physics_step = p_step;
+}
+
+float Engine::get_physics_step() const {
+	return _physics_step;
 }
 
 void Engine::set_target_fps(int p_fps) {
