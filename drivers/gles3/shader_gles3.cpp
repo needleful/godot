@@ -33,6 +33,7 @@
 #include "core/local_vector.h"
 #include "core/os/os.h"
 #include "core/print_string.h"
+#include "core/profiler.h"
 #include "core/threaded_callable_queue.h"
 #include "drivers/gles3/shader_cache_gles3.h"
 #include "servers/visual_server.h"
@@ -204,6 +205,7 @@ bool ShaderGLES3::_bind_ubershader(bool p_for_warmup) {
 }
 
 void ShaderGLES3::advance_async_shaders_compilation() {
+	PROFILE
 	SelfList<ShaderGLES3::Version> *curr = versions_compiling.first();
 	while (curr) {
 		SelfList<ShaderGLES3::Version> *next = curr->next();

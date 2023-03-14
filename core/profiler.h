@@ -12,10 +12,23 @@ struct ProfileMarker {
 	~ProfileMarker();
 };
 
+struct ProfileTimer {
+	const char *func_name;
+	int64_t start_time;
+	int64_t timer_last_start;
+	int64_t running_timer;
+
+	ProfileTimer(const char *p_func);
+	void start();
+	void stop();
+	~ProfileTimer();
+};
+
 struct ProfileToken {
 	const char *func_name;
 	int64_t start_time;
 	int64_t end_time;
+	int64_t special_value;
 };
 
 class Logger;

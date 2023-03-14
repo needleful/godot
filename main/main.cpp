@@ -87,6 +87,10 @@
 #endif
 #endif
 
+#ifdef BT_ENABLE_PROFILE
+#include "thirdparty/bullet/LinearMath/btQuickProf.h"
+#endif
+
 /* Static members */
 
 // Singletons
@@ -2317,6 +2321,13 @@ bool Main::iteration() {
 		message_queue->flush();
 
 		PhysicsServer::get_singleton()->step(frame_slice * time_scale);
+
+#ifdef BT_ENABLE_PROFILE
+		if (profile_logger && (CProfileManager::Get_Time_Since_Reset() > 0.02)) {
+			profile_logger->logf("Bullet:\n");
+			CProfileManager::dumpAll(profile_logger);
+		}
+#endif
 
 		Physics2DServer::get_singleton()->end_sync();
 		Physics2DServer::get_singleton()->step(frame_slice * time_scale);

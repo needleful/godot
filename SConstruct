@@ -189,6 +189,7 @@ opts.Add(BoolVariable("builtin_zlib", "Use the built-in zlib library", True))
 opts.Add(BoolVariable("builtin_zstd", "Use the built-in Zstd library", True))
 
 opts.Add(BoolVariable("single_threaded", "Disable multithreading entirely", False))
+opts.Add(BoolVariable("bt_profile", "Enable profiling Bullet", False))
 
 # Compilation environment setup
 opts.Add("CXX", "C++ compiler")
@@ -332,6 +333,9 @@ if env_base["target"] == "debug":
     # DEV_ENABLED enables *engine developer* code which should only be compiled for those
     # working on the engine itself.
     env_base.Append(CPPDEFINES=["DEV_ENABLED"])
+
+if env_base["bt_profile"]:
+    env_base.Append(CPPDEFINES=["BT_ENABLE_PROFILE"])
 
 # SCons speed optimization controlled by the `fast_unsafe` option, which provide
 # more than 10 s speed up for incremental rebuilds.

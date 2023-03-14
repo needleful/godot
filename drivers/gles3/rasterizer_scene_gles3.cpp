@@ -2106,6 +2106,8 @@ void RasterizerSceneGLES3::_render_list(RenderList::Element **p_elements, int p_
 	bool prev_opaque_prepass = false;
 	state.scene_shader.set_conditional(SceneShaderGLES3::USE_OPAQUE_PREPASS, false);
 
+	ProfileTimer draw_call_timer("Draw Calls");
+
 	for (int i = 0; i < p_element_count; i++) {
 		RenderList::Element *e = p_elements[i];
 		RasterizerStorageGLES3::Material *material = e->material;
@@ -2302,7 +2304,9 @@ void RasterizerSceneGLES3::_render_list(RenderList::Element **p_elements, int p_
 
 		state.scene_shader.set_uniform(SceneShaderGLES3::WORLD_TRANSFORM, e->instance->transform);
 
+		draw_call_timer.start();
 		_render_geometry(e);
+		draw_call_timer.stop();
 
 		prev_material = material;
 		prev_base_type = e->instance->base_type;
