@@ -376,7 +376,7 @@ MainFrameTime MainTimerSync::advance(float p_target_frame_slice, float p_max_fra
 	// simple determination of number of physics iteration
 	time_accum += ret.idle_step;
 
-	float frame_slice = CLAMP(0.5 * (time_accum + p_max_physics_time), p_target_frame_slice, p_max_frame_slice);
+	float frame_slice = CLAMP(0.25 * time_accum + 0.75 * p_max_physics_time, p_target_frame_slice, p_max_frame_slice);
 	ret.physics_step = frame_slice;
 
 	ret.physics_steps = floor(time_accum / frame_slice);
