@@ -11,6 +11,7 @@
 #include "core/os/memory.h"
 
 ProfileMarker::ProfileMarker(const char *p_func) {
+#ifdef NP_PROFILER
 	func_name = p_func;
 	LARGE_INTEGER ticks;
 	if (QueryPerformanceCounter(&ticks)) {
@@ -18,9 +19,11 @@ ProfileMarker::ProfileMarker(const char *p_func) {
 	} else {
 		start_time = -1;
 	}
+#endif
 }
 
 ProfileMarker::~ProfileMarker() {
+#ifdef NP_PROFILER
 	ProfileToken token;
 	token.func_name = func_name;
 	token.start_time = start_time;
@@ -36,9 +39,11 @@ ProfileMarker::~ProfileMarker() {
 	}
 
 	ProfilerManager::singleton->append(token);
+#endif
 }
 
 ProfileTimer::ProfileTimer(const char *p_func) {
+#ifdef NP_PROFILER
 	func_name = p_func;
 	running_timer = 0;
 	LARGE_INTEGER ticks;
@@ -47,25 +52,31 @@ ProfileTimer::ProfileTimer(const char *p_func) {
 	} else {
 		start_time = -1;
 	}
+#endif
 }
 
 void ProfileTimer::start() {
+#ifdef NP_PROFILER
 	LARGE_INTEGER ticks;
 	if (QueryPerformanceCounter(&ticks)) {
 		timer_last_start = ticks.QuadPart;
 	} else {
 		timer_last_start = -1;
 	}
+#endif
 }
 
 void ProfileTimer::stop() {
+#ifdef NP_PROFILER
 	LARGE_INTEGER ticks;
 	if (QueryPerformanceCounter(&ticks)) {
 		running_timer += ticks.QuadPart - timer_last_start;
 	}
+#endif
 }
 
 ProfileTimer::~ProfileTimer() {
+#ifdef NP_PROFILER
 	ProfileToken token;
 	token.func_name = func_name;
 	token.start_time = start_time;
@@ -81,32 +92,40 @@ ProfileTimer::~ProfileTimer() {
 	}
 
 	ProfilerManager::singleton->append(token);
+#endif
 }
 
 ProfilerManager *ProfilerManager::singleton = nullptr;
 
 ProfilerManager::ProfilerManager() {
+#ifdef NP_PROFILER
 	ProfilerManager::singleton = this;
 	capacity = 1024;
 	size = 0;
 	buffer = (ProfileToken *)memalloc(sizeof(ProfileToken) * capacity);
 	time_offset = 0;
+#endif
 }
 
 void ProfilerManager::_realloc() {
+#ifdef NP_PROFILER
 	buffer = (ProfileToken *)memrealloc(buffer, sizeof(ProfileToken) * capacity);
+#endif
 }
 
 void ProfilerManager::append(ProfileToken p_marker) {
+#ifdef NP_PROFILER
 	size += 1;
 	if (size >= capacity) {
 		capacity *= 2;
 		_realloc();
 	}
 	buffer[size - 1] = p_marker;
+#endif
 }
 
 void ProfilerManager::log_and_wipe(uint64_t frame_time, Logger *p_logger) {
+#ifdef NP_PROFILER
 	if (p_logger) {
 		p_logger->logf("%u\n", frame_time);
 		for (int i = 0; i < size; i++) {
@@ -130,11 +149,14 @@ void ProfilerManager::log_and_wipe(uint64_t frame_time, Logger *p_logger) {
 	else {
 		time_offset = 0;
 	}
+#endif
 }
 
 ProfilerManager::~ProfilerManager() {
+#ifdef NP_PROFILER
 	memfree(buffer);
 	buffer = nullptr;
 	size = 0;
 	capacity = 0;
+#endif
 }

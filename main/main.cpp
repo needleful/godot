@@ -1074,8 +1074,9 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		String base_path = GLOBAL_GET("logging/file_logging/log_path");
 		int max_files = GLOBAL_GET("logging/file_logging/max_log_files");
 		OS::get_singleton()->add_logger(memnew(RotatedFileLogger(base_path, max_files)));
-
+#ifdef NP_PROFILER
 		profile_logger = memnew(RotatedFileLogger("user://logs/profiler.log", 5));
+#endif
 	}
 
 	if (main_args.size() == 0 && String(GLOBAL_DEF("application/run/main_scene", "")) == "") {
@@ -2327,11 +2328,13 @@ bool Main::iteration() {
 
 		PhysicsServer::get_singleton()->step(advance.physics_step * time_scale);
 
+#ifdef NP_PROFILER
 #ifdef BT_ENABLE_PROFILE
 		if (profile_logger && (CProfileManager::Get_Time_Since_Reset() > 0.02)) {
 			profile_logger->logf("Bullet:\n");
 			CProfileManager::dumpAll(profile_logger);
 		}
+#endif
 #endif
 
 		Physics2DServer::get_singleton()->end_sync();

@@ -189,7 +189,8 @@ opts.Add(BoolVariable("builtin_zlib", "Use the built-in zlib library", True))
 opts.Add(BoolVariable("builtin_zstd", "Use the built-in Zstd library", True))
 
 opts.Add(BoolVariable("single_threaded", "Disable multithreading entirely", False))
-opts.Add(BoolVariable("bt_profile", "Enable profiling Bullet", False))
+opts.Add(BoolVariable("np_profiler", "Enable needleful's magic profiler", True))
+opts.Add(BoolVariable("bt_profile", "Add the Bullet profiler to np_profiler's output", False))
 
 # Compilation environment setup
 opts.Add("CXX", "C++ compiler")
@@ -334,6 +335,8 @@ if env_base["target"] == "debug":
     # working on the engine itself.
     env_base.Append(CPPDEFINES=["DEV_ENABLED"])
 
+if env_base["np_profiler"]:
+    env_base.Append(CPPDEFINES=["NP_PROFILER"])
 if env_base["bt_profile"]:
     env_base.Append(CPPDEFINES=["BT_ENABLE_PROFILE"])
 
