@@ -2027,6 +2027,7 @@ void VisualServerScene::instance_geometry_set_as_instance_lod(RID p_instance, RI
 }
 
 void VisualServerScene::_update_instance(Instance *p_instance) {
+	PROFILE
 	p_instance->version++;
 
 	// when not using interpolation the transform is used straight
@@ -2135,6 +2136,7 @@ void VisualServerScene::_update_instance(Instance *p_instance) {
 }
 
 void VisualServerScene::_update_instance_aabb(Instance *p_instance) {
+	PROFILE
 	AABB new_aabb;
 
 	ERR_FAIL_COND(p_instance->base_type != VS::INSTANCE_NONE && !p_instance->base.is_valid());
@@ -2445,6 +2447,7 @@ void VisualServerScene::_update_instance_lightmap_captures(Instance *p_instance)
 }
 
 bool VisualServerScene::_light_instance_update_shadow(Instance *p_instance, const Transform p_cam_transform, const CameraMatrix &p_cam_projection, bool p_cam_orthogonal, RID p_shadow_atlas, Scenario *p_scenario, uint32_t p_visible_layers) {
+	PROFILE
 	InstanceLightData *light = static_cast<InstanceLightData *>(p_instance->base_data);
 	uint32_t light_cull_mask = VSG::storage->light_get_cull_mask(p_instance->base);
 
@@ -2982,6 +2985,7 @@ void VisualServerScene::render_camera(Ref<ARVRInterface> &p_interface, ARVRInter
 };
 
 void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const CameraMatrix &p_cam_projection, bool p_cam_orthogonal, RID p_force_environment, uint32_t p_visible_layers, RID p_scenario, RID p_shadow_atlas, RID p_reflection_probe, int32_t &r_previous_room_id_hint) {
+	PROFILE
 	// Note, in stereo rendering:
 	// - p_cam_transform will be a transform in the middle of our two eyes
 	// - p_cam_projection is a wider frustrum that encompasses both eyes
