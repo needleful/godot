@@ -2027,7 +2027,6 @@ void VisualServerScene::instance_geometry_set_as_instance_lod(RID p_instance, RI
 }
 
 void VisualServerScene::_update_instance(Instance *p_instance) {
-	PROFILE
 	p_instance->version++;
 
 	// when not using interpolation the transform is used straight
@@ -2136,7 +2135,6 @@ void VisualServerScene::_update_instance(Instance *p_instance) {
 }
 
 void VisualServerScene::_update_instance_aabb(Instance *p_instance) {
-	PROFILE
 	AABB new_aabb;
 
 	ERR_FAIL_COND(p_instance->base_type != VS::INSTANCE_NONE && !p_instance->base.is_valid());
