@@ -501,11 +501,9 @@ public:
 
 		Vector<ShaderLanguage::DataType> texture_types;
 		Vector<ShaderLanguage::ShaderNode::Uniform::Hint> texture_hints;
-		bool valid;
 
 		ShaderLanguage::StencilTest front_stencil;
 		ShaderLanguage::StencilTest back_stencil;
-		bool uses_stencil;
 
 		String path;
 
@@ -598,8 +596,10 @@ public:
 		struct Particles {
 		} particles;
 
-		bool uses_vertex_time;
-		bool uses_fragment_time;
+		bool valid : 1;
+		bool uses_stencil : 1;
+		bool uses_vertex_time : 1;
+		bool uses_fragment_time : 1;
 
 		Shader() :
 				dirty_list(this) {
