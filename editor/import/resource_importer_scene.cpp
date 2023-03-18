@@ -947,7 +947,7 @@ static String _make_extname(const String &p_str) {
 	return ext_name;
 }
 
-void ResourceImporterScene::_find_meshes(Node *p_node, Map<Ref<ArrayMesh>, Transform> &meshes) {
+void ResourceImporterScene::_find_meshes_for_lightmap(Node *p_node, Map<Ref<ArrayMesh>, Transform> &meshes) {
 	MeshInstance *mi = Object::cast_to<MeshInstance>(p_node);
 
 	if (mi) {
@@ -962,6 +962,21 @@ void ResourceImporterScene::_find_meshes(Node *p_node, Map<Ref<ArrayMesh>, Trans
 			}
 
 			meshes[mesh] = transform;
+		}
+	}
+	for (int i = 0; i < p_node->get_child_count(); i++) {
+		_find_meshes_for_lightmap(p_node->get_child(i), meshes);
+	}
+}
+
+void ResourceImporterScene::_find_meshes(Node *p_node, Set<Ref<ArrayMesh>> &meshes) {
+	MeshInstance *mi = Object::cast_to<MeshInstance>(p_node);
+
+	if (mi) {
+		Ref<ArrayMesh> mesh = mi->get_mesh();
+
+		if (mesh.is_valid() && !meshes.has(mesh)) {
+			meshes.insert(mesh);
 		}
 	}
 	for (int i = 0; i < p_node->get_child_count(); i++) {
@@ -1166,6 +1181,7 @@ void ResourceImporterScene::get_import_options(List<ImportOption> *r_options, in
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "meshes/ensure_tangents"), true));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "meshes/storage", PROPERTY_HINT_ENUM, "Built-In,Files (.mesh),Files (.tres)"), meshes_out ? 1 : 0));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "meshes/light_baking", PROPERTY_HINT_ENUM, "Disabled,Enable,Gen Lightmaps", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED), 0));
+	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "meshes/shadow_render_distance", PROPERTY_HINT_ENUM, "Close,Medium,Far,All", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED), VS::SHADOW_DIST_ALL));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::REAL, "meshes/lightmap_texel_size", PROPERTY_HINT_RANGE, "0.001,100,0.001"), 0.1));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "skins/use_named_skins"), true));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "external_files/store_in_subdir"), false));
@@ -1377,6 +1393,8 @@ Error ResourceImporterScene::import(const String &p_source_file, const String &p
 	float anim_optimizer_angerr = p_options["animation/optimizer/max_angular_error"];
 	float anim_optimizer_maxang = p_options["animation/optimizer/max_angle"];
 	int light_bake_mode = p_options["meshes/light_baking"];
+	int shadow_dist_int = p_options["meshes/shadow_render_distance"];
+	Mesh::ShadowRenderDistance shadow_render_distance = (Mesh::ShadowRenderDistance)shadow_dist_int;
 
 	Map<Ref<Mesh>, List<Ref<Shape>>> collision_map;
 	List<Pair<NodePath, Node *>> node_renames;
@@ -1434,7 +1452,7 @@ Error ResourceImporterScene::import(const String &p_source_file, const String &p
 
 	if (light_bake_mode == 2 /* || generate LOD */) {
 		Map<Ref<ArrayMesh>, Transform> meshes;
-		_find_meshes(scene, meshes);
+		_find_meshes_for_lightmap(scene, meshes);
 
 		String file_id = src_path.get_file();
 		String cache_file_path = base_path.plus_file(file_id + ".unwrap_cache");
@@ -1546,6 +1564,16 @@ Error ResourceImporterScene::import(const String &p_source_file, const String &p
 
 			file->close();
 			memfree(cache_data);
+		}
+	}
+
+	if (shadow_render_distance != Mesh::SHADOW_DIST_ALL) {
+		Set<Ref<ArrayMesh>> meshes;
+		_find_meshes(scene, meshes);
+
+		for (Set<Ref<ArrayMesh>>::Element *E = meshes.front(); E; E = E->next()) {
+			Ref<ArrayMesh> m = Ref<ArrayMesh>(E->get());
+			m->set_shadow_render_distance(shadow_render_distance);
 		}
 	}
 

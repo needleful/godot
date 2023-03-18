@@ -143,7 +143,8 @@ public:
 	// Import scenes *after* everything else (such as textures).
 	virtual int get_import_order() const { return ResourceImporter::IMPORT_ORDER_SCENE; }
 
-	void _find_meshes(Node *p_node, Map<Ref<ArrayMesh>, Transform> &meshes);
+	void _find_meshes_for_lightmap(Node *p_node, Map<Ref<ArrayMesh>, Transform> &meshes);
+	void _find_meshes(Node *p_node, Set<Ref<ArrayMesh>> &meshes);
 
 	void _make_external_resources(Node *p_node, const String &p_base_path, bool p_make_animations, bool p_animations_as_text, bool p_keep_animations, bool p_make_materials, bool p_materials_as_text, bool p_keep_materials, bool p_make_meshes, bool p_meshes_as_text, Map<Ref<Animation>, Ref<Animation>> &p_animations, Map<Ref<Material>, Ref<Material>> &p_materials, Map<Ref<ArrayMesh>, Ref<ArrayMesh>> &p_meshes);
 
