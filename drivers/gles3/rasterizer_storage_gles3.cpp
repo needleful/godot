@@ -3890,6 +3890,19 @@ PoolVector<float> RasterizerStorageGLES3::mesh_get_blend_shape_values(RID p_mesh
 	return mesh->blend_shape_values;
 }
 
+// TODO implement
+void RasterizerStorageGLES3::mesh_set_shadow_render_distance(RID p_mesh, VS::ShadowRenderDistance p_distance) {
+	Mesh *mesh = mesh_owner.getornull(p_mesh);
+	ERR_FAIL_COND(!mesh);
+	mesh->shadow_render_distance = p_distance;
+}
+
+VS::ShadowRenderDistance RasterizerStorageGLES3::mesh_get_shadow_render_distance(RID p_mesh) const {
+	Mesh *mesh = mesh_owner.getornull(p_mesh);
+	ERR_FAIL_COND_V(!mesh, VS::SHADOW_DIST_ALL);
+	return mesh->shadow_render_distance;
+}
+
 void RasterizerStorageGLES3::mesh_surface_update_region(RID p_mesh, int p_surface, int p_offset, const PoolVector<uint8_t> &p_data) {
 	Mesh *mesh = mesh_owner.getornull(p_mesh);
 	ERR_FAIL_COND(!mesh);

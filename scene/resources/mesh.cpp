@@ -463,26 +463,18 @@ Ref<Mesh> Mesh::create_outline(float p_margin) const {
 	return newmesh;
 }
 
-void Mesh::set_lightmap_size_hint(const Vector2 &p_size) {
-	lightmap_size_hint = p_size;
-}
-
-Size2 Mesh::get_lightmap_size_hint() const {
-	return lightmap_size_hint;
-}
-
 void Mesh::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_lightmap_size_hint", "size"), &Mesh::set_lightmap_size_hint);
-	ClassDB::bind_method(D_METHOD("get_lightmap_size_hint"), &Mesh::get_lightmap_size_hint);
 	ClassDB::bind_method(D_METHOD("get_aabb"), &Mesh::get_aabb);
-
-	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "lightmap_size_hint"), "set_lightmap_size_hint", "get_lightmap_size_hint");
 
 	ClassDB::bind_method(D_METHOD("get_surface_count"), &Mesh::get_surface_count);
 	ClassDB::bind_method(D_METHOD("surface_get_arrays", "surf_idx"), &Mesh::surface_get_arrays);
 	ClassDB::bind_method(D_METHOD("surface_get_blend_shape_arrays", "surf_idx"), &Mesh::surface_get_blend_shape_arrays);
 	ClassDB::bind_method(D_METHOD("surface_set_material", "surf_idx", "material"), &Mesh::surface_set_material);
 	ClassDB::bind_method(D_METHOD("surface_get_material", "surf_idx"), &Mesh::surface_get_material);
+
+	ClassDB::bind_method(D_METHOD("get_shadow_render_distance"), &Mesh::get_shadow_render_distance);
+	ClassDB::bind_method(D_METHOD("set_shadow_render_distance", "shadow_render_distance"), &Mesh::set_shadow_render_distance);
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "shadow_render_distance", PROPERTY_HINT_ENUM, "Close,Medium,Far,All"), "set_shadow_render_distance", "get_shadow_render_distance");
 
 	BIND_ENUM_CONSTANT(PRIMITIVE_POINTS);
 	BIND_ENUM_CONSTANT(PRIMITIVE_LINES);
@@ -532,6 +524,11 @@ void Mesh::_bind_methods() {
 	BIND_ENUM_CONSTANT(ARRAY_WEIGHTS);
 	BIND_ENUM_CONSTANT(ARRAY_INDEX);
 	BIND_ENUM_CONSTANT(ARRAY_MAX);
+
+	BIND_ENUM_CONSTANT(SHADOW_DIST_CLOSE);
+	BIND_ENUM_CONSTANT(SHADOW_DIST_MEDIUM);
+	BIND_ENUM_CONSTANT(SHADOW_DIST_FAR);
+	BIND_ENUM_CONSTANT(SHADOW_DIST_ALL);
 }
 
 void Mesh::clear_cache() const {
@@ -1392,8 +1389,6 @@ Error ArrayMesh::lightmap_unwrap_cached(int *&r_cache_data, unsigned int &r_cach
 		surfaces_tools[i]->commit(Ref<ArrayMesh>((ArrayMesh *)this), lightmap_surfaces[i].format);
 	}
 
-	set_lightmap_size_hint(Size2(size_x, size_y));
-
 	if (!cached) {
 		//free stuff
 		::free(gen_vertices);
@@ -1402,6 +1397,15 @@ Error ArrayMesh::lightmap_unwrap_cached(int *&r_cache_data, unsigned int &r_cach
 	}
 
 	return OK;
+}
+
+Mesh::ShadowRenderDistance ArrayMesh::get_shadow_render_distance() const {
+	return (Mesh::ShadowRenderDistance)VisualServer::get_singleton()->mesh_get_shadow_render_distance(mesh);
+}
+
+void ArrayMesh::set_shadow_render_distance(Mesh::ShadowRenderDistance p_shadow_distance) {
+	shadow_render_distance = p_shadow_distance;
+	return VisualServer::get_singleton()->mesh_set_shadow_render_distance(mesh, (VS::ShadowRenderDistance)shadow_render_distance);
 }
 
 void ArrayMesh::_bind_methods() {

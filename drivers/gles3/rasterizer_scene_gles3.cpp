@@ -3112,13 +3112,15 @@ void RasterizerSceneGLES3::_copy_texture_to_front_buffer(GLuint p_texture) {
 	storage->shaders.copy.set_conditional(CopyShaderGLES3::DISABLE_ALPHA, false);
 }
 
-void RasterizerSceneGLES3::_fill_render_list(RasterizerInstance **p_cull_result, int p_cull_count, bool p_depth_pass, bool p_shadow_pass) {
+void RasterizerSceneGLES3::_fill_render_list(RasterizerInstance **p_cull_result, int p_cull_count, bool p_depth_pass, int p_shadow_pass) {
 	PROFILE
 	current_geometry_index = 0;
 	current_material_index = 0;
 	state.used_sss = false;
 	state.used_screen_texture = false;
 	state.used_depth_texture = false;
+
+	bool is_shadow = p_shadow_pass >= 0;
 
 	//fill list
 
@@ -3129,12 +3131,16 @@ void RasterizerSceneGLES3::_fill_render_list(RasterizerInstance **p_cull_result,
 				RasterizerStorageGLES3::Mesh *mesh = storage->mesh_owner.getptr(inst->base);
 				ERR_CONTINUE(!mesh);
 
+				if (is_shadow && mesh->shadow_render_distance < p_shadow_pass) {
+					continue; // Mesh not rendered in this shadow slice
+				}
+
 				int ssize = mesh->surfaces.size();
 
 				for (int j = 0; j < ssize; j++) {
 					int mat_idx = inst->materials[j].is_valid() ? j : -1;
 					RasterizerStorageGLES3::Surface *s = mesh->surfaces[j];
-					_add_geometry(s, inst, nullptr, mat_idx, p_depth_pass, p_shadow_pass);
+					_add_geometry(s, inst, nullptr, mat_idx, p_depth_pass, is_shadow);
 				}
 
 				//mesh->last_pass=frame;
@@ -3153,11 +3159,15 @@ void RasterizerSceneGLES3::_fill_render_list(RasterizerInstance **p_cull_result,
 					continue; //mesh not assigned
 				}
 
+				if (is_shadow && mesh->shadow_render_distance < p_shadow_pass) {
+					continue; // Mesh not rendered in this shadow slice
+				}
+
 				int ssize = mesh->surfaces.size();
 
 				for (int j = 0; j < ssize; j++) {
 					RasterizerStorageGLES3::Surface *s = mesh->surfaces[j];
-					_add_geometry(s, inst, multi_mesh, -1, p_depth_pass, p_shadow_pass);
+					_add_geometry(s, inst, multi_mesh, -1, p_depth_pass, is_shadow);
 				}
 
 			} break;
@@ -3165,7 +3175,7 @@ void RasterizerSceneGLES3::_fill_render_list(RasterizerInstance **p_cull_result,
 				RasterizerStorageGLES3::Immediate *immediate = storage->immediate_owner.getptr(inst->base);
 				ERR_CONTINUE(!immediate);
 
-				_add_geometry(immediate, inst, nullptr, -1, p_depth_pass, p_shadow_pass);
+				_add_geometry(immediate, inst, nullptr, -1, p_depth_pass, is_shadow);
 
 			} break;
 			case VS::INSTANCE_PARTICLES: {
@@ -3182,11 +3192,15 @@ void RasterizerSceneGLES3::_fill_render_list(RasterizerInstance **p_cull_result,
 						continue; //mesh not assigned
 					}
 
+					if (is_shadow && mesh->shadow_render_distance < p_shadow_pass) {
+						continue; // Mesh not rendered in this shadow slice
+					}
+
 					int ssize = mesh->surfaces.size();
 
 					for (int k = 0; k < ssize; k++) {
 						RasterizerStorageGLES3::Surface *s = mesh->surfaces[k];
-						_add_geometry(s, inst, particles, -1, p_depth_pass, p_shadow_pass);
+						_add_geometry(s, inst, particles, -1, p_depth_pass, is_shadow);
 					}
 				}
 
@@ -4193,7 +4207,7 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 		render_list.clear();
-		_fill_render_list(p_cull_result, p_cull_count, true, false);
+		_fill_render_list(p_cull_result, p_cull_count, true, -1);
 		render_list.sort_by_key(false);
 		state.scene_shader.set_conditional(SceneShaderGLES3::RENDER_DEPTH, true);
 		_render_list(render_list.elements, render_list.element_count, p_cam_transform, p_cam_projection, nullptr, false, false, true, false, false);
@@ -4219,7 +4233,7 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 	bool use_mrt = false;
 
 	render_list.clear();
-	_fill_render_list(p_cull_result, p_cull_count, false, false);
+	_fill_render_list(p_cull_result, p_cull_count, false, -1);
 	//
 
 	glEnable(GL_BLEND);
@@ -4636,6 +4650,7 @@ void RasterizerSceneGLES3::render_shadow(RID p_light, RID p_shadow_atlas, int p_
 	int current_cubemap = -1;
 	float bias = 0;
 	float normal_bias = 0;
+	int shadow_distance = 0;
 
 	state.used_depth_prepass = false;
 
@@ -4643,6 +4658,7 @@ void RasterizerSceneGLES3::render_shadow(RID p_light, RID p_shadow_atlas, int p_
 	Transform light_transform;
 
 	if (light->type == VS::LIGHT_DIRECTIONAL) {
+		shadow_distance = p_pass;
 		//set pssm stuff
 		if (light_instance->last_scene_shadow_pass != scene_pass) {
 			//assign rect if unassigned
@@ -4786,7 +4802,7 @@ void RasterizerSceneGLES3::render_shadow(RID p_light, RID p_shadow_atlas, int p_
 	}
 
 	render_list.clear();
-	_fill_render_list(p_cull_result, p_cull_count, true, true);
+	_fill_render_list(p_cull_result, p_cull_count, true, shadow_distance);
 
 	//shadow is front to back for performance
 	render_list.sort_by_depth(false);

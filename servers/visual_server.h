@@ -289,6 +289,13 @@ public:
 		PRIMITIVE_MAX = 7,
 	};
 
+	enum ShadowRenderDistance {
+		SHADOW_DIST_CLOSE = 0,
+		SHADOW_DIST_MEDIUM = 1,
+		SHADOW_DIST_FAR = 2,
+		SHADOW_DIST_ALL = 3
+	};
+
 	virtual RID mesh_create() = 0;
 
 	virtual uint32_t mesh_surface_get_format_offset(uint32_t p_format, int p_vertex_len, int p_index_len, int p_array_index) const;
@@ -300,6 +307,9 @@ public:
 
 	virtual void mesh_set_blend_shape_count(RID p_mesh, int p_amount) = 0;
 	virtual int mesh_get_blend_shape_count(RID p_mesh) const = 0;
+
+	virtual ShadowRenderDistance mesh_get_shadow_render_distance(RID p_mesh) const = 0;
+	virtual void mesh_set_shadow_render_distance(RID p_mesh, ShadowRenderDistance p_distance) = 0;
 
 	enum BlendShapeMode {
 		BLEND_SHAPE_MODE_NORMALIZED,
@@ -1204,6 +1214,7 @@ VARIANT_ENUM_CAST(VisualServer::InstanceFlags);
 VARIANT_ENUM_CAST(VisualServer::ShadowCastingSetting);
 VARIANT_ENUM_CAST(VisualServer::TextureType);
 VARIANT_ENUM_CAST(VisualServer::ChangedPriority);
+VARIANT_ENUM_CAST(VisualServer::ShadowRenderDistance);
 
 //typedef VisualServer VS; // makes it easier to use
 #define VS VisualServer

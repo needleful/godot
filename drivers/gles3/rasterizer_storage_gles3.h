@@ -801,6 +801,7 @@ public:
 		Vector<Surface *> surfaces;
 		int blend_shape_count;
 		VS::BlendShapeMode blend_shape_mode;
+		VS::ShadowRenderDistance shadow_render_distance;
 		PoolRealArray blend_shape_values;
 		AABB custom_aabb;
 		mutable uint64_t last_pass;
@@ -817,6 +818,7 @@ public:
 				active(false),
 				blend_shape_count(0),
 				blend_shape_mode(VS::BLEND_SHAPE_MODE_NORMALIZED),
+				shadow_render_distance(VS::SHADOW_DIST_ALL),
 				last_pass(0) {
 		}
 	};
@@ -835,6 +837,9 @@ public:
 
 	void mesh_set_blend_shape_values(RID p_mesh, PoolVector<float> p_values);
 	PoolVector<float> mesh_get_blend_shape_values(RID p_mesh) const;
+
+	void mesh_set_shadow_render_distance(RID p_mesh, VS::ShadowRenderDistance p_distance);
+	VS::ShadowRenderDistance mesh_get_shadow_render_distance(RID p_mesh) const;
 
 	void mesh_surface_update_region(RID p_mesh, int p_surface, int p_offset, const PoolVector<uint8_t> &p_data);
 

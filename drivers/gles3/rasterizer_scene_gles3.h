@@ -842,7 +842,7 @@ public:
 	void _copy_screen(bool p_invalidate_color = false, bool p_invalidate_depth = false);
 	void _copy_texture_to_front_buffer(GLuint p_texture); //used for debug
 
-	void _fill_render_list(RasterizerInstance **p_cull_result, int p_cull_count, bool p_depth_pass, bool p_shadow_pass);
+	void _fill_render_list(RasterizerInstance **p_cull_result, int p_cull_count, bool p_depth_pass, int p_shadow_pass);
 
 	void _blur_effect_buffer();
 	void _render_mrts(Environment *env, const CameraMatrix &p_cam_projection);

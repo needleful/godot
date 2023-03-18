@@ -235,6 +235,9 @@ public:
 	BIND2(mesh_set_blend_shape_mode, RID, BlendShapeMode)
 	BIND1RC(BlendShapeMode, mesh_get_blend_shape_mode, RID)
 
+	BIND2(mesh_set_shadow_render_distance, RID, ShadowRenderDistance);
+	BIND1RC(ShadowRenderDistance, mesh_get_shadow_render_distance, RID);
+
 	BIND4(mesh_surface_update_region, RID, int, int, const PoolVector<uint8_t> &)
 
 	BIND3(mesh_surface_set_material, RID, int, RID)
