@@ -40,6 +40,7 @@
 #include "core/os/thread.h"
 #include "core/safe_refcount.h"
 #include "core/self_list.h"
+#include "drivers/gles_common/rasterizer_instance_base.h"
 #include "portals/portal_renderer.h"
 #include "servers/arvr/arvr_interface.h"
 
@@ -63,7 +64,6 @@ public:
 	void pre_draw(bool p_will_draw);
 
 	/* CAMERA API */
-	struct Scenario;
 
 	struct Camera : public RID_Data {
 		enum Type {
@@ -122,160 +122,10 @@ public:
 	virtual void camera_set_environment(RID p_camera, RID p_env);
 	virtual void camera_set_use_vertical_aspect(RID p_camera, bool p_enable);
 
-	/* SCENARIO API */
+	mutable RID_Owner<RasterizerScenario> scenario_owner;
 
-	struct Instance;
-
-	// common interface for all spatial partitioning schemes
-	// this is a bit excessive boilerplatewise but can be removed if we decide to stick with one method
-
-	// note this is actually the BVH id +1, so that visual server can test against zero
-	// for validity to maintain compatibility with octree (where 0 indicates invalid)
-	typedef uint32_t SpatialPartitionID;
-
-	class SpatialPartitioningScene {
-	public:
-		virtual SpatialPartitionID create(Instance *p_userdata, const AABB &p_aabb = AABB(), int p_subindex = 0, bool p_pairable = false, uint32_t p_pairable_type = 0, uint32_t pairable_mask = 1) = 0;
-		virtual void erase(SpatialPartitionID p_handle) = 0;
-		virtual void move(SpatialPartitionID p_handle, const AABB &p_aabb) = 0;
-		virtual void activate(SpatialPartitionID p_handle, const AABB &p_aabb) {}
-		virtual void deactivate(SpatialPartitionID p_handle) {}
-		virtual void force_collision_check(SpatialPartitionID p_handle) {}
-		virtual void update() {}
-		virtual void update_collisions() {}
-		virtual void set_pairable(Instance *p_instance, bool p_pairable, uint32_t p_pairable_type, uint32_t p_pairable_mask) = 0;
-		virtual int cull_convex(const Vector<Plane> &p_convex, Instance **p_result_array, int p_result_max, uint32_t p_mask = 0xFFFFFFFF) = 0;
-		virtual int cull_aabb(const AABB &p_aabb, Instance **p_result_array, int p_result_max, int *p_subindex_array = nullptr, uint32_t p_mask = 0xFFFFFFFF) = 0;
-		virtual int cull_segment(const Vector3 &p_from, const Vector3 &p_to, Instance **p_result_array, int p_result_max, int *p_subindex_array = nullptr, uint32_t p_mask = 0xFFFFFFFF) = 0;
-
-		typedef void *(*PairCallback)(void *, uint32_t, Instance *, int, uint32_t, Instance *, int);
-		typedef void (*UnpairCallback)(void *, uint32_t, Instance *, int, uint32_t, Instance *, int, void *);
-
-		virtual void set_pair_callback(PairCallback p_callback, void *p_userdata) = 0;
-		virtual void set_unpair_callback(UnpairCallback p_callback, void *p_userdata) = 0;
-
-		// bvh specific
-		virtual void params_set_node_expansion(real_t p_value) {}
-		virtual void params_set_pairing_expansion(real_t p_value) {}
-
-		// octree specific
-		virtual void set_balance(float p_balance) {}
-
-		virtual ~SpatialPartitioningScene() {}
-	};
-
-	class SpatialPartitioningScene_Octree : public SpatialPartitioningScene {
-		Octree_CL<Instance, true> _octree;
-
-	public:
-		SpatialPartitionID create(Instance *p_userdata, const AABB &p_aabb = AABB(), int p_subindex = 0, bool p_pairable = false, uint32_t p_pairable_type = 0, uint32_t pairable_mask = 1);
-		void erase(SpatialPartitionID p_handle);
-		void move(SpatialPartitionID p_handle, const AABB &p_aabb);
-		void set_pairable(Instance *p_instance, bool p_pairable, uint32_t p_pairable_type, uint32_t p_pairable_mask);
-		int cull_convex(const Vector<Plane> &p_convex, Instance **p_result_array, int p_result_max, uint32_t p_mask = 0xFFFFFFFF);
-		int cull_aabb(const AABB &p_aabb, Instance **p_result_array, int p_result_max, int *p_subindex_array = nullptr, uint32_t p_mask = 0xFFFFFFFF);
-		int cull_segment(const Vector3 &p_from, const Vector3 &p_to, Instance **p_result_array, int p_result_max, int *p_subindex_array = nullptr, uint32_t p_mask = 0xFFFFFFFF);
-		void set_pair_callback(PairCallback p_callback, void *p_userdata);
-		void set_unpair_callback(UnpairCallback p_callback, void *p_userdata);
-		void set_balance(float p_balance);
-	};
-
-	class SpatialPartitioningScene_BVH : public SpatialPartitioningScene {
-		template <class T>
-		class UserPairTestFunction {
-		public:
-			static bool user_pair_check(const T *p_a, const T *p_b) {
-				// return false if no collision, decided by masks etc
-				return true;
-			}
-		};
-
-		template <class T>
-		class UserCullTestFunction {
-			// write this logic once for use in all routines
-			// double check this as a possible source of bugs in future.
-			static bool _cull_pairing_mask_test_hit(uint32_t p_maskA, uint32_t p_typeA, uint32_t p_maskB, uint32_t p_typeB) {
-				// double check this as a possible source of bugs in future.
-				bool A_match_B = p_maskA & p_typeB;
-
-				if (!A_match_B) {
-					bool B_match_A = p_maskB & p_typeA;
-					if (!B_match_A) {
-						return false;
-					}
-				}
-
-				return true;
-			}
-
-		public:
-			static bool user_cull_check(const T *p_a, const T *p_b) {
-				DEV_ASSERT(p_a);
-				DEV_ASSERT(p_b);
-
-				uint32_t a_mask = p_a->bvh_pairable_mask;
-				uint32_t a_type = p_a->bvh_pairable_type;
-				uint32_t b_mask = p_b->bvh_pairable_mask;
-				uint32_t b_type = p_b->bvh_pairable_type;
-
-				if (!_cull_pairing_mask_test_hit(a_mask, a_type, b_mask, b_type)) {
-					return false;
-				}
-
-				return true;
-			}
-		};
-
-	private:
-		// Note that SpatialPartitionIDs are +1 based when stored in visual server, to enable 0 to indicate invalid ID.
-		BVH_Manager<Instance, 2, true, 256, UserPairTestFunction<Instance>, UserCullTestFunction<Instance>> _bvh;
-		Instance *_dummy_cull_object;
-
-	public:
-		SpatialPartitioningScene_BVH();
-		~SpatialPartitioningScene_BVH();
-		SpatialPartitionID create(Instance *p_userdata, const AABB &p_aabb = AABB(), int p_subindex = 0, bool p_pairable = false, uint32_t p_pairable_type = 0, uint32_t p_pairable_mask = 1);
-		void erase(SpatialPartitionID p_handle);
-		void move(SpatialPartitionID p_handle, const AABB &p_aabb);
-		void activate(SpatialPartitionID p_handle, const AABB &p_aabb);
-		void deactivate(SpatialPartitionID p_handle);
-		void force_collision_check(SpatialPartitionID p_handle);
-		void update();
-		void update_collisions();
-		void set_pairable(Instance *p_instance, bool p_pairable, uint32_t p_pairable_type, uint32_t p_pairable_mask);
-		int cull_convex(const Vector<Plane> &p_convex, Instance **p_result_array, int p_result_max, uint32_t p_mask = 0xFFFFFFFF);
-		int cull_aabb(const AABB &p_aabb, Instance **p_result_array, int p_result_max, int *p_subindex_array = nullptr, uint32_t p_mask = 0xFFFFFFFF);
-		int cull_segment(const Vector3 &p_from, const Vector3 &p_to, Instance **p_result_array, int p_result_max, int *p_subindex_array = nullptr, uint32_t p_mask = 0xFFFFFFFF);
-		void set_pair_callback(PairCallback p_callback, void *p_userdata);
-		void set_unpair_callback(UnpairCallback p_callback, void *p_userdata);
-
-		void params_set_node_expansion(real_t p_value) { _bvh.params_set_node_expansion(p_value); }
-		void params_set_pairing_expansion(real_t p_value) { _bvh.params_set_pairing_expansion(p_value); }
-	};
-
-	struct Scenario : RID_Data {
-		VS::ScenarioDebugMode debug;
-		RID self;
-
-		SpatialPartitioningScene *sps;
-		PortalRenderer _portal_renderer;
-
-		List<Instance *> directional_lights;
-		RID environment;
-		RID fallback_environment;
-		RID reflection_probe_shadow_atlas;
-		RID reflection_atlas;
-
-		SelfList<Instance>::List instances;
-
-		Scenario();
-		~Scenario() { memdelete(sps); }
-	};
-
-	mutable RID_Owner<Scenario> scenario_owner;
-
-	static void *_instance_pair(void *p_self, SpatialPartitionID, Instance *p_A, int, SpatialPartitionID, Instance *p_B, int);
-	static void _instance_unpair(void *p_self, SpatialPartitionID, Instance *p_A, int, SpatialPartitionID, Instance *p_B, int, void *);
+	static void *_instance_pair(void *p_self, SpatialPartitionID, RasterizerInstance *p_A, int, SpatialPartitionID, RasterizerInstance *p_B, int);
+	static void _instance_unpair(void *p_self, SpatialPartitionID, RasterizerInstance *p_A, int, SpatialPartitionID, RasterizerInstance *p_B, int, void *);
 
 	virtual RID scenario_create();
 
@@ -285,116 +135,14 @@ public:
 	virtual void scenario_set_reflection_atlas_size(RID p_scenario, int p_size, int p_subdiv);
 
 	/* INSTANCING API */
-
-	struct InstanceBaseData {
-		virtual ~InstanceBaseData() {}
-	};
-
-	struct Instance : RasterizerInstanceBase {
-		RID self;
-		//scenario stuff
-		SpatialPartitionID spatial_partition_id;
-
-		// rooms & portals
-		OcclusionHandle occlusion_handle; // handle of instance in occlusion system (or 0)
-		VisualServer::InstancePortalMode portal_mode;
-
-		Scenario *scenario;
-		SelfList<Instance> scenario_item;
-
-		//aabb stuff
-		bool update_aabb;
-		bool update_materials;
-
-		SelfList<Instance> update_item;
-
-		AABB aabb;
-		AABB transformed_aabb;
-		AABB *custom_aabb; // <Zylann> would using aabb directly with a bool be better?
-		float sorting_offset;
-		bool use_aabb_center;
-		float extra_margin;
-		uint32_t object_id;
-
-		float lod_begin;
-		float lod_end;
-		float lod_begin_hysteresis;
-		float lod_end_hysteresis;
-		RID lod_instance;
-
-		// These are used for the user cull testing function
-		// in the BVH, this is precached rather than recalculated each time.
-		uint32_t bvh_pairable_mask;
-		uint32_t bvh_pairable_type;
-
-		uint64_t last_render_pass;
-		uint64_t last_frame_pass;
-
-		uint64_t version; // changes to this, and changes to base increase version
-
-		InstanceBaseData *base_data;
-
-		virtual void base_removed() {
-			singleton->instance_set_base(self, RID());
-		}
-
-		virtual void base_changed(bool p_aabb, bool p_materials) {
-			singleton->_instance_queue_update(this, p_aabb, p_materials);
-		}
-
-		Instance() :
-				scenario_item(this),
-				update_item(this) {
-			spatial_partition_id = 0;
-			scenario = nullptr;
-
-			update_aabb = false;
-			update_materials = false;
-
-			extra_margin = 0;
-
-			object_id = 0;
-			visible = true;
-
-			occlusion_handle = 0;
-			portal_mode = VisualServer::InstancePortalMode::INSTANCE_PORTAL_MODE_STATIC;
-
-			lod_begin = 0;
-			lod_end = 0;
-			lod_begin_hysteresis = 0;
-			lod_end_hysteresis = 0;
-
-			bvh_pairable_mask = 0;
-			bvh_pairable_type = 0;
-
-			last_render_pass = 0;
-			last_frame_pass = 0;
-			version = 1;
-			base_data = nullptr;
-
-			custom_aabb = nullptr;
-			sorting_offset = 0.0f;
-			use_aabb_center = true;
-		}
-
-		~Instance() {
-			if (base_data) {
-				memdelete(base_data);
-			}
-			if (custom_aabb) {
-				memdelete(custom_aabb);
-			}
-		}
-	};
-
-	SelfList<Instance>::List _instance_update_list;
+	SelfList<RasterizerInstance>::List _instance_update_list;
 
 	// fixed timestep interpolation
 	virtual void set_physics_interpolation_enabled(bool p_enabled);
 
 	struct InterpolationData {
 		void notify_free_camera(RID p_rid, Camera &r_camera);
-		void notify_free_instance(RID p_rid, Instance &r_instance);
+		void notify_free_instance(RID p_rid, RasterizerInstance &r_instance);
 		LocalVector<RID> instance_interpolate_update_list;
 		LocalVector<RID> instance_transform_update_lists[2];
 		LocalVector<RID> *instance_transform_update_list_curr = &instance_transform_update_lists[0];
@@ -409,209 +157,20 @@ public:
 		bool interpolation_enabled = false;
 	} _interpolation_data;
 
-	void _instance_queue_update(Instance *p_instance, bool p_update_aabb, bool p_update_materials = false);
-
-	struct InstanceGeometryData : public InstanceBaseData {
-		List<Instance *> lighting;
-		bool lighting_dirty;
-		bool can_cast_shadows;
-		bool material_is_animated;
-
-		List<Instance *> reflection_probes;
-		bool reflection_dirty;
-
-		List<Instance *> gi_probes;
-		bool gi_probes_dirty;
-
-		List<Instance *> lightmap_captures;
-
-		InstanceGeometryData() {
-			lighting_dirty = true;
-			reflection_dirty = true;
-			can_cast_shadows = true;
-			material_is_animated = true;
-			gi_probes_dirty = true;
-		}
-	};
-
-	struct InstanceReflectionProbeData : public InstanceBaseData {
-		Instance *owner;
-
-		struct PairInfo {
-			List<Instance *>::Element *L; //reflection iterator in geometry
-			Instance *geometry;
-		};
-		List<PairInfo> geometries;
-
-		RID instance;
-		bool reflection_dirty;
-		SelfList<InstanceReflectionProbeData> update_list;
-
-		int render_step;
-		int32_t previous_room_id_hint;
-
-		InstanceReflectionProbeData() :
-				update_list(this) {
-			reflection_dirty = true;
-			render_step = -1;
-			previous_room_id_hint = -1;
-		}
-	};
-
-	SelfList<InstanceReflectionProbeData>::List reflection_probe_render_list;
-
-	struct InstanceLightData : public InstanceBaseData {
-		struct PairInfo {
-			List<Instance *>::Element *L; //light iterator in geometry
-			Instance *geometry;
-		};
-
-		RID instance;
-		uint64_t last_version;
-		List<Instance *>::Element *D; // directional light in scenario
-
-		bool shadow_dirty;
-
-		List<PairInfo> geometries;
-
-		Instance *baked_light;
-		int32_t previous_room_id_hint;
-
-		InstanceLightData() {
-			shadow_dirty = true;
-			D = nullptr;
-			last_version = 0;
-			baked_light = nullptr;
-			previous_room_id_hint = -1;
-		}
-	};
-
-	struct InstanceGIProbeData : public InstanceBaseData {
-		Instance *owner;
-
-		struct PairInfo {
-			List<Instance *>::Element *L; //gi probe iterator in geometry
-			Instance *geometry;
-		};
-
-		List<PairInfo> geometries;
-
-		Set<Instance *> lights;
-
-		struct LightCache {
-			VS::LightType type;
-			Transform transform;
-			Color color;
-			float energy;
-			float radius;
-			float attenuation;
-			float spot_angle;
-			float spot_attenuation;
-			bool visible;
-
-			bool operator==(const LightCache &p_cache) {
-				return (type == p_cache.type &&
-						transform == p_cache.transform &&
-						color == p_cache.color &&
-						energy == p_cache.energy &&
-						radius == p_cache.radius &&
-						attenuation == p_cache.attenuation &&
-						spot_angle == p_cache.spot_angle &&
-						spot_attenuation == p_cache.spot_attenuation &&
-						visible == p_cache.visible);
-			}
-
-			bool operator!=(const LightCache &p_cache) {
-				return !operator==(p_cache);
-			}
-
-			LightCache() {
-				type = VS::LIGHT_DIRECTIONAL;
-				energy = 1.0;
-				radius = 1.0;
-				attenuation = 1.0;
-				spot_angle = 1.0;
-				spot_attenuation = 1.0;
-				visible = true;
-			}
-		};
-
-		struct LocalData {
-			uint16_t pos[3];
-			uint16_t energy[3]; //using 0..1024 for float range 0..1. integer is needed for deterministic add/remove of lights
-		};
-
-		struct CompBlockS3TC {
-			uint32_t offset; //offset in mipmap
-			uint32_t source_count; //sources
-			uint32_t sources[16]; //id for each source
-			uint8_t alpha[8]; //alpha block is pre-computed
-		};
-
-		struct Dynamic {
-			Map<RID, LightCache> light_cache;
-			Map<RID, LightCache> light_cache_changes;
-			PoolVector<int> light_data;
-			PoolVector<LocalData> local_data;
-			Vector<Vector<uint32_t>> level_cell_lists;
-			RID probe_data;
-			bool enabled;
-			int bake_dynamic_range;
-			RasterizerStorage::GIProbeCompression compression;
-
-			Vector<PoolVector<uint8_t>> mipmaps_3d;
-			Vector<PoolVector<CompBlockS3TC>> mipmaps_s3tc; //for s3tc
-
-			int updating_stage;
-			float propagate;
-
-			int grid_size[3];
-
-			Transform light_to_cell_xform;
-
-		} dynamic;
-
-		RID probe_instance;
-
-		bool invalid;
-		uint32_t base_version;
-
-		SelfList<InstanceGIProbeData> update_element;
-
-		InstanceGIProbeData() :
-				update_element(this) {
-			invalid = true;
-			base_version = 0;
-			dynamic.updating_stage = GI_UPDATE_STAGE_CHECK;
-		}
-	};
-
-	SelfList<InstanceGIProbeData>::List gi_probe_update_list;
-
-	struct InstanceLightmapCaptureData : public InstanceBaseData {
-		struct PairInfo {
-			List<Instance *>::Element *L; //iterator in geometry
-			Instance *geometry;
-		};
-		List<PairInfo> geometries;
-
-		Set<Instance *> users;
-
-		InstanceLightmapCaptureData() {
-		}
-	};
+	void _instance_queue_update(RasterizerInstance *p_instance, bool p_update_aabb, bool p_update_materials = false);
 
 	int instance_cull_count;
-	Instance *instance_cull_result[MAX_INSTANCE_CULL];
-	Instance *instance_shadow_cull_result[MAX_INSTANCE_CULL]; //used for generating shadowmaps
-	Instance *light_cull_result[MAX_LIGHTS_CULLED];
+	RasterizerInstance *instance_cull_result[MAX_INSTANCE_CULL];
+	RasterizerInstance *instance_shadow_cull_result[MAX_INSTANCE_CULL]; //used for generating shadowmaps
+	RasterizerInstance *light_cull_result[MAX_LIGHTS_CULLED];
 	RID light_instance_cull_result[MAX_LIGHTS_CULLED];
 	int light_cull_count;
 	int directional_light_count;
+	SelfList<InstanceReflectionProbeData>::List reflection_probe_render_list;
 	RID reflection_probe_instance_cull_result[MAX_REFLECTION_PROBES_CULLED];
 	int reflection_probe_cull_count;
 
-	RID_Owner<Instance> instance_owner;
+	RID_Owner<RasterizerInstance> instance_owner;
 
 	virtual RID instance_create();
 
@@ -626,7 +185,6 @@ public:
 	virtual void instance_set_blend_shape_weight(RID p_instance, int p_shape, float p_weight);
 	virtual void instance_set_surface_material(RID p_instance, int p_surface, RID p_material);
 	virtual void instance_set_visible(RID p_instance, bool p_visible);
-	virtual void instance_set_use_lightmap(RID p_instance, RID p_lightmap_instance, RID p_lightmap, int p_lightmap_slice, const Rect2 &p_lightmap_uv_rect);
 
 	virtual void instance_set_custom_aabb(RID p_instance, AABB p_aabb);
 
@@ -639,29 +197,29 @@ public:
 	virtual void instance_set_portal_mode(RID p_instance, VisualServer::InstancePortalMode p_mode);
 	bool _instance_get_transformed_aabb(RID p_instance, AABB &r_aabb);
 	bool _instance_get_transformed_aabb_for_occlusion(VSInstance *p_instance, AABB &r_aabb) const {
-		r_aabb = ((Instance *)p_instance)->transformed_aabb;
-		return ((Instance *)p_instance)->portal_mode != VisualServer::INSTANCE_PORTAL_MODE_GLOBAL;
+		r_aabb = ((RasterizerInstance *)p_instance)->transformed_aabb;
+		return ((RasterizerInstance *)p_instance)->portal_mode != VisualServer::INSTANCE_PORTAL_MODE_GLOBAL;
 	}
 	void *_instance_get_from_rid(RID p_instance);
 	bool _instance_cull_check(VSInstance *p_instance, uint32_t p_cull_mask) const {
-		uint32_t pairable_type = 1 << ((Instance *)p_instance)->base_type;
+		uint32_t pairable_type = 1 << ((RasterizerInstance *)p_instance)->base_type;
 		return pairable_type & p_cull_mask;
 	}
 	ObjectID _instance_get_object_ID(VSInstance *p_instance) const {
 		if (p_instance) {
-			return ((Instance *)p_instance)->object_id;
+			return ((RasterizerInstance *)p_instance)->object_id;
 		}
 		return 0;
 	}
 
 private:
-	void _instance_create_occlusion_rep(Instance *p_instance);
-	void _instance_destroy_occlusion_rep(Instance *p_instance);
+	void _instance_create_occlusion_rep(RasterizerInstance *p_instance);
+	void _instance_destroy_occlusion_rep(RasterizerInstance *p_instance);
 
 public:
 	struct Ghost : RID_Data {
 		// all interactions with actual ghosts are indirect, as the ghost is part of the scenario
-		Scenario *scenario = nullptr;
+		RasterizerScenario *scenario = nullptr;
 		uint32_t object_id = 0;
 		RGhostHandle rghost_handle = 0; // handle in occlusion system (or 0)
 		AABB aabb;
@@ -691,7 +249,7 @@ public:
 	struct Portal : RID_Data {
 		// all interactions with actual portals are indirect, as the portal is part of the scenario
 		uint32_t scenario_portal_id = 0;
-		Scenario *scenario = nullptr;
+		RasterizerScenario *scenario = nullptr;
 		virtual ~Portal() {
 			if (scenario) {
 				scenario->_portal_renderer.portal_destroy(scenario_portal_id);
@@ -713,7 +271,7 @@ public:
 	struct RoomGroup : RID_Data {
 		// all interactions with actual roomgroups are indirect, as the roomgroup is part of the scenario
 		uint32_t scenario_roomgroup_id = 0;
-		Scenario *scenario = nullptr;
+		RasterizerScenario *scenario = nullptr;
 		virtual ~RoomGroup() {
 			if (scenario) {
 				scenario->_portal_renderer.roomgroup_destroy(scenario_roomgroup_id);
@@ -733,7 +291,7 @@ public:
 
 	struct OccluderInstance : RID_Data {
 		uint32_t scenario_occluder_id = 0;
-		Scenario *scenario = nullptr;
+		RasterizerScenario *scenario = nullptr;
 		virtual ~OccluderInstance() {
 			if (scenario) {
 				scenario->_portal_renderer.occluder_instance_destroy(scenario_occluder_id);
@@ -782,7 +340,7 @@ public:
 	struct Room : RID_Data {
 		// all interactions with actual rooms are indirect, as the room is part of the scenario
 		uint32_t scenario_room_id = 0;
-		Scenario *scenario = nullptr;
+		RasterizerScenario *scenario = nullptr;
 		virtual ~Room() {
 			if (scenario) {
 				scenario->_portal_renderer.room_destroy(scenario_room_id);
@@ -822,8 +380,8 @@ public:
 	virtual Vector<ObjectID> instances_cull_convex(const Vector<Plane> &p_convex, RID p_scenario = RID()) const;
 
 	// internal (uses portals when available)
-	int _cull_convex_from_point(Scenario *p_scenario, const Transform &p_cam_transform, const CameraMatrix &p_cam_projection, const Vector<Plane> &p_convex, Instance **p_result_array, int p_result_max, int32_t &r_previous_room_id_hint, uint32_t p_mask = 0xFFFFFFFF);
-	void _rooms_instance_update(Instance *p_instance, const AABB &p_aabb);
+	int _cull_convex_from_point(RasterizerScenario *p_scenario, const Transform &p_cam_transform, const CameraMatrix &p_cam_projection, const Vector<Plane> &p_convex, RasterizerInstance **p_result_array, int p_result_max, int32_t &r_previous_room_id_hint, uint32_t p_mask = 0xFFFFFFFF);
+	void _rooms_instance_update(RasterizerInstance *p_instance, const AABB &p_aabb);
 
 	virtual void instance_geometry_set_flag(RID p_instance, VS::InstanceFlags p_flags, bool p_enabled);
 	virtual void instance_geometry_set_cast_shadows_setting(RID p_instance, VS::ShadowCastingSetting p_shadow_casting_setting);
@@ -833,12 +391,11 @@ public:
 	virtual void instance_geometry_set_draw_range(RID p_instance, float p_min, float p_max, float p_min_margin, float p_max_margin);
 	virtual void instance_geometry_set_as_instance_lod(RID p_instance, RID p_as_lod_of_instance);
 
-	_FORCE_INLINE_ void _update_instance(Instance *p_instance);
-	_FORCE_INLINE_ void _update_instance_aabb(Instance *p_instance);
-	_FORCE_INLINE_ void _update_dirty_instance(Instance *p_instance);
-	_FORCE_INLINE_ void _update_instance_lightmap_captures(Instance *p_instance);
+	_FORCE_INLINE_ void _update_instance(RasterizerInstance *p_instance);
+	_FORCE_INLINE_ void _update_instance_aabb(RasterizerInstance *p_instance);
+	_FORCE_INLINE_ void _update_dirty_instance(RasterizerInstance *p_instance);
 
-	_FORCE_INLINE_ bool _light_instance_update_shadow(Instance *p_instance, const Transform p_cam_transform, const CameraMatrix &p_cam_projection, bool p_cam_orthogonal, RID p_shadow_atlas, Scenario *p_scenario, uint32_t p_visible_layers = 0xFFFFFF);
+	_FORCE_INLINE_ bool _light_instance_update_shadow(RasterizerInstance *p_instance, const Transform p_cam_transform, const CameraMatrix &p_cam_projection, bool p_cam_orthogonal, RID p_shadow_atlas, RasterizerScenario *p_scenario, uint32_t p_visible_layers = 0xFFFFFF);
 
 	void _prepare_scene(const Transform p_cam_transform, const CameraMatrix &p_cam_projection, bool p_cam_orthogonal, RID p_force_environment, uint32_t p_visible_layers, RID p_scenario, RID p_shadow_atlas, RID p_reflection_probe, int32_t &r_previous_room_id_hint);
 	void _render_scene(const Transform p_cam_transform, const CameraMatrix &p_cam_projection, const int p_eye, bool p_cam_orthogonal, RID p_force_environment, RID p_scenario, RID p_shadow_atlas, RID p_reflection_probe, int p_reflection_probe_pass);
@@ -852,50 +409,7 @@ public:
 	void update_interpolation_tick(bool p_process = true);
 	void update_interpolation_frame(bool p_process = true);
 
-	//probes
-	struct GIProbeDataHeader {
-		uint32_t version;
-		uint32_t cell_subdiv;
-		uint32_t width;
-		uint32_t height;
-		uint32_t depth;
-		uint32_t cell_count;
-		uint32_t leaf_cell_count;
-	};
-
-	struct GIProbeDataCell {
-		uint32_t children[8];
-		uint32_t albedo;
-		uint32_t emission;
-		uint32_t normal;
-		uint32_t level_alpha;
-	};
-
-	enum {
-		GI_UPDATE_STAGE_CHECK,
-		GI_UPDATE_STAGE_LIGHTING,
-		GI_UPDATE_STAGE_UPLOADING,
-	};
-
-	void _gi_probe_bake_thread();
-	static void _gi_probe_bake_threads(void *);
-
-	bool probe_bake_thread_exit;
-	Thread probe_bake_thread;
-	Semaphore probe_bake_sem;
-	Mutex probe_bake_mutex;
-	List<Instance *> probe_bake_list;
-
-	bool _render_reflection_probe_step(Instance *p_instance, int p_step);
-	void _gi_probe_fill_local_data(int p_idx, int p_level, int p_x, int p_y, int p_z, const GIProbeDataCell *p_cell, const GIProbeDataHeader *p_header, InstanceGIProbeData::LocalData *p_local_data, Vector<uint32_t> *prev_cell);
-
-	_FORCE_INLINE_ uint32_t _gi_bake_find_cell(const GIProbeDataCell *cells, int x, int y, int z, int p_cell_subdiv);
-	void _bake_gi_downscale_light(int p_idx, int p_level, const GIProbeDataCell *p_cells, const GIProbeDataHeader *p_header, InstanceGIProbeData::LocalData *p_local_data, float p_propagate);
-	void _bake_gi_probe_light(const GIProbeDataHeader *header, const GIProbeDataCell *cells, InstanceGIProbeData::LocalData *local_data, const uint32_t *leaves, int p_leaf_count, const InstanceGIProbeData::LightCache &light_cache, int p_sign);
-	void _bake_gi_probe(Instance *p_gi_probe);
-	bool _check_gi_probe(Instance *p_gi_probe);
-	void _setup_gi_probe(Instance *p_instance);
-
+	bool _render_reflection_probe_step(RasterizerInstance *p_instance, int p_step);
 	void render_probes();
 
 	bool free(RID p_rid);

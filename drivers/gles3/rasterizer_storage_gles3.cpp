@@ -2690,11 +2690,11 @@ bool RasterizerStorageGLES3::material_uses_ensure_correct_normals(RID p_material
 	return material->shader->spatial.uses_ensure_correct_normals;
 }
 
-void RasterizerStorageGLES3::material_add_instance_owner(RID p_material, RasterizerInstanceBase *p_instance) {
+void RasterizerStorageGLES3::material_add_instance_owner(RID p_material, RasterizerInstance *p_instance) {
 	Material *material = material_owner.get(p_material);
 	ERR_FAIL_COND(!material);
 
-	Map<RasterizerInstanceBase *, int>::Element *E = material->instance_owners.find(p_instance);
+	Map<RasterizerInstance *, int>::Element *E = material->instance_owners.find(p_instance);
 	if (E) {
 		E->get()++;
 	} else {
@@ -2702,11 +2702,11 @@ void RasterizerStorageGLES3::material_add_instance_owner(RID p_material, Rasteri
 	}
 }
 
-void RasterizerStorageGLES3::material_remove_instance_owner(RID p_material, RasterizerInstanceBase *p_instance) {
+void RasterizerStorageGLES3::material_remove_instance_owner(RID p_material, RasterizerInstance *p_instance) {
 	Material *material = material_owner.get(p_material);
 	ERR_FAIL_COND(!material);
 
-	Map<RasterizerInstanceBase *, int>::Element *E = material->instance_owners.find(p_instance);
+	Map<RasterizerInstance *, int>::Element *E = material->instance_owners.find(p_instance);
 	ERR_FAIL_COND(!E);
 	E->get()--;
 
@@ -3210,7 +3210,7 @@ void RasterizerStorageGLES3::_update_material(Material *material) {
 					E->key()->material_changed_notify();
 				}
 
-				for (Map<RasterizerInstanceBase *, int>::Element *E = material->instance_owners.front(); E; E = E->next()) {
+				for (Map<RasterizerInstance *, int>::Element *E = material->instance_owners.front(); E; E = E->next()) {
 					E->key()->base_changed(false, true);
 				}
 			}
@@ -5432,7 +5432,7 @@ void RasterizerStorageGLES3::update_dirty_skeletons() {
 			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, height * (skeleton->use_2d ? 2 : 3), GL_RGBA, GL_FLOAT, skeleton->skel_texture.ptr());
 		}
 
-		for (Set<RasterizerInstanceBase *>::Element *E = skeleton->instances.front(); E; E = E->next()) {
+		for (Set<RasterizerInstance *>::Element *E = skeleton->instances.front(); E; E = E->next()) {
 			E->get()->base_changed(true, false);
 		}
 
@@ -6816,21 +6816,21 @@ bool RasterizerStorageGLES3::particles_is_inactive(RID p_particles) const {
 
 ////////
 
-void RasterizerStorageGLES3::instance_add_skeleton(RID p_skeleton, RasterizerInstanceBase *p_instance) {
+void RasterizerStorageGLES3::instance_add_skeleton(RID p_skeleton, RasterizerInstance *p_instance) {
 	Skeleton *skeleton = skeleton_owner.getornull(p_skeleton);
 	ERR_FAIL_COND(!skeleton);
 
 	skeleton->instances.insert(p_instance);
 }
 
-void RasterizerStorageGLES3::instance_remove_skeleton(RID p_skeleton, RasterizerInstanceBase *p_instance) {
+void RasterizerStorageGLES3::instance_remove_skeleton(RID p_skeleton, RasterizerInstance *p_instance) {
 	Skeleton *skeleton = skeleton_owner.getornull(p_skeleton);
 	ERR_FAIL_COND(!skeleton);
 
 	skeleton->instances.erase(p_instance);
 }
 
-void RasterizerStorageGLES3::instance_add_dependency(RID p_base, RasterizerInstanceBase *p_instance) {
+void RasterizerStorageGLES3::instance_add_dependency(RID p_base, RasterizerInstance *p_instance) {
 	Instantiable *inst = nullptr;
 	switch (p_instance->base_type) {
 		case VS::INSTANCE_MESH: {
@@ -6873,7 +6873,7 @@ void RasterizerStorageGLES3::instance_add_dependency(RID p_base, RasterizerInsta
 	inst->instance_list.add(&p_instance->dependency_item);
 }
 
-void RasterizerStorageGLES3::instance_remove_dependency(RID p_base, RasterizerInstanceBase *p_instance) {
+void RasterizerStorageGLES3::instance_remove_dependency(RID p_base, RasterizerInstance *p_instance) {
 	Instantiable *inst = nullptr;
 
 	switch (p_instance->base_type) {
@@ -7869,8 +7869,8 @@ bool RasterizerStorageGLES3::free(RID p_rid) {
 			Geometry *g = E->key();
 			g->material = RID();
 		}
-		for (Map<RasterizerInstanceBase *, int>::Element *E = material->instance_owners.front(); E; E = E->next()) {
-			RasterizerInstanceBase *ins = E->key();
+		for (Map<RasterizerInstance *, int>::Element *E = material->instance_owners.front(); E; E = E->next()) {
+			RasterizerInstance *ins = E->key();
 
 			if (ins->material_override == p_rid) {
 				ins->material_override = RID();
@@ -7897,7 +7897,7 @@ bool RasterizerStorageGLES3::free(RID p_rid) {
 			skeleton_update_list.remove(&skeleton->update_list);
 		}
 
-		for (Set<RasterizerInstanceBase *>::Element *E = skeleton->instances.front(); E; E = E->next()) {
+		for (Set<RasterizerInstance *>::Element *E = skeleton->instances.front(); E; E = E->next()) {
 			E->get()->skeleton = RID();
 		}
 

@@ -1996,44 +1996,6 @@ void VisualServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("reflection_probe_set_enable_box_projection", "probe", "enable"), &VisualServer::reflection_probe_set_enable_box_projection);
 	ClassDB::bind_method(D_METHOD("reflection_probe_set_enable_shadows", "probe", "enable"), &VisualServer::reflection_probe_set_enable_shadows);
 	ClassDB::bind_method(D_METHOD("reflection_probe_set_cull_mask", "probe", "layers"), &VisualServer::reflection_probe_set_cull_mask);
-
-	ClassDB::bind_method(D_METHOD("gi_probe_create"), &VisualServer::gi_probe_create);
-	ClassDB::bind_method(D_METHOD("gi_probe_set_bounds", "probe", "bounds"), &VisualServer::gi_probe_set_bounds);
-	ClassDB::bind_method(D_METHOD("gi_probe_get_bounds", "probe"), &VisualServer::gi_probe_get_bounds);
-	ClassDB::bind_method(D_METHOD("gi_probe_set_cell_size", "probe", "range"), &VisualServer::gi_probe_set_cell_size);
-	ClassDB::bind_method(D_METHOD("gi_probe_get_cell_size", "probe"), &VisualServer::gi_probe_get_cell_size);
-	ClassDB::bind_method(D_METHOD("gi_probe_set_to_cell_xform", "probe", "xform"), &VisualServer::gi_probe_set_to_cell_xform);
-	ClassDB::bind_method(D_METHOD("gi_probe_get_to_cell_xform", "probe"), &VisualServer::gi_probe_get_to_cell_xform);
-	ClassDB::bind_method(D_METHOD("gi_probe_set_dynamic_data", "probe", "data"), &VisualServer::gi_probe_set_dynamic_data);
-	ClassDB::bind_method(D_METHOD("gi_probe_get_dynamic_data", "probe"), &VisualServer::gi_probe_get_dynamic_data);
-	ClassDB::bind_method(D_METHOD("gi_probe_set_dynamic_range", "probe", "range"), &VisualServer::gi_probe_set_dynamic_range);
-	ClassDB::bind_method(D_METHOD("gi_probe_get_dynamic_range", "probe"), &VisualServer::gi_probe_get_dynamic_range);
-	ClassDB::bind_method(D_METHOD("gi_probe_set_energy", "probe", "energy"), &VisualServer::gi_probe_set_energy);
-	ClassDB::bind_method(D_METHOD("gi_probe_get_energy", "probe"), &VisualServer::gi_probe_get_energy);
-	ClassDB::bind_method(D_METHOD("gi_probe_set_bias", "probe", "bias"), &VisualServer::gi_probe_set_bias);
-	ClassDB::bind_method(D_METHOD("gi_probe_get_bias", "probe"), &VisualServer::gi_probe_get_bias);
-	ClassDB::bind_method(D_METHOD("gi_probe_set_normal_bias", "probe", "bias"), &VisualServer::gi_probe_set_normal_bias);
-	ClassDB::bind_method(D_METHOD("gi_probe_get_normal_bias", "probe"), &VisualServer::gi_probe_get_normal_bias);
-	ClassDB::bind_method(D_METHOD("gi_probe_set_propagation", "probe", "propagation"), &VisualServer::gi_probe_set_propagation);
-	ClassDB::bind_method(D_METHOD("gi_probe_get_propagation", "probe"), &VisualServer::gi_probe_get_propagation);
-	ClassDB::bind_method(D_METHOD("gi_probe_set_interior", "probe", "enable"), &VisualServer::gi_probe_set_interior);
-	ClassDB::bind_method(D_METHOD("gi_probe_is_interior", "probe"), &VisualServer::gi_probe_is_interior);
-	ClassDB::bind_method(D_METHOD("gi_probe_set_compress", "probe", "enable"), &VisualServer::gi_probe_set_compress);
-	ClassDB::bind_method(D_METHOD("gi_probe_is_compressed", "probe"), &VisualServer::gi_probe_is_compressed);
-
-	ClassDB::bind_method(D_METHOD("lightmap_capture_create"), &VisualServer::lightmap_capture_create);
-	ClassDB::bind_method(D_METHOD("lightmap_capture_set_bounds", "capture", "bounds"), &VisualServer::lightmap_capture_set_bounds);
-	ClassDB::bind_method(D_METHOD("lightmap_capture_get_bounds", "capture"), &VisualServer::lightmap_capture_get_bounds);
-	ClassDB::bind_method(D_METHOD("lightmap_capture_set_octree", "capture", "octree"), &VisualServer::lightmap_capture_set_octree);
-	ClassDB::bind_method(D_METHOD("lightmap_capture_set_octree_cell_transform", "capture", "xform"), &VisualServer::lightmap_capture_set_octree_cell_transform);
-	ClassDB::bind_method(D_METHOD("lightmap_capture_get_octree_cell_transform", "capture"), &VisualServer::lightmap_capture_get_octree_cell_transform);
-	ClassDB::bind_method(D_METHOD("lightmap_capture_set_octree_cell_subdiv", "capture", "subdiv"), &VisualServer::lightmap_capture_set_octree_cell_subdiv);
-	ClassDB::bind_method(D_METHOD("lightmap_capture_get_octree_cell_subdiv", "capture"), &VisualServer::lightmap_capture_get_octree_cell_subdiv);
-	ClassDB::bind_method(D_METHOD("lightmap_capture_get_octree", "capture"), &VisualServer::lightmap_capture_get_octree);
-	ClassDB::bind_method(D_METHOD("lightmap_capture_set_energy", "capture", "energy"), &VisualServer::lightmap_capture_set_energy);
-	ClassDB::bind_method(D_METHOD("lightmap_capture_get_energy", "capture"), &VisualServer::lightmap_capture_get_energy);
-	ClassDB::bind_method(D_METHOD("lightmap_capture_set_interior", "capture", "interior"), &VisualServer::lightmap_capture_set_interior);
-	ClassDB::bind_method(D_METHOD("lightmap_capture_is_interior", "capture"), &VisualServer::lightmap_capture_is_interior);
 #endif
 	ClassDB::bind_method(D_METHOD("particles_create"), &VisualServer::particles_create);
 	ClassDB::bind_method(D_METHOD("particles_set_emitting", "particles", "emitting"), &VisualServer::particles_set_emitting);
@@ -2148,7 +2110,6 @@ void VisualServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("instance_set_blend_shape_weight", "instance", "shape", "weight"), &VisualServer::instance_set_blend_shape_weight);
 	ClassDB::bind_method(D_METHOD("instance_set_surface_material", "instance", "surface", "material"), &VisualServer::instance_set_surface_material);
 	ClassDB::bind_method(D_METHOD("instance_set_visible", "instance", "visible"), &VisualServer::instance_set_visible);
-	ClassDB::bind_method(D_METHOD("instance_set_use_lightmap", "instance", "lightmap_instance", "lightmap", "lightmap_slice", "lightmap_uv_rect"), &VisualServer::instance_set_use_lightmap, DEFVAL(-1), DEFVAL(Rect2(0, 0, 1, 1)));
 	ClassDB::bind_method(D_METHOD("instance_set_custom_aabb", "instance", "aabb"), &VisualServer::instance_set_custom_aabb);
 	ClassDB::bind_method(D_METHOD("instance_attach_skeleton", "instance", "skeleton"), &VisualServer::instance_attach_skeleton);
 	ClassDB::bind_method(D_METHOD("instance_set_exterior", "instance", "enabled"), &VisualServer::instance_set_exterior);

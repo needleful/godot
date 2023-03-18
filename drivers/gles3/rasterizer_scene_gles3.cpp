@@ -1048,41 +1048,6 @@ void RasterizerSceneGLES3::light_instance_mark_visible(RID p_light_instance) {
 	light_instance->last_scene_pass = scene_pass;
 }
 
-//////////////////////
-
-RID RasterizerSceneGLES3::gi_probe_instance_create() {
-	GIProbeInstance *gipi = memnew(GIProbeInstance);
-
-	return gi_probe_instance_owner.make_rid(gipi);
-}
-
-void RasterizerSceneGLES3::gi_probe_instance_set_light_data(RID p_probe, RID p_base, RID p_data) {
-	GIProbeInstance *gipi = gi_probe_instance_owner.getornull(p_probe);
-	ERR_FAIL_COND(!gipi);
-	gipi->data = p_data;
-	gipi->probe = storage->gi_probe_owner.getornull(p_base);
-	if (p_data.is_valid()) {
-		RasterizerStorageGLES3::GIProbeData *gipd = storage->gi_probe_data_owner.getornull(p_data);
-		ERR_FAIL_COND(!gipd);
-
-		gipi->tex_cache = gipd->tex_id;
-		gipi->cell_size_cache.x = 1.0 / gipd->width;
-		gipi->cell_size_cache.y = 1.0 / gipd->height;
-		gipi->cell_size_cache.z = 1.0 / gipd->depth;
-	}
-}
-void RasterizerSceneGLES3::gi_probe_instance_set_transform_to_data(RID p_probe, const Transform &p_xform) {
-	GIProbeInstance *gipi = gi_probe_instance_owner.getornull(p_probe);
-	ERR_FAIL_COND(!gipi);
-	gipi->transform_to_data = p_xform;
-}
-
-void RasterizerSceneGLES3::gi_probe_instance_set_bounds(RID p_probe, const Vector3 &p_bounds) {
-	GIProbeInstance *gipi = gi_probe_instance_owner.getornull(p_probe);
-	ERR_FAIL_COND(!gipi);
-	gipi->bounds = p_bounds;
-}
-
 ////////////////////////////
 ////////////////////////////
 ////////////////////////////
@@ -1806,10 +1771,6 @@ void RasterizerSceneGLES3::_setup_light(RenderList::Element *e, const Transform 
 				continue; // Not visible
 			}
 
-			if (e->instance->baked_light && li->light_ptr->bake_mode == VS::LightBakeMode::LIGHT_BAKE_ALL) {
-				continue; // This light is already included in the lightmap
-			}
-
 			if (li && li->light_ptr->type == VS::LIGHT_OMNI) {
 				if (omni_count < maxobj && e->instance->layer_mask & li->light_ptr->cull_mask) {
 					omni_indices[omni_count++] = li->light_index;
@@ -1855,77 +1816,6 @@ void RasterizerSceneGLES3::_setup_light(RenderList::Element *e, const Transform 
 	state.scene_shader.set_uniform(SceneShaderGLES3::REFLECTION_COUNT, reflection_count);
 	if (reflection_count) {
 		glUniform1iv(state.scene_shader.get_uniform(SceneShaderGLES3::REFLECTION_INDICES), reflection_count, reflection_indices);
-	}
-
-	int gi_probe_count = e->instance->gi_probe_instances.size();
-	if (gi_probe_count) {
-		const RID *ridp = e->instance->gi_probe_instances.ptr();
-
-		GIProbeInstance *gipi = gi_probe_instance_owner.getptr(ridp[0]);
-
-		float bias_scale = e->instance->baked_light ? 1 : 0;
-		// Normally, lightmapping uses the same texturing units than the GI probes; however, in the case of the ubershader
-		// that's not a good idea because some hardware/drivers (Android/Intel) may fail to render if a single texturing unit
-		// is used through multiple kinds of samplers in the same shader.
-		// Moreover, since we don't know at this point if we are going to consume these textures from the ubershader or
-		// a conditioned one, the fact that async compilation is enabled is enough for us to switch to the alternative
-		// arrangement of texturing units.
-		if (storage->config.async_compilation_enabled) {
-			glActiveTexture(GL_TEXTURE0 + storage->config.max_texture_image_units - 12);
-		} else {
-			glActiveTexture(GL_TEXTURE0 + storage->config.max_texture_image_units - 10);
-		}
-		glBindTexture(GL_TEXTURE_3D, gipi->tex_cache);
-		state.scene_shader.set_uniform(SceneShaderGLES3::GI_PROBE_XFORM1, gipi->transform_to_data * p_view_transform);
-		state.scene_shader.set_uniform(SceneShaderGLES3::GI_PROBE_BOUNDS1, gipi->bounds);
-		state.scene_shader.set_uniform(SceneShaderGLES3::GI_PROBE_MULTIPLIER1, gipi->probe ? gipi->probe->dynamic_range * gipi->probe->energy : 0.0);
-		state.scene_shader.set_uniform(SceneShaderGLES3::GI_PROBE_BIAS1, gipi->probe ? gipi->probe->bias * bias_scale : 0.0);
-		state.scene_shader.set_uniform(SceneShaderGLES3::GI_PROBE_NORMAL_BIAS1, gipi->probe ? gipi->probe->normal_bias * bias_scale : 0.0);
-		state.scene_shader.set_uniform(SceneShaderGLES3::GI_PROBE_BLEND_AMBIENT1, gipi->probe ? !gipi->probe->interior : false);
-		state.scene_shader.set_uniform(SceneShaderGLES3::GI_PROBE_CELL_SIZE1, gipi->cell_size_cache);
-		if (gi_probe_count > 1) {
-			GIProbeInstance *gipi2 = gi_probe_instance_owner.getptr(ridp[1]);
-
-			if (storage->config.async_compilation_enabled) {
-				glActiveTexture(GL_TEXTURE0 + storage->config.max_texture_image_units - 13);
-			} else {
-				glActiveTexture(GL_TEXTURE0 + storage->config.max_texture_image_units - 11);
-			}
-			glBindTexture(GL_TEXTURE_3D, gipi2->tex_cache);
-			state.scene_shader.set_uniform(SceneShaderGLES3::GI_PROBE_XFORM2, gipi2->transform_to_data * p_view_transform);
-			state.scene_shader.set_uniform(SceneShaderGLES3::GI_PROBE_BOUNDS2, gipi2->bounds);
-			state.scene_shader.set_uniform(SceneShaderGLES3::GI_PROBE_CELL_SIZE2, gipi2->cell_size_cache);
-			state.scene_shader.set_uniform(SceneShaderGLES3::GI_PROBE_MULTIPLIER2, gipi2->probe ? gipi2->probe->dynamic_range * gipi2->probe->energy : 0.0);
-			state.scene_shader.set_uniform(SceneShaderGLES3::GI_PROBE_BIAS2, gipi2->probe ? gipi2->probe->bias * bias_scale : 0.0);
-			state.scene_shader.set_uniform(SceneShaderGLES3::GI_PROBE_NORMAL_BIAS2, gipi2->probe ? gipi2->probe->normal_bias * bias_scale : 0.0);
-			state.scene_shader.set_uniform(SceneShaderGLES3::GI_PROBE_BLEND_AMBIENT2, gipi2->probe ? !gipi2->probe->interior : false);
-			state.scene_shader.set_uniform(SceneShaderGLES3::GI_PROBE2_ENABLED, true);
-		} else {
-			state.scene_shader.set_uniform(SceneShaderGLES3::GI_PROBE2_ENABLED, false);
-		}
-	} else if (!e->instance->lightmap_capture_data.empty()) {
-		glUniform4fv(state.scene_shader.get_uniform_location(SceneShaderGLES3::LIGHTMAP_CAPTURES), 12, (const GLfloat *)e->instance->lightmap_capture_data.ptr());
-
-	} else if (e->instance->lightmap.is_valid()) {
-		RasterizerStorageGLES3::Texture *lightmap = storage->texture_owner.getornull(e->instance->lightmap);
-		RasterizerStorageGLES3::LightmapCapture *capture = storage->lightmap_capture_data_owner.getornull(e->instance->lightmap_capture->base);
-
-		if (lightmap && capture) {
-			if (e->instance->lightmap_slice == -1) {
-				glActiveTexture(GL_TEXTURE0 + storage->config.max_texture_image_units - 10);
-				glBindTexture(GL_TEXTURE_2D, lightmap->tex_id);
-			} else {
-				glActiveTexture(GL_TEXTURE0 + storage->config.max_texture_image_units - 11);
-				glBindTexture(GL_TEXTURE_2D_ARRAY, lightmap->tex_id);
-				state.scene_shader.set_uniform(SceneShaderGLES3::LIGHTMAP_LAYER, e->instance->lightmap_slice);
-			}
-			const Rect2 &uvr = e->instance->lightmap_uv_rect;
-			state.scene_shader.set_uniform(SceneShaderGLES3::LIGHTMAP_UV_RECT, Color(uvr.get_position().x, uvr.get_position().y, uvr.get_size().x, uvr.get_size().y));
-			if (storage->config.use_lightmap_filter_bicubic) {
-				state.scene_shader.set_uniform(SceneShaderGLES3::LIGHTMAP_TEXTURE_SIZE, Vector2(lightmap->width, lightmap->height));
-			}
-			state.scene_shader.set_uniform(SceneShaderGLES3::LIGHTMAP_ENERGY, capture->energy);
-		}
 	}
 }
 
@@ -2123,7 +2013,6 @@ void RasterizerSceneGLES3::_render_list(RenderList::Element **p_elements, int p_
 		if (!p_shadow) {
 			bool use_directional = directional_light != nullptr;
 			if (p_directional_add) {
-				use_directional = use_directional && !(e->instance->baked_light && directional_light->light_ptr->bake_mode == VS::LightBakeMode::LIGHT_BAKE_ALL);
 				use_directional = use_directional && ((e->instance->layer_mask & directional_light->light_ptr->cull_mask) != 0);
 				use_directional = use_directional && ((e->sort_key & SORT_KEY_UNSHADED_FLAG) == 0);
 				if (!use_directional) {
@@ -2155,11 +2044,6 @@ void RasterizerSceneGLES3::_render_list(RenderList::Element **p_elements, int p_
 
 					//state.scene_shader.set_conditional(SceneShaderGLES3::SHADELESS,true);
 				} else {
-					state.scene_shader.set_conditional(SceneShaderGLES3::USE_GI_PROBES, e->instance->gi_probe_instances.size() > 0);
-					state.scene_shader.set_conditional(SceneShaderGLES3::USE_LIGHTMAP, e->instance->lightmap.is_valid() && e->instance->gi_probe_instances.size() == 0);
-					state.scene_shader.set_conditional(SceneShaderGLES3::USE_LIGHTMAP_LAYERED, e->instance->lightmap_slice != -1);
-					//state.scene_shader.set_conditional(SceneShaderGLES3::USE_LIGHTMAP_CAPTURE, !e->instance->lightmap_capture_data.empty() && !e->instance->lightmap.is_valid() && e->instance->gi_probe_instances.size() == 0);
-
 					state.scene_shader.set_conditional(SceneShaderGLES3::SHADELESS, false);
 
 					state.scene_shader.set_conditional(SceneShaderGLES3::USE_FORWARD_LIGHTING, !p_directional_add);
@@ -2346,7 +2230,7 @@ void RasterizerSceneGLES3::_render_list(RenderList::Element **p_elements, int p_
 	state.scene_shader.set_conditional(SceneShaderGLES3::USE_OPAQUE_PREPASS, false);
 }
 
-void RasterizerSceneGLES3::_add_geometry(RasterizerStorageGLES3::Geometry *p_geometry, RasterizerInstanceBase *p_instance, RasterizerStorageGLES3::GeometryOwner *p_owner, int p_material, bool p_depth_pass, bool p_shadow_pass) {
+void RasterizerSceneGLES3::_add_geometry(RasterizerStorageGLES3::Geometry *p_geometry, RasterizerInstance *p_instance, RasterizerStorageGLES3::GeometryOwner *p_owner, int p_material, bool p_depth_pass, bool p_shadow_pass) {
 	RasterizerStorageGLES3::Material *m = nullptr;
 	RID m_src = p_instance->material_override.is_valid() ? p_instance->material_override : (p_material >= 0 ? p_instance->materials[p_material] : p_geometry->material);
 
@@ -2409,7 +2293,7 @@ void RasterizerSceneGLES3::_add_geometry(RasterizerStorageGLES3::Geometry *p_geo
 	}
 }
 
-void RasterizerSceneGLES3::_add_geometry_with_material(RasterizerStorageGLES3::Geometry *p_geometry, RasterizerInstanceBase *p_instance, RasterizerStorageGLES3::GeometryOwner *p_owner, RasterizerStorageGLES3::Material *p_material, bool p_depth_pass, bool p_shadow_pass) {
+void RasterizerSceneGLES3::_add_geometry_with_material(RasterizerStorageGLES3::Geometry *p_geometry, RasterizerInstance *p_instance, RasterizerStorageGLES3::GeometryOwner *p_owner, RasterizerStorageGLES3::Material *p_material, bool p_depth_pass, bool p_shadow_pass) {
 	bool has_base_alpha = (p_material->shader->spatial.uses_alpha && !p_material->shader->spatial.uses_alpha_scissor) || p_material->shader->spatial.uses_screen_texture || p_material->shader->spatial.uses_depth_texture;
 	bool has_blend_alpha = p_material->shader->spatial.blend_mode != RasterizerStorageGLES3::Shader::Spatial::BLEND_MODE_MIX;
 	bool has_alpha = has_base_alpha || has_blend_alpha;
@@ -2484,7 +2368,7 @@ void RasterizerSceneGLES3::_add_geometry_with_material(RasterizerStorageGLES3::G
 	// We sort only by the first directional light. The rest of directional lights will be drawn in additive passes that are skipped if disabled.
 	if (first_directional_light.is_valid() && light_instance_owner.owns(first_directional_light)) {
 		RasterizerStorageGLES3::Light *directional = light_instance_owner.getptr(first_directional_light)->light_ptr;
-		if ((e->instance->layer_mask & directional->cull_mask) == 0 || (e->instance->baked_light && directional->bake_mode == VS::LightBakeMode::LIGHT_BAKE_ALL)) {
+		if ((e->instance->layer_mask & directional->cull_mask) == 0) {
 			e->sort_key |= SORT_KEY_NO_DIRECTIONAL_FLAG;
 		}
 	}
@@ -2501,20 +2385,6 @@ void RasterizerSceneGLES3::_add_geometry_with_material(RasterizerStorageGLES3::G
 	e->sort_key |= uint64_t(e->instance->depth_layer) << RenderList::SORT_KEY_OPAQUE_DEPTH_LAYER_SHIFT;
 
 	if (!p_depth_pass) {
-		if (e->instance->gi_probe_instances.size()) {
-			e->sort_key |= SORT_KEY_GI_PROBES_FLAG;
-		}
-
-		if (e->instance->lightmap.is_valid()) {
-			e->sort_key |= SORT_KEY_LIGHTMAP_FLAG;
-			if (e->instance->lightmap_slice != -1) {
-				e->sort_key |= SORT_KEY_LIGHTMAP_LAYERED_FLAG;
-			}
-		}
-
-		if (!e->instance->lightmap_capture_data.empty()) {
-			e->sort_key |= SORT_KEY_LIGHTMAP_CAPTURE_FLAG;
-		}
 		e->sort_key |= (uint64_t(p_material->render_priority) + 128) << RenderList::SORT_KEY_PRIORITY_SHIFT;
 	} else {
 		e->sort_key |= uint64_t(e->instance->depth_layer) << RenderList::SORT_KEY_OPAQUE_DEPTH_LAYER_SHIFT;
@@ -3242,7 +3112,7 @@ void RasterizerSceneGLES3::_copy_texture_to_front_buffer(GLuint p_texture) {
 	storage->shaders.copy.set_conditional(CopyShaderGLES3::DISABLE_ALPHA, false);
 }
 
-void RasterizerSceneGLES3::_fill_render_list(RasterizerInstanceBase **p_cull_result, int p_cull_count, bool p_depth_pass, bool p_shadow_pass) {
+void RasterizerSceneGLES3::_fill_render_list(RasterizerInstance **p_cull_result, int p_cull_count, bool p_depth_pass, bool p_shadow_pass) {
 	PROFILE
 	current_geometry_index = 0;
 	current_material_index = 0;
@@ -3253,7 +3123,7 @@ void RasterizerSceneGLES3::_fill_render_list(RasterizerInstanceBase **p_cull_res
 	//fill list
 
 	for (int i = 0; i < p_cull_count; i++) {
-		RasterizerInstanceBase *inst = p_cull_result[i];
+		RasterizerInstance *inst = p_cull_result[i];
 		switch (inst->base_type) {
 			case VS::INSTANCE_MESH: {
 				RasterizerStorageGLES3::Mesh *mesh = storage->mesh_owner.getptr(inst->base);
@@ -4205,10 +4075,6 @@ bool RasterizerSceneGLES3::_element_needs_directional_add(RenderList::Element *e
 
 	for (int i = 0; i < state.directional_light_count; i++) {
 		LightInstance *l = directional_lights[i];
-		// any unbaked and unculled light?
-		if (e->instance->baked_light && l->light_ptr->bake_mode == VS::LightBakeMode::LIGHT_BAKE_ALL) {
-			continue;
-		}
 		if ((e->instance->layer_mask & l->light_ptr->cull_mask) == 0) {
 			continue;
 		}
@@ -4217,7 +4083,7 @@ bool RasterizerSceneGLES3::_element_needs_directional_add(RenderList::Element *e
 	return false; // no visible unbaked light
 }
 
-void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const CameraMatrix &p_cam_projection, const int p_eye, bool p_cam_ortogonal, RasterizerInstanceBase **p_cull_result, int p_cull_count, RID *p_light_cull_result, int p_light_cull_count, RID *p_reflection_probe_cull_result, int p_reflection_probe_cull_count, RID p_environment, RID p_shadow_atlas, RID p_reflection_atlas, RID p_reflection_probe, int p_reflection_probe_pass) {
+void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const CameraMatrix &p_cam_projection, const int p_eye, bool p_cam_ortogonal, RasterizerInstance **p_cull_result, int p_cull_count, RID *p_light_cull_result, int p_light_cull_count, RID *p_reflection_probe_cull_result, int p_reflection_probe_cull_count, RID p_environment, RID p_shadow_atlas, RID p_reflection_atlas, RID p_reflection_probe, int p_reflection_probe_pass) {
 	//first of all, make a new render pass
 	render_pass++;
 
@@ -4750,7 +4616,7 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 	_post_process(env, p_cam_projection);
 }
 
-void RasterizerSceneGLES3::render_shadow(RID p_light, RID p_shadow_atlas, int p_pass, RasterizerInstanceBase **p_cull_result, int p_cull_count) {
+void RasterizerSceneGLES3::render_shadow(RID p_light, RID p_shadow_atlas, int p_pass, RasterizerInstance **p_cull_result, int p_cull_count) {
 	render_pass++;
 
 	directional_light = nullptr;
@@ -5068,12 +4934,6 @@ bool RasterizerSceneGLES3::free(RID p_rid) {
 
 		environment_owner.free(p_rid);
 		memdelete(environment);
-
-	} else if (gi_probe_instance_owner.owns(p_rid)) {
-		GIProbeInstance *gi_probe_instance = gi_probe_instance_owner.get(p_rid);
-
-		gi_probe_instance_owner.free(p_rid);
-		memdelete(gi_probe_instance);
 
 	} else {
 		return false;
@@ -5434,10 +5294,6 @@ void RasterizerSceneGLES3::iteration() {
 	subsurface_scatter_weight_samples = GLOBAL_GET("rendering/quality/subsurface_scattering/weight_samples");
 	subsurface_scatter_quality = SubSurfaceScatterQuality(int(GLOBAL_GET("rendering/quality/subsurface_scattering/quality")));
 	subsurface_scatter_size = GLOBAL_GET("rendering/quality/subsurface_scattering/scale");
-
-	storage->config.use_lightmap_filter_bicubic = GLOBAL_GET("rendering/quality/lightmapping/use_bicubic_sampling");
-	state.scene_shader.set_conditional(SceneShaderGLES3::USE_LIGHTMAP_FILTER_BICUBIC, storage->config.use_lightmap_filter_bicubic);
-	state.scene_shader.set_conditional(SceneShaderGLES3::VCT_QUALITY_HIGH, GLOBAL_GET("rendering/quality/voxel_cone_tracing/high_quality"));
 }
 
 void RasterizerSceneGLES3::finalize() {
