@@ -2683,7 +2683,7 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 				break;
 			}
 
-			if (!E->get()->visible) {
+			if (!E->get()->visible || !(E->get()->layer_mask & camera_layer_mask)) {
 				continue;
 			}
 
