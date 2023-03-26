@@ -134,6 +134,7 @@ void Node::_notification(int p_notification) {
 			}
 		} break;
 		case NOTIFICATION_READY: {
+			ProfileMarker __mk("notification(ready)");
 			if (get_script_instance()) {
 				if (get_script_instance()->has_method(SceneStringNames::get_singleton()->_input)) {
 					set_process_input(true);
@@ -177,6 +178,7 @@ void Node::_notification(int p_notification) {
 }
 
 void Node::_propagate_ready() {
+	PROFILE
 	data.ready_notified = true;
 	data.blocked++;
 	for (int i = 0; i < data.children.size(); i++) {
