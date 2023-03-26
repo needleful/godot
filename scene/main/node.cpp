@@ -35,6 +35,7 @@
 #include "core/io/resource_loader.h"
 #include "core/message_queue.h"
 #include "core/print_string.h"
+#include "core/profiler.h"
 #include "instance_placeholder.h"
 #include "scene/animation/scene_tree_tween.h"
 #include "scene/resources/packed_scene.h"
@@ -1294,6 +1295,7 @@ void Node::_add_child_nocheck(Node *p_child, const StringName &p_name) {
 }
 
 void Node::add_child(Node *p_child, bool p_legible_unique_name) {
+	PROFILE
 	ERR_FAIL_NULL(p_child);
 	ERR_FAIL_COND_MSG(p_child == this, vformat("Can't add child '%s' to itself.", p_child->get_name())); // adding to itself!
 	ERR_FAIL_COND_MSG(p_child->data.parent, vformat("Can't add child '%s' to '%s', already has a parent '%s'.", p_child->get_name(), get_name(), p_child->data.parent->get_name())); //Fail if node has a parent
