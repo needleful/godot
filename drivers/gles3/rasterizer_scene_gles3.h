@@ -129,6 +129,7 @@ public:
 			float camera_inverse_matrix[16];
 			float camera_matrix[16];
 			float ambient_light_color[4];
+			float indirect_light_color[4];
 			float bg_color[4];
 			float fog_color_enabled[4];
 			float fog_sun_color_amount[4];
@@ -390,6 +391,7 @@ public:
 		int camera_feed_id;
 
 		Color ambient_color;
+		Color indirect_color;
 		float ambient_energy;
 		float ambient_sky_contribution;
 
@@ -558,6 +560,7 @@ public:
 	void environment_set_bg_energy(RID p_env, float p_energy);
 	void environment_set_canvas_max_layer(RID p_env, int p_max_layer);
 	void environment_set_ambient_light(RID p_env, const Color &p_color, float p_energy = 1.0, float p_sky_contribution = 0.0);
+	void environment_set_indirect_light(RID p_env, const Color &p_color);
 	void environment_set_camera_feed_id(RID p_env, int p_camera_feed_id);
 
 	void environment_set_dof_blur_near(RID p_env, bool p_enable, float p_distance, float p_transition, float p_amount, VS::EnvironmentDOFBlurQuality p_quality);

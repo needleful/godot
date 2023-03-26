@@ -102,6 +102,11 @@ void Environment::set_ambient_light_sky_contribution(float p_energy) {
 	VS::get_singleton()->environment_set_ambient_light(environment, ambient_color, ambient_energy, ambient_sky_contribution);
 }
 
+void Environment::set_indirect_light_color(const Color &p_color) {
+	indirect_color = p_color;
+	VS::get_singleton()->environment_set_indirect_light(environment, p_color);
+}
+
 void Environment::set_camera_feed_id(int p_camera_feed_id) {
 	camera_feed_id = p_camera_feed_id;
 	VS::get_singleton()->environment_set_camera_feed_id(environment, camera_feed_id);
@@ -148,6 +153,9 @@ float Environment::get_ambient_light_energy() const {
 }
 float Environment::get_ambient_light_sky_contribution() const {
 	return ambient_sky_contribution;
+}
+Color Environment::get_indirect_light_color() const {
+	return indirect_color;
 }
 int Environment::get_camera_feed_id() const {
 	return camera_feed_id;
@@ -818,6 +826,7 @@ void Environment::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_bg_energy", "energy"), &Environment::set_bg_energy);
 	ClassDB::bind_method(D_METHOD("set_canvas_max_layer", "layer"), &Environment::set_canvas_max_layer);
 	ClassDB::bind_method(D_METHOD("set_ambient_light_color", "color"), &Environment::set_ambient_light_color);
+	ClassDB::bind_method(D_METHOD("set_indirect_light_color", "color"), &Environment::set_indirect_light_color);
 	ClassDB::bind_method(D_METHOD("set_ambient_light_energy", "energy"), &Environment::set_ambient_light_energy);
 	ClassDB::bind_method(D_METHOD("set_ambient_light_sky_contribution", "energy"), &Environment::set_ambient_light_sky_contribution);
 	ClassDB::bind_method(D_METHOD("set_camera_feed_id", "camera_feed_id"), &Environment::set_camera_feed_id);
@@ -832,6 +841,7 @@ void Environment::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_bg_energy"), &Environment::get_bg_energy);
 	ClassDB::bind_method(D_METHOD("get_canvas_max_layer"), &Environment::get_canvas_max_layer);
 	ClassDB::bind_method(D_METHOD("get_ambient_light_color"), &Environment::get_ambient_light_color);
+	ClassDB::bind_method(D_METHOD("get_indirect_light_color"), &Environment::get_indirect_light_color);
 	ClassDB::bind_method(D_METHOD("get_ambient_light_energy"), &Environment::get_ambient_light_energy);
 	ClassDB::bind_method(D_METHOD("get_ambient_light_sky_contribution"), &Environment::get_ambient_light_sky_contribution);
 	ClassDB::bind_method(D_METHOD("get_camera_feed_id"), &Environment::get_camera_feed_id);
@@ -853,6 +863,8 @@ void Environment::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::COLOR, "ambient_light_color"), "set_ambient_light_color", "get_ambient_light_color");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "ambient_light_energy", PROPERTY_HINT_RANGE, "0,16,0.01"), "set_ambient_light_energy", "get_ambient_light_energy");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "ambient_light_sky_contribution", PROPERTY_HINT_RANGE, "0,1,0.01"), "set_ambient_light_sky_contribution", "get_ambient_light_sky_contribution");
+
+	ADD_PROPERTY(PropertyInfo(Variant::COLOR, "indirect_light_color"), "set_indirect_light_color", "get_indirect_light_color");
 
 	ClassDB::bind_method(D_METHOD("set_fog_enabled", "enabled"), &Environment::set_fog_enabled);
 	ClassDB::bind_method(D_METHOD("is_fog_enabled"), &Environment::is_fog_enabled);

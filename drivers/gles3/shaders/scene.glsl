@@ -84,6 +84,7 @@ layout(std140) uniform SceneData { // ubo:0
 	highp mat4 camera_matrix;
 
 	mediump vec4 ambient_light_color;
+	mediump vec4 indirect_light_color;
 	mediump vec4 bg_color;
 
 	mediump vec4 fog_color_enabled;
@@ -781,6 +782,7 @@ layout(std140) uniform SceneData {
 	highp mat4 camera_matrix;
 
 	mediump vec4 ambient_light_color;
+	mediump vec4 indirect_light_color;
 	mediump vec4 bg_color;
 
 	mediump vec4 fog_color_enabled;
@@ -2097,6 +2099,7 @@ FRAGMENT_SHADER_CODE
 	if (ambient_accum.a > 0.0) {
 		ambient_light = ambient_accum.rgb / ambient_accum.a;
 	}
+	ambient_light += indirect_light_color.rgb * 0.5 * (normal.y + 1.0);
 #endif //ubershader-runtime
 #endif //ubershader-runtime
 #endif //ubershader-runtime

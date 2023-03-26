@@ -844,6 +844,13 @@ void RasterizerSceneGLES3::environment_set_ambient_light(RID p_env, const Color 
 	env->ambient_energy = p_energy;
 	env->ambient_sky_contribution = p_sky_contribution;
 }
+
+void RasterizerSceneGLES3::environment_set_indirect_light(RID p_env, const Color &p_color) {
+	Environment *env = environment_owner.getornull(p_env);
+	ERR_FAIL_COND(!env);
+	env->indirect_color = p_color;
+}
+
 void RasterizerSceneGLES3::environment_set_camera_feed_id(RID p_env, int p_camera_feed_id) {
 	Environment *env = environment_owner.getornull(p_env);
 	ERR_FAIL_COND(!env);
@@ -2565,6 +2572,12 @@ void RasterizerSceneGLES3::_setup_environment(Environment *env, const CameraMatr
 		state.ubo_data.ambient_light_color[1] = linear_ambient_color.g;
 		state.ubo_data.ambient_light_color[2] = linear_ambient_color.b;
 		state.ubo_data.ambient_light_color[3] = linear_ambient_color.a;
+
+		Color linear_indirect_color = env->indirect_color.to_linear();
+		state.ubo_data.indirect_light_color[0] = linear_indirect_color.r;
+		state.ubo_data.indirect_light_color[1] = linear_indirect_color.g;
+		state.ubo_data.indirect_light_color[2] = linear_indirect_color.b;
+		state.ubo_data.indirect_light_color[3] = linear_indirect_color.a;
 
 		Color bg_color;
 
