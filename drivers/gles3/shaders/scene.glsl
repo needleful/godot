@@ -605,14 +605,15 @@ VERTEX_SHADER_CODE
 	diffuse_light_interp = vec4(0.0);
 	specular_light_interp = vec4(0.0);
 
+	vec3 ambient_light = mix(ambient_light_color.rgb, indirect_light_color.rgb, 0.5 * (world_normal.y + 1.0));
 #ifdef USE_FORWARD_LIGHTING //ubershader-runtime
 
 	for (int i = 0; i < omni_light_count; i++) {
-		light_process_omni(omni_light_indices[i], vertex_interp, -normalize(vertex_interp), normal_interp, roughness, diffuse_light_interp.rgb, specular_light_interp.rgb, ambient_light_color.rgb);
+		light_process_omni(omni_light_indices[i], vertex_interp, -normalize(vertex_interp), normal_interp, roughness, diffuse_light_interp.rgb, specular_light_interp.rgb, ambient_light);
 	}
 
 	for (int i = 0; i < spot_light_count; i++) {
-		light_process_spot(spot_light_indices[i], vertex_interp, -normalize(vertex_interp), normal_interp, roughness, diffuse_light_interp.rgb, specular_light_interp.rgb, ambient_light_color.rgb);
+		light_process_spot(spot_light_indices[i], vertex_interp, -normalize(vertex_interp), normal_interp, roughness, diffuse_light_interp.rgb, specular_light_interp.rgb, ambient_light);
 	}
 #endif //ubershader-runtime
 
@@ -620,7 +621,7 @@ VERTEX_SHADER_CODE
 
 	vec3 directional_diffuse = vec3(0.0);
 	vec3 directional_specular = vec3(0.0);
-	light_compute(normal_interp, -light_direction_attenuation.xyz, -normalize(vertex_interp), light_color_energy.rgb, roughness, directional_diffuse, directional_specular, ambient_light_color.rgb);
+	light_compute(normal_interp, -light_direction_attenuation.xyz, -normalize(vertex_interp), light_color_energy.rgb, roughness, directional_diffuse, directional_specular, ambient_light);
 
 	float diff_avg = dot(diffuse_light_interp.rgb, vec3(0.33333));
 	float diff_dir_avg = dot(directional_diffuse, vec3(0.33333));
@@ -1496,6 +1497,49 @@ void reflection_process(int idx, vec3 vertex, vec3 normal, vec3 binormal, vec3 t
 		reflection.rgb *= reflection.a;
 
 		reflection_accum += reflection;
+	}
+
+	if (reflections[idx].ambient.a > 0.0) { //compute ambient using skybox
+		vec3 local_amb_vec = (reflections[idx].local_matrix * vec4(normal, 0.0)).xyz;
+		vec3 splane = normalize(local_amb_vec);
+		vec4 clamp_rect = reflections[idx].atlas_clamp;
+
+		splane.z *= -1.0;
+		if (splane.z >= 0.0) {
+			splane.z += 1.0;
+			clamp_rect.y += clamp_rect.w;
+		} else {
+			splane.z = 1.0 - splane.z;
+			splane.y = -splane.y;
+		}
+
+		splane.xy /= splane.z;
+		splane.xy = splane.xy * 0.5 + 0.5;
+		splane.xy = splane.xy * clamp_rect.zw + clamp_rect.xy;
+		splane.xy = clamp(splane.xy, clamp_rect.xy, clamp_rect.xy + clamp_rect.zw);
+
+		highp vec4 ambient_out;
+		ambient_out.a = blend;
+		ambient_out.rgb = textureLod(reflection_atlas, splane.xy, 5.0).rgb;
+		ambient_out.rgb = mix(reflections[idx].ambient.rgb, ambient_out.rgb, reflections[idx].ambient.a);
+
+		if (reflections[idx].params.z < 0.5) {
+			ambient_out.rgb = mix(ambient, ambient_out.rgb, blend);
+		}
+
+		ambient_out.rgb *= ambient_out.a;
+		ambient_accum += ambient_out;
+	} else {
+		highp vec4 ambient_out;
+		ambient_out.a = blend;
+		ambient_out.rgb = reflections[idx].ambient.rgb;
+
+		if (reflections[idx].params.z < 0.5) {
+			ambient_out.rgb = mix(ambient, ambient_out.rgb, blend);
+		}
+
+		ambient_out.rgb *= ambient_out.a;
+		ambient_accum += ambient_out;
 	}
 }
 
