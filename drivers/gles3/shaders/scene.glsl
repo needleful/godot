@@ -376,11 +376,20 @@ void main() {
 #endif //ubershader-runtime
 
 	vec3 normal;
+	vec3 world_normal;
+
 #ifdef ENABLE_OCTAHEDRAL_COMPRESSION //ubershader-runtime
 	normal = oct_to_vec3(normal_tangent_attrib.xy);
 #else //ubershader-runtime
 	normal = normal_attrib;
 #endif //ubershader-runtime
+
+#if defined(ENSURE_CORRECT_NORMALS)
+	mat3 normal_matrix = mat3(transpose(inverse(world_matrix)));
+	world_normal = normal_matrix * normal;
+#else
+	world_normal = normalize((world_matrix * vec4(normal, 0.0)).xyz);
+#endif
 
 #if defined(ENABLE_TANGENT_INTERP) || defined(ENABLE_NORMALMAP) || defined(LIGHT_USE_ANISOTROPY)
 	vec3 tangent;
@@ -439,13 +448,7 @@ void main() {
 #if !defined(SKIP_TRANSFORM_USED) && defined(VERTEX_WORLD_COORDS_USED)
 
 	vertex = world_matrix * vertex;
-
-#if defined(ENSURE_CORRECT_NORMALS)
-	mat3 normal_matrix = mat3(transpose(inverse(world_matrix)));
-	normal = normal_matrix * normal;
-#else
-	normal = normalize((world_matrix * vec4(normal, 0.0)).xyz);
-#endif
+	normal = world_normal;
 
 #if defined(ENABLE_TANGENT_INTERP) || defined(ENABLE_NORMALMAP) || defined(LIGHT_USE_ANISOTROPY)
 
@@ -518,18 +521,16 @@ VERTEX_SHADER_CODE
 
 	gl_PointSize = point_size;
 
-#if defined(ENSURE_CORRECT_NORMALS)
-	mat3 normal_matrix = mat3(transpose(inverse(modelview)));
-	vec3 world_normal = normal_matrix * normal;
-#else
-	vec3 world_normal = normalize((modelview * vec4(normal, 0.0)).xyz);
-#endif
-
 // using local coordinates (default)
 #if !defined(SKIP_TRANSFORM_USED) && !defined(VERTEX_WORLD_COORDS_USED)
 
 	vertex = modelview * vertex;
-	normal = world_normal;
+#if defined(ENSURE_CORRECT_NORMALS)
+	mat3 normal_matrix = mat3(transpose(inverse(modelview)));
+	normal = normal_matrix * normal;
+#else
+	normal = normalize((modelview * vec4(normal, 0.0)).xyz);
+#endif
 
 #if defined(ENABLE_TANGENT_INTERP) || defined(ENABLE_NORMALMAP) || defined(LIGHT_USE_ANISOTROPY)
 
@@ -1727,11 +1728,7 @@ FRAGMENT_SHADER_CODE
 	ambient_light = vec3(0.0, 0.0, 0.0);
 #else
 
-#if defined(VERTEX_WORLD_COORDS_USED)
-	vec3 world_normal = normal;
-#else
 	vec3 world_normal = world_normal_interp;
-#endif
 	ambient_light = mix(ambient_light_color.rgb, indirect_light_color.rgb, 0.5 * (world_normal.y + 1.0));
 
 	env_reflection_light = bg_color.rgb * bg_energy;
