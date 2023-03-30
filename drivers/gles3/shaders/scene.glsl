@@ -1533,7 +1533,7 @@ void reflection_process(int idx, vec3 vertex, vec3 normal, vec3 binormal, vec3 t
 	} else {
 		highp vec4 ambient_out;
 		ambient_out.a = blend;
-		ambient_out.rgb = reflections[idx].ambient.rgb;
+		ambient_out.rgb = ambient.rgb;
 
 		if (reflections[idx].params.z < 0.5) {
 			ambient_out.rgb = mix(ambient, ambient_out.rgb, blend);
