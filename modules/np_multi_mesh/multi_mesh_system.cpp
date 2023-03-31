@@ -2,37 +2,36 @@
 
 #include "multi_mesh_system.h"
 
-#include "core/print_string.h"
 #include "scene/3d/mesh_instance.h"
 #include "scene/resources/material.h"
 
 MultiMeshComponent::MultiMeshComponent() :
-		index(-1) {}
+		index(-1),
+		system(nullptr) {}
 
 void MultiMeshComponent::_notification(int p_what) {
 	if (p_what == NOTIFICATION_ENTER_TREE) {
-		MultiMeshSystem *system = _find_system();
+		// Fix this later. I quit!
+		//system = _find_system();
 		if (system) {
 			system->_add_component(this);
 		}
 	} else if (p_what == NOTIFICATION_READY) {
-		if (!_find_system()) {
+		if (!system) {
 			// fall back to MeshInstance
 			MeshInstance *meshi = memnew(MeshInstance);
 			meshi->set_mesh(mesh);
+			if (material_override.is_valid()) {
+				meshi->set_material_override(material_override);
+			}
 			meshi->set_name("__fallback_mesh");
 			add_child(meshi);
 		}
 	} else if (p_what == NOTIFICATION_TRANSFORM_CHANGED) {
-		if (index < 0) {
-			return;
-		}
-		MultiMeshSystem *system = _find_system();
-		if (system) {
+		if (index >= 0 && system) {
 			system->_update_component_transform(this);
 		}
 	} else if (p_what == NOTIFICATION_VISIBILITY_CHANGED) {
-		MultiMeshSystem *system = _find_system();
 		if (system) {
 			if (is_visible_in_tree())
 				system->_add_component(this);
@@ -40,11 +39,7 @@ void MultiMeshComponent::_notification(int p_what) {
 				system->_remove_component(this);
 		}
 	} else if (p_what == NOTIFICATION_EXIT_TREE) {
-		if (index < 0) {
-			return;
-		}
-		MultiMeshSystem *system = _find_system();
-		if (system) {
+		if (index >= 0 && system) {
 			system->_remove_component(this);
 		}
 	}
@@ -96,6 +91,7 @@ MultiMeshSystem::MultiMeshSystem() {}
 void MultiMeshSystem::_add_component(MultiMeshComponent *p_component) {
 	ERR_FAIL_NULL(p_component);
 	ERR_FAIL_COND_MSG(!p_component->get_mesh().is_valid(), "Component has no mesh: " + get_path());
+
 	uint32_t mesh_id = p_component->get_mesh()->get_rid().get_id();
 	if (!meshes.has(mesh_id)) {
 		MultiMeshInstance *mmi = memnew(MultiMeshInstance);
@@ -115,9 +111,10 @@ void MultiMeshSystem::_add_component(MultiMeshComponent *p_component) {
 	}
 
 	components[mesh_id].push_back(p_component);
+
 	p_component->index = components[mesh_id].size() - 1;
 
-	if (meshes[mesh_id]->is_inside_tree()) {
+	if (ready) {
 		Ref<MultiMesh> mesh = meshes[mesh_id]->get_multimesh();
 		int vis = components[mesh_id].size();
 		if (vis > mesh->get_instance_count()) {
@@ -153,6 +150,7 @@ void MultiMeshSystem::_remove_component(MultiMeshComponent *p_component) {
 		// irrelevant
 		return;
 	}
+
 	Vector<MultiMeshComponent *> &comps = components[mesh_id];
 	Ref<MultiMesh> multimesh = meshes[mesh_id]->get_multimesh();
 
@@ -170,10 +168,18 @@ void MultiMeshSystem::_remove_component(MultiMeshComponent *p_component) {
 }
 
 void MultiMeshSystem::_notification(int p_what) {
-	if (p_what == NOTIFICATION_READY) {
-		// Create the multimeshes
+	if (p_what == NOTIFICATION_ENTER_TREE) {
 		const uint32_t *mesh_id = NULL;
+		while ((mesh_id = meshes.next(mesh_id))) {
+			MultiMeshInstance *m = meshes[*mesh_id];
+			m->get_multimesh()->set_visible_instance_count(0);
+			m->get_multimesh()->set_instance_count(0);
+			components[*mesh_id].resize(0);
+		}
+	} else if (p_what == NOTIFICATION_READY) {
+		// Create the multimeshes
 		Transform inv_transform = get_global_transform().affine_inverse();
+		const uint32_t *mesh_id = NULL;
 		while ((mesh_id = meshes.next(mesh_id))) {
 			MultiMeshInstance *m = meshes[*mesh_id];
 			Vector<MultiMeshComponent *> &comps = components[*mesh_id];

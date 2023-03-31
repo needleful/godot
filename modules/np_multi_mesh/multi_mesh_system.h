@@ -16,7 +16,7 @@ protected:
 	Ref<Mesh> mesh;
 	Ref<Material> material_override;
 	int index;
-
+	MultiMeshSystem *system;
 	MultiMeshSystem *_find_system();
 	void _notification(int p_what);
 	static void _bind_methods();
