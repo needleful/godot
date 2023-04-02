@@ -73,7 +73,6 @@ def make_default_controller_mappings(target, source, env):
 
     g.write("/* THIS FILE IS GENERATED DO NOT EDIT */\n")
     g.write('#include "core/typedefs.h"\n')
-    g.write('#include "main/default_controller_mappings.h"\n')
 
     # ensure mappings have a consistent order
     platform_mappings = OrderedDict()
@@ -114,7 +113,7 @@ def make_default_controller_mappings(target, source, env):
         "UWP": "#ifdef UWP_ENABLED",
     }
 
-    g.write("const char* DefaultControllerMappings::mappings[] = {\n")
+    g.write("const char* default_controller_mappings[] = {\n")
     for platform, mappings in platform_mappings.items():
         variable = platform_variables[platform]
         g.write("{}\n".format(variable))

@@ -13,7 +13,7 @@ env.add_source_files(env.main_sources, "*.cpp")
 controller_databases = ["gamecontrollerdb.txt", "godotcontrollerdb.txt"]
 
 gensource = env.CommandNoCache(
-    "default_controller_mappings.gen.cpp",
+    "default_controller_mappings.gen.h",
     controller_databases,
     run_in_subprocess(main_builders.make_default_controller_mappings),
 )
