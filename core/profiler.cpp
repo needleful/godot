@@ -2,13 +2,14 @@
 
 #include "profiler.h"
 
+#ifdef NP_PROFILER
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #undef WIN32_LEAN_AND_MEAN
 #include <profileapi.h>
-
 #include "core/io/logger.h"
 #include "core/os/memory.h"
+#endif // NP_PROFILER
 
 ProfileMarker::ProfileMarker(const char *p_func) {
 #ifdef NP_PROFILER
