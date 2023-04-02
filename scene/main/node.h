@@ -31,6 +31,7 @@
 #ifndef NODE_H
 #define NODE_H
 
+#include "core/bitfield_enum.h"
 #include "core/class_db.h"
 #include "core/map.h"
 #include "core/node_path.h"
@@ -48,18 +49,14 @@ class Node : public Object {
 	OBJ_CATEGORY("Nodes");
 
 public:
-	// N.B. Any enum stored as a bitfield should
-	// be specified as UNSIGNED to work around
-	// some compilers trying to store it as signed,
-	// and requiring 1 more bit than necessary.
-	enum PauseMode : unsigned int {
+	enum PauseMode BITFIELD_ENUM {
 
 		PAUSE_MODE_INHERIT,
 		PAUSE_MODE_STOP,
 		PAUSE_MODE_PROCESS
 	};
 
-	enum PhysicsInterpolationMode : unsigned int {
+	enum PhysicsInterpolationMode BITFIELD_ENUM {
 
 		PHYSICS_INTERPOLATION_MODE_INHERIT,
 		PHYSICS_INTERPOLATION_MODE_OFF,

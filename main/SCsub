@@ -18,8 +18,6 @@ gensource = env.CommandNoCache(
     run_in_subprocess(main_builders.make_default_controller_mappings),
 )
 
-env.add_source_files(env.main_sources, gensource)
-
 env.Depends("#main/splash.gen.h", "#main/splash.png")
 env.CommandNoCache("#main/splash.gen.h", "#main/splash.png", run_in_subprocess(main_builders.make_splash))
 
