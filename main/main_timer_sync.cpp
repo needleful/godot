@@ -382,7 +382,7 @@ MainFrameTime MainTimerSync::advance(float p_target_frame_slice, float p_max_fra
 		float slice_per_max_steps = time_accum/max_steps;
 	}*/
 
-	float frame_slice = CLAMP(p_max_physics_time, p_target_frame_slice, p_max_frame_slice);
+	float frame_slice = CLAMP(p_max_physics_time * 1.5, p_target_frame_slice, p_max_frame_slice);
 	ret.physics_step = frame_slice;
 
 	ret.physics_steps = floor(time_accum / frame_slice);
