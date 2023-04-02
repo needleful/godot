@@ -77,8 +77,6 @@ private:
 	VS::LightType type;
 	bool editor_only;
 	void _update_visibility();
-	BakeMode bake_mode;
-
 	// bind helpers
 
 	virtual void owner_changed_notify();
@@ -118,10 +116,7 @@ public:
 
 	void set_shadow_reverse_cull_face(bool p_enable);
 	bool get_shadow_reverse_cull_face() const;
-
-	void set_bake_mode(BakeMode p_mode);
-	BakeMode get_bake_mode() const;
-
+	
 	virtual AABB get_aabb() const;
 	virtual PoolVector<Face3> get_faces(uint32_t p_usage_flags) const;
 

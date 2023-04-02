@@ -68,16 +68,6 @@ public:
 		GI_PROBE_ETC2
 	};
 
-	struct LightmapCaptureOctree {
-		enum {
-			CHILD_EMPTY = 0xFFFFFFFF
-		};
-
-		uint16_t light[6][3]; //anisotropic light
-		float alpha;
-		uint32_t children[8];
-	};
-
 	enum RenderTargetFlags {
 		RENDER_TARGET_VFLIP,
 		RENDER_TARGET_TRANSPARENT,
@@ -138,7 +128,6 @@ public:
 		bool shrink_textures_x2;
 		bool use_fast_texture_filter;
 		bool use_anisotropic_filter;
-		bool use_lightmap_filter_bicubic;
 		bool use_physical_light_attenuation;
 
 		bool s3tc_supported;
@@ -1048,7 +1037,6 @@ public:
 		bool shadow;
 		bool negative;
 		bool reverse_cull;
-		VS::LightBakeMode bake_mode;
 		uint32_t cull_mask;
 		VS::LightOmniShadowMode omni_shadow_mode;
 		VS::LightOmniShadowDetail omni_shadow_detail;
@@ -1073,9 +1061,7 @@ public:
 	void light_set_negative(RID p_light, bool p_enable);
 	void light_set_cull_mask(RID p_light, uint32_t p_mask);
 	void light_set_reverse_cull_face_mode(RID p_light, bool p_enabled);
-	void light_set_use_gi(RID p_light, bool p_enabled);
-	void light_set_bake_mode(RID p_light, VS::LightBakeMode p_bake_mode);
-
+	
 	void light_omni_set_shadow_mode(RID p_light, VS::LightOmniShadowMode p_mode);
 	void light_omni_set_shadow_detail(RID p_light, VS::LightOmniShadowDetail p_detail);
 
@@ -1094,9 +1080,7 @@ public:
 	VS::LightType light_get_type(RID p_light) const;
 	float light_get_param(RID p_light, VS::LightParam p_param);
 	Color light_get_color(RID p_light);
-	bool light_get_use_gi(RID p_light);
 	uint32_t light_get_cull_mask(RID p_light);
-	VS::LightBakeMode light_get_bake_mode(RID p_light);
 
 	AABB light_get_aabb(RID p_light) const;
 	uint64_t light_get_version(RID p_light) const;
@@ -1220,49 +1204,6 @@ public:
 
 	RID gi_probe_dynamic_data_create(int p_width, int p_height, int p_depth, GIProbeCompression p_compression);
 	void gi_probe_dynamic_data_update(RID p_gi_probe_data, int p_depth_slice, int p_slice_count, int p_mipmap, const void *p_data);
-
-	/* LIGHTMAP CAPTURE */
-
-	RID lightmap_capture_create();
-	void lightmap_capture_set_bounds(RID p_capture, const AABB &p_bounds);
-	AABB lightmap_capture_get_bounds(RID p_capture) const;
-	void lightmap_capture_set_octree(RID p_capture, const PoolVector<uint8_t> &p_octree);
-	PoolVector<uint8_t> lightmap_capture_get_octree(RID p_capture) const;
-	void lightmap_capture_set_octree_cell_transform(RID p_capture, const Transform &p_xform);
-	Transform lightmap_capture_get_octree_cell_transform(RID p_capture) const;
-	void lightmap_capture_set_octree_cell_subdiv(RID p_capture, int p_subdiv);
-	int lightmap_capture_get_octree_cell_subdiv(RID p_capture) const;
-
-	void lightmap_capture_set_energy(RID p_capture, float p_energy);
-	float lightmap_capture_get_energy(RID p_capture) const;
-	void lightmap_capture_set_interior(RID p_capture, bool p_interior);
-	bool lightmap_capture_is_interior(RID p_capture) const;
-
-	const PoolVector<LightmapCaptureOctree> *lightmap_capture_get_octree_ptr(RID p_capture) const;
-
-	struct LightmapCapture : public Instantiable {
-		PoolVector<LightmapCaptureOctree> octree;
-		AABB bounds;
-		Transform cell_xform;
-		int cell_subdiv;
-		float energy;
-		bool interior;
-
-		SelfList<LightmapCapture> update_list;
-
-		LightmapCapture() :
-				update_list(this) {
-			energy = 1.0;
-			cell_subdiv = 1;
-			interior = false;
-		}
-	};
-
-	SelfList<LightmapCapture>::List capture_update_list;
-
-	void update_dirty_captures();
-
-	mutable RID_Owner<LightmapCapture> lightmap_capture_data_owner;
 
 	/* PARTICLES */
 

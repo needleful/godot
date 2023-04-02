@@ -5483,7 +5483,6 @@ RID RasterizerStorageGLES3::light_create(VS::LightType p_type) {
 	light->directional_blend_splits = false;
 	light->directional_range_mode = VS::LIGHT_DIRECTIONAL_SHADOW_DEPTH_RANGE_STABLE;
 	light->reverse_cull = false;
-	light->bake_mode = VS::LIGHT_BAKE_INDIRECT;
 	light->version = 0;
 
 	return light_owner.make_rid(light);
@@ -5561,21 +5560,6 @@ void RasterizerStorageGLES3::light_set_reverse_cull_face_mode(RID p_light, bool 
 	ERR_FAIL_COND(!light);
 
 	light->reverse_cull = p_enabled;
-
-	light->version++;
-	light->instance_change_notify(true, false);
-}
-
-void RasterizerStorageGLES3::light_set_use_gi(RID p_light, bool p_enabled) {
-	WARN_DEPRECATED_MSG("'VisualServer.light_set_use_gi' is deprecated and will be removed in a future version. Use 'VisualServer.light_set_bake_mode' instead.");
-	light_set_bake_mode(p_light, p_enabled ? VS::LightBakeMode::LIGHT_BAKE_INDIRECT : VS::LightBakeMode::LIGHT_BAKE_DISABLED);
-}
-
-void RasterizerStorageGLES3::light_set_bake_mode(RID p_light, VS::LightBakeMode p_bake_mode) {
-	Light *light = light_owner.getornull(p_light);
-	ERR_FAIL_COND(!light);
-
-	light->bake_mode = p_bake_mode;
 
 	light->version++;
 	light->instance_change_notify(true, false);
@@ -5678,17 +5662,6 @@ uint32_t RasterizerStorageGLES3::light_get_cull_mask(RID p_light) {
 	const Light *light = light_owner.getornull(p_light);
 	ERR_FAIL_COND_V(!light, 0);
 	return light->cull_mask;
-}
-
-bool RasterizerStorageGLES3::light_get_use_gi(RID p_light) {
-	return light_get_bake_mode(p_light) != VS::LightBakeMode::LIGHT_BAKE_DISABLED;
-}
-
-VS::LightBakeMode RasterizerStorageGLES3::light_get_bake_mode(RID p_light) {
-	Light *light = light_owner.getornull(p_light);
-	ERR_FAIL_COND_V(!light, VS::LightBakeMode::LIGHT_BAKE_DISABLED);
-
-	return light->bake_mode;
 }
 
 bool RasterizerStorageGLES3::light_has_shadow(RID p_light) const {
@@ -6144,125 +6117,6 @@ void RasterizerStorageGLES3::gi_probe_dynamic_data_update(RID p_gi_probe_data, i
 	glTexSubImage3D(GL_TEXTURE_3D, p_mipmap, 0, 0, p_depth_slice, gipd->width >> p_mipmap, gipd->height >> p_mipmap, p_slice_count, GL_RGBA, GL_UNSIGNED_BYTE, p_data);
 	//glTexImage3D(GL_TEXTURE_3D,p_mipmap,GL_RGBA8,gipd->width>>p_mipmap,gipd->height>>p_mipmap,gipd->depth>>p_mipmap,0,GL_RGBA,GL_UNSIGNED_BYTE,p_data);
 	//glTexImage3D(GL_TEXTURE_3D,p_mipmap,GL_RGBA8,gipd->width>>p_mipmap,gipd->height>>p_mipmap,gipd->depth>>p_mipmap,0,GL_RGBA,GL_UNSIGNED_BYTE,data.ptr());
-}
-/////////////////////////////
-
-RID RasterizerStorageGLES3::lightmap_capture_create() {
-	LightmapCapture *capture = memnew(LightmapCapture);
-	return lightmap_capture_data_owner.make_rid(capture);
-}
-
-void RasterizerStorageGLES3::lightmap_capture_set_bounds(RID p_capture, const AABB &p_bounds) {
-	LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
-	ERR_FAIL_COND(!capture);
-	capture->bounds = p_bounds;
-	capture->instance_change_notify(true, false);
-}
-AABB RasterizerStorageGLES3::lightmap_capture_get_bounds(RID p_capture) const {
-	const LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
-	ERR_FAIL_COND_V(!capture, AABB());
-	return capture->bounds;
-}
-void RasterizerStorageGLES3::lightmap_capture_set_octree(RID p_capture, const PoolVector<uint8_t> &p_octree) {
-	LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
-	ERR_FAIL_COND(!capture);
-
-	ERR_FAIL_COND(p_octree.size() == 0 || (p_octree.size() % sizeof(LightmapCaptureOctree)) != 0);
-
-	capture->octree.resize(p_octree.size() / sizeof(LightmapCaptureOctree));
-	if (p_octree.size()) {
-		PoolVector<LightmapCaptureOctree>::Write w = capture->octree.write();
-		PoolVector<uint8_t>::Read r = p_octree.read();
-		memcpy(w.ptr(), r.ptr(), p_octree.size());
-	}
-	capture->instance_change_notify(true, false);
-}
-PoolVector<uint8_t> RasterizerStorageGLES3::lightmap_capture_get_octree(RID p_capture) const {
-	const LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
-	ERR_FAIL_COND_V(!capture, PoolVector<uint8_t>());
-
-	if (capture->octree.size() == 0) {
-		return PoolVector<uint8_t>();
-	}
-
-	PoolVector<uint8_t> ret;
-	ret.resize(capture->octree.size() * sizeof(LightmapCaptureOctree));
-	{
-		PoolVector<LightmapCaptureOctree>::Read r = capture->octree.read();
-		PoolVector<uint8_t>::Write w = ret.write();
-		memcpy(w.ptr(), r.ptr(), ret.size());
-	}
-
-	return ret;
-}
-
-void RasterizerStorageGLES3::lightmap_capture_set_octree_cell_transform(RID p_capture, const Transform &p_xform) {
-	LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
-	ERR_FAIL_COND(!capture);
-	capture->cell_xform = p_xform;
-}
-
-Transform RasterizerStorageGLES3::lightmap_capture_get_octree_cell_transform(RID p_capture) const {
-	const LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
-	ERR_FAIL_COND_V(!capture, Transform());
-	return capture->cell_xform;
-}
-
-void RasterizerStorageGLES3::lightmap_capture_set_octree_cell_subdiv(RID p_capture, int p_subdiv) {
-	LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
-	ERR_FAIL_COND(!capture);
-	capture->cell_subdiv = p_subdiv;
-}
-
-int RasterizerStorageGLES3::lightmap_capture_get_octree_cell_subdiv(RID p_capture) const {
-	const LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
-	ERR_FAIL_COND_V(!capture, 0);
-	return capture->cell_subdiv;
-}
-
-void RasterizerStorageGLES3::lightmap_capture_set_energy(RID p_capture, float p_energy) {
-	LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
-	ERR_FAIL_COND(!capture);
-	capture->energy = p_energy;
-
-	if (!capture->update_list.in_list()) {
-		capture_update_list.add(&capture->update_list);
-	}
-}
-
-float RasterizerStorageGLES3::lightmap_capture_get_energy(RID p_capture) const {
-	const LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
-	ERR_FAIL_COND_V(!capture, 0);
-	return capture->energy;
-}
-
-void RasterizerStorageGLES3::lightmap_capture_set_interior(RID p_capture, bool p_interior) {
-	LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
-	ERR_FAIL_COND(!capture);
-	capture->interior = p_interior;
-	if (!capture->update_list.in_list()) {
-		capture_update_list.add(&capture->update_list);
-	}
-}
-
-bool RasterizerStorageGLES3::lightmap_capture_is_interior(RID p_capture) const {
-	const LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
-	ERR_FAIL_COND_V(!capture, false);
-	return capture->interior;
-}
-
-const PoolVector<RasterizerStorageGLES3::LightmapCaptureOctree> *RasterizerStorageGLES3::lightmap_capture_get_octree_ptr(RID p_capture) const {
-	const LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
-	ERR_FAIL_COND_V(!capture, nullptr);
-	return &capture->octree;
-}
-
-void RasterizerStorageGLES3::update_dirty_captures() {
-	while (capture_update_list.first()) {
-		LightmapCapture *capture = capture_update_list.first()->self();
-		capture->instance_change_notify(false, true);
-		capture_update_list.remove(capture_update_list.first());
-	}
 }
 
 ///////
@@ -6874,10 +6728,6 @@ void RasterizerStorageGLES3::instance_add_dependency(RID p_base, RasterizerInsta
 			inst = gi_probe_owner.getornull(p_base);
 			ERR_FAIL_COND(!inst);
 		} break;
-		case VS::INSTANCE_LIGHTMAP_CAPTURE: {
-			inst = lightmap_capture_data_owner.getornull(p_base);
-			ERR_FAIL_COND(!inst);
-		} break;
 		default: {
 			ERR_FAIL();
 		}
@@ -6916,10 +6766,6 @@ void RasterizerStorageGLES3::instance_remove_dependency(RID p_base, RasterizerIn
 		} break;
 		case VS::INSTANCE_GI_PROBE: {
 			inst = gi_probe_owner.getornull(p_base);
-			ERR_FAIL_COND(!inst);
-		} break;
-		case VS::INSTANCE_LIGHTMAP_CAPTURE: {
-			inst = lightmap_capture_data_owner.getornull(p_base);
 			ERR_FAIL_COND(!inst);
 		} break;
 		default: {
@@ -7808,10 +7654,6 @@ VS::InstanceType RasterizerStorageGLES3::get_base_type(RID p_rid) const {
 		return VS::INSTANCE_GI_PROBE;
 	}
 
-	if (lightmap_capture_data_owner.owns(p_rid)) {
-		return VS::INSTANCE_LIGHTMAP_CAPTURE;
-	}
-
 	return VS::INSTANCE_NONE;
 }
 
@@ -7996,14 +7838,6 @@ bool RasterizerStorageGLES3::free(RID p_rid) {
 		glDeleteTextures(1, &gi_probe_data->tex_id);
 		gi_probe_data_owner.free(p_rid);
 		memdelete(gi_probe_data);
-	} else if (lightmap_capture_data_owner.owns(p_rid)) {
-		// delete the texture
-		LightmapCapture *lightmap_capture = lightmap_capture_data_owner.get(p_rid);
-		lightmap_capture->instance_remove_deps();
-
-		lightmap_capture_data_owner.free(p_rid);
-		memdelete(lightmap_capture);
-
 	} else if (canvas_occluder_owner.owns(p_rid)) {
 		CanvasOccluder *co = canvas_occluder_owner.get(p_rid);
 		if (co->index_id) {
@@ -8502,10 +8336,6 @@ void RasterizerStorageGLES3::initialize() {
 
 	String renderer = (const char *)glGetString(GL_RENDERER);
 
-	GLOBAL_DEF("rendering/quality/lightmapping/use_bicubic_sampling", true);
-	GLOBAL_DEF("rendering/quality/lightmapping/use_bicubic_sampling.mobile", false);
-	config.use_lightmap_filter_bicubic = GLOBAL_GET("rendering/quality/lightmapping/use_bicubic_sampling");
-
 	config.use_physical_light_attenuation = GLOBAL_GET("rendering/quality/shading/use_physical_light_attenuation");
 
 	config.use_depth_prepass = bool(GLOBAL_GET("rendering/quality/depth_prepass/enable"));
@@ -8552,7 +8382,6 @@ void RasterizerStorageGLES3::update_dirty_resources() {
 	update_dirty_shaders();
 	update_dirty_materials();
 	update_particles();
-	update_dirty_captures();
 }
 
 RasterizerStorageGLES3::RasterizerStorageGLES3() {

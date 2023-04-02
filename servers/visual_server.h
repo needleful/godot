@@ -473,16 +473,6 @@ public:
 	virtual void light_set_negative(RID p_light, bool p_enable) = 0;
 	virtual void light_set_cull_mask(RID p_light, uint32_t p_mask) = 0;
 	virtual void light_set_reverse_cull_face_mode(RID p_light, bool p_enabled) = 0;
-	virtual void light_set_use_gi(RID p_light, bool p_enable) = 0;
-
-	// bake mode
-	enum LightBakeMode {
-		LIGHT_BAKE_DISABLED,
-		LIGHT_BAKE_INDIRECT,
-		LIGHT_BAKE_ALL
-	};
-
-	virtual void light_set_bake_mode(RID p_light, LightBakeMode p_bake_mode) = 0;
 
 	// omni light
 	enum LightOmniShadowMode {
@@ -816,7 +806,6 @@ public:
 		INSTANCE_LIGHT,
 		INSTANCE_REFLECTION_PROBE,
 		INSTANCE_GI_PROBE,
-		INSTANCE_LIGHTMAP_CAPTURE,
 		INSTANCE_MAX,
 
 		INSTANCE_GEOMETRY_MASK = (1 << INSTANCE_MESH) | (1 << INSTANCE_MULTIMESH) | (1 << INSTANCE_IMMEDIATE) | (1 << INSTANCE_PARTICLES)
@@ -934,7 +923,6 @@ public:
 	Array _instances_cull_convex_bind(const Array &p_convex, RID p_scenario = RID()) const;
 
 	enum InstanceFlags {
-		INSTANCE_FLAG_USE_BAKED_LIGHT,
 		INSTANCE_FLAG_DRAW_NEXT_FRAME_IF_VISIBLE,
 		INSTANCE_FLAG_MAX
 	};
@@ -1198,7 +1186,6 @@ VARIANT_ENUM_CAST(VisualServer::MultimeshTransformFormat);
 VARIANT_ENUM_CAST(VisualServer::MultimeshColorFormat);
 VARIANT_ENUM_CAST(VisualServer::MultimeshCustomDataFormat);
 VARIANT_ENUM_CAST(VisualServer::MultimeshPhysicsInterpolationQuality);
-VARIANT_ENUM_CAST(VisualServer::LightBakeMode);
 VARIANT_ENUM_CAST(VisualServer::LightOmniShadowMode);
 VARIANT_ENUM_CAST(VisualServer::LightOmniShadowDetail);
 VARIANT_ENUM_CAST(VisualServer::LightDirectionalShadowMode);
