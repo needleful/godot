@@ -2304,6 +2304,7 @@ bool Main::iteration() {
 	bool exit = false;
 
 	for (int iters = 0; iters < advance.physics_steps; ++iters) {
+		ProfileMarker phys_mark("Physics Step");
 		if (Input::get_singleton()->is_using_input_buffering() && agile_input_event_flushing) {
 			Input::get_singleton()->flush_buffered_events();
 		}
@@ -2356,14 +2357,17 @@ bool Main::iteration() {
 	}
 
 	uint64_t idle_begin = OS::get_singleton()->get_ticks_usec();
+	{
+		ProfileMarker other_things("Idle Frame");
 
-	if (OS::get_singleton()->get_main_loop()->idle(step * time_scale)) {
-		exit = true;
+		if (OS::get_singleton()->get_main_loop()->idle(step * time_scale)) {
+			exit = true;
+		}
+		visual_server_callbacks->flush();
+		message_queue->flush();
+
+		VisualServer::get_singleton()->sync(); //sync if still drawing from previous frames.
 	}
-	visual_server_callbacks->flush();
-	message_queue->flush();
-
-	VisualServer::get_singleton()->sync(); //sync if still drawing from previous frames.
 
 	if (OS::get_singleton()->can_draw() && VisualServer::get_singleton()->is_render_loop_enabled()) {
 		if ((!force_redraw_requested) && OS::get_singleton()->is_in_low_processor_usage_mode()) {
