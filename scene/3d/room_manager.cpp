@@ -1860,7 +1860,6 @@ bool RoomManager::_bound_findpoints_geom_instance(GeometryInstance *p_gi, Vector
 	}
 
 	// Fallback path for geometry that is not recognised
-	// (including CPUParticles, which will need to rely on an expansion margin)
 	r_aabb = p_gi->get_transformed_aabb();
 	return true;
 }

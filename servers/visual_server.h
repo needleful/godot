@@ -39,6 +39,8 @@
 #include "core/rid.h"
 #include "core/variant.h"
 
+#include "servers/visual/data_particles.h"
+
 class VisualServerCallbacks;
 
 class VisualServer : public Object {
@@ -535,6 +537,8 @@ public:
 
 	virtual RID particles_create() = 0;
 
+	virtual void particles_set(const ParticlesData &data) = 0;
+
 	virtual void particles_set_emitting(RID p_particles, bool p_emitting) = 0;
 	virtual bool particles_get_emitting(RID p_particles) = 0;
 	virtual void particles_set_amount(RID p_particles, int p_amount) = 0;
@@ -553,13 +557,7 @@ public:
 	virtual void particles_request_process(RID p_particles) = 0;
 	virtual void particles_restart(RID p_particles) = 0;
 
-	enum ParticlesDrawOrder {
-		PARTICLES_DRAW_ORDER_INDEX,
-		PARTICLES_DRAW_ORDER_LIFETIME,
-		PARTICLES_DRAW_ORDER_VIEW_DEPTH,
-	};
-
-	virtual void particles_set_draw_order(RID p_particles, ParticlesDrawOrder p_order) = 0;
+	virtual void particles_set_draw_order(RID p_particles, ParticlesData::DrawOrder p_order) = 0;
 
 	virtual void particles_set_draw_passes(RID p_particles, int p_count) = 0;
 	virtual void particles_set_draw_pass_mesh(RID p_particles, int p_pass, RID p_mesh) = 0;
@@ -581,15 +579,6 @@ public:
 	virtual void camera_set_environment(RID p_camera, RID p_env) = 0;
 	virtual void camera_set_use_vertical_aspect(RID p_camera, bool p_enable) = 0;
 
-	/*
-	enum ParticlesCollisionMode {
-		PARTICLES_COLLISION_NONE,
-		PARTICLES_COLLISION_TEXTURE,
-		PARTICLES_COLLISION_CUBEMAP,
-	};
-
-	virtual void particles_set_collision(RID p_particles,ParticlesCollisionMode p_mode,const Transform&, p_xform,const RID p_depth_tex,const RID p_normal_tex)=0;
-*/
 	/* VIEWPORT TARGET API */
 
 	virtual RID viewport_create() = 0;
@@ -1191,7 +1180,6 @@ VARIANT_ENUM_CAST(VisualServer::LightOmniShadowDetail);
 VARIANT_ENUM_CAST(VisualServer::LightDirectionalShadowMode);
 VARIANT_ENUM_CAST(VisualServer::LightDirectionalShadowDepthRangeMode);
 VARIANT_ENUM_CAST(VisualServer::ReflectionProbeUpdateMode);
-VARIANT_ENUM_CAST(VisualServer::ParticlesDrawOrder);
 VARIANT_ENUM_CAST(VisualServer::EnvironmentBG);
 VARIANT_ENUM_CAST(VisualServer::EnvironmentDOFBlurQuality);
 VARIANT_ENUM_CAST(VisualServer::EnvironmentGlowBlendMode);
@@ -1203,6 +1191,7 @@ VARIANT_ENUM_CAST(VisualServer::ShadowCastingSetting);
 VARIANT_ENUM_CAST(VisualServer::TextureType);
 VARIANT_ENUM_CAST(VisualServer::ChangedPriority);
 VARIANT_ENUM_CAST(VisualServer::ShadowRenderDistance);
+VARIANT_ENUM_CAST(ParticlesData::DrawOrder);
 
 //typedef VisualServer VS; // makes it easier to use
 #define VS VisualServer

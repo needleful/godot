@@ -6127,6 +6127,10 @@ RID RasterizerStorageGLES3::particles_create() {
 	return particles_owner.make_rid(particles);
 }
 
+void RasterizerStorageGLES3::particles_set(const ParticlesData &data) {
+	return;
+}
+
 void RasterizerStorageGLES3::particles_set_emitting(RID p_particles, bool p_emitting) {
 	Particles *particles = particles_owner.getornull(p_particles);
 	ERR_FAIL_COND(!particles);
@@ -6220,7 +6224,7 @@ void RasterizerStorageGLES3::particles_set_randomness_ratio(RID p_particles, flo
 }
 
 void RasterizerStorageGLES3::_particles_update_histories(Particles *particles) {
-	bool needs_histories = particles->draw_order == VS::PARTICLES_DRAW_ORDER_VIEW_DEPTH;
+	bool needs_histories = particles->draw_order == ParticlesData::DRAW_ORDER_VIEW_DEPTH;
 
 	if (needs_histories == particles->histories_enabled) {
 		return;
@@ -6298,7 +6302,7 @@ void RasterizerStorageGLES3::particles_set_process_material(RID p_particles, RID
 	particles->process_material = p_material;
 }
 
-void RasterizerStorageGLES3::particles_set_draw_order(RID p_particles, VS::ParticlesDrawOrder p_order) {
+void RasterizerStorageGLES3::particles_set_draw_order(RID p_particles, ParticlesData::DrawOrder p_order) {
 	Particles *particles = particles_owner.getornull(p_particles);
 	ERR_FAIL_COND(!particles);
 

@@ -365,6 +365,8 @@ public:
 
 	BIND0R(RID, particles_create)
 
+	BIND1(particles_set, const ParticlesData &);
+
 	BIND2(particles_set_emitting, RID, bool)
 	BIND1R(bool, particles_get_emitting, RID)
 	BIND2(particles_set_amount, RID, int)
@@ -383,7 +385,7 @@ public:
 	BIND1(particles_request_process, RID)
 	BIND1(particles_restart, RID)
 
-	BIND2(particles_set_draw_order, RID, VS::ParticlesDrawOrder)
+	BIND2(particles_set_draw_order, RID, ParticlesData::DrawOrder)
 
 	BIND2(particles_set_draw_passes, RID, int)
 	BIND3(particles_set_draw_pass_mesh, RID, int, RID)

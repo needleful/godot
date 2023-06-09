@@ -185,7 +185,7 @@ float Particles2D::get_speed_scale() const {
 
 void Particles2D::set_draw_order(DrawOrder p_order) {
 	draw_order = p_order;
-	VS::get_singleton()->particles_set_draw_order(particles, VS::ParticlesDrawOrder(p_order));
+	VS::get_singleton()->particles_set_draw_order(particles, ParticlesData::DrawOrder(p_order));
 }
 
 Particles2D::DrawOrder Particles2D::get_draw_order() const {

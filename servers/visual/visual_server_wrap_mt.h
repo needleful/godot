@@ -288,6 +288,7 @@ public:
 
 	FUNCRID(particles)
 
+	FUNC1(particles_set, const ParticlesData &);
 	FUNC2(particles_set_emitting, RID, bool)
 	FUNC1R(bool, particles_get_emitting, RID)
 	FUNC2(particles_set_amount, RID, int)
@@ -306,7 +307,7 @@ public:
 	FUNC1(particles_request_process, RID)
 	FUNC1(particles_restart, RID)
 
-	FUNC2(particles_set_draw_order, RID, VS::ParticlesDrawOrder)
+	FUNC2(particles_set_draw_order, RID, ParticlesData::DrawOrder)
 
 	FUNC2(particles_set_draw_passes, RID, int)
 	FUNC3(particles_set_draw_pass_mesh, RID, int, RID)

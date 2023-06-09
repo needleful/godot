@@ -1061,7 +1061,7 @@ public:
 	void light_set_negative(RID p_light, bool p_enable);
 	void light_set_cull_mask(RID p_light, uint32_t p_mask);
 	void light_set_reverse_cull_face_mode(RID p_light, bool p_enabled);
-	
+
 	void light_omni_set_shadow_mode(RID p_light, VS::LightOmniShadowMode p_mode);
 	void light_omni_set_shadow_detail(RID p_light, VS::LightOmniShadowDetail p_detail);
 
@@ -1222,7 +1222,7 @@ public:
 		bool use_local_coords;
 		RID process_material;
 
-		VS::ParticlesDrawOrder draw_order;
+		ParticlesData::DrawOrder draw_order;
 
 		Vector<RID> draw_passes;
 
@@ -1266,7 +1266,7 @@ public:
 				restart_request(false),
 				custom_aabb(AABB(Vector3(-4, -4, -4), Vector3(8, 8, 8))),
 				use_local_coords(true),
-				draw_order(VS::PARTICLES_DRAW_ORDER_INDEX),
+				draw_order(ParticlesData::DRAW_ORDER_INDEX),
 				histories_enabled(false),
 				particle_element(this),
 				prev_ticks(0),
@@ -1301,6 +1301,8 @@ public:
 
 	RID particles_create();
 
+	void particles_set(const ParticlesData &data);
+
 	void particles_set_emitting(RID p_particles, bool p_emitting);
 	bool particles_get_emitting(RID p_particles);
 	void particles_set_amount(RID p_particles, int p_amount);
@@ -1317,7 +1319,7 @@ public:
 	void particles_set_fractional_delta(RID p_particles, bool p_enable);
 	void particles_restart(RID p_particles);
 
-	void particles_set_draw_order(RID p_particles, VS::ParticlesDrawOrder p_order);
+	void particles_set_draw_order(RID p_particles, ParticlesData::DrawOrder p_order);
 
 	void particles_set_draw_passes(RID p_particles, int p_passes);
 	void particles_set_draw_pass_mesh(RID p_particles, int p_pass, RID p_mesh);

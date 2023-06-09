@@ -2079,7 +2079,7 @@ void RasterizerCanvasGLES3::render_batches(Item *p_current_clip, bool &r_reclip,
 
 							int amount = particles->amount;
 
-							if (particles->draw_order != VS::PARTICLES_DRAW_ORDER_LIFETIME) {
+							if (particles->draw_order != ParticlesData::DRAW_ORDER_LIFETIME) {
 								glEnableVertexAttribArray(8); //xform x
 								glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, stride, CAST_INT_TO_UCHAR_PTR(sizeof(float) * 4 * 3));
 								glVertexAttribDivisor(8, 1);

@@ -32,7 +32,6 @@
 
 #include "core/io/resource_loader.h"
 #include "editor/plugins/spatial_editor_plugin.h"
-#include "scene/3d/cpu_particles.h"
 #include "scene/resources/particles_material.h"
 
 bool ParticlesEditorBase::_generate(PoolVector<Vector3> &points, PoolVector<Vector3> &normals) {
@@ -286,23 +285,6 @@ void ParticlesEditor::_menu_option(int p_option) {
 			emission_tree_dialog->popup_centered_ratio();
 
 		} break;
-		case MENU_OPTION_CONVERT_TO_CPU_PARTICLES: {
-			CPUParticles *cpu_particles = memnew(CPUParticles);
-			cpu_particles->convert_from_particles(node);
-			cpu_particles->set_name(node->get_name());
-			cpu_particles->set_transform(node->get_transform());
-			cpu_particles->set_visible(node->is_visible());
-			cpu_particles->set_pause_mode(node->get_pause_mode());
-
-			UndoRedo *ur = EditorNode::get_singleton()->get_undo_redo();
-			ur->create_action(TTR("Convert to CPUParticles"));
-			ur->add_do_method(EditorNode::get_singleton()->get_scene_tree_dock(), "replace_node", node, cpu_particles, true, false);
-			ur->add_do_reference(cpu_particles);
-			ur->add_undo_method(EditorNode::get_singleton()->get_scene_tree_dock(), "replace_node", cpu_particles, node, false, false);
-			ur->add_undo_reference(node);
-			ur->commit_action();
-
-		} break;
 		case MENU_OPTION_RESTART: {
 			node->restart();
 
@@ -448,8 +430,6 @@ ParticlesEditor::ParticlesEditor() {
 	options->get_popup()->add_separator();
 	options->get_popup()->add_item(TTR("Create Emission Points From Mesh"), MENU_OPTION_CREATE_EMISSION_VOLUME_FROM_MESH);
 	options->get_popup()->add_item(TTR("Create Emission Points From Node"), MENU_OPTION_CREATE_EMISSION_VOLUME_FROM_NODE);
-	options->get_popup()->add_separator();
-	options->get_popup()->add_item(TTR("Convert to CPUParticles"), MENU_OPTION_CONVERT_TO_CPU_PARTICLES);
 	options->get_popup()->add_separator();
 	options->get_popup()->add_item(TTR("Restart"), MENU_OPTION_RESTART);
 

@@ -1377,7 +1377,7 @@ void RasterizerSceneGLES3::_setup_geometry(RenderList::Element *e, const Transfo
 			RasterizerStorageGLES3::Particles *particles = static_cast<RasterizerStorageGLES3::Particles *>(e->owner);
 			RasterizerStorageGLES3::Surface *s = static_cast<RasterizerStorageGLES3::Surface *>(e->geometry);
 
-			if (particles->draw_order == VS::PARTICLES_DRAW_ORDER_VIEW_DEPTH && particles->particle_valid_histories[1]) {
+			if (particles->draw_order == ParticlesData::DRAW_ORDER_VIEW_DEPTH && particles->particle_valid_histories[1]) {
 				glBindBuffer(GL_ARRAY_BUFFER, particles->particle_buffer_histories[1]); //modify the buffer, this was used 2 frames ago so it should be good enough for flushing
 				RasterizerGLES3Particle *particle_array;
 #ifndef __EMSCRIPTEN__
@@ -1438,7 +1438,7 @@ void RasterizerSceneGLES3::_setup_geometry(RenderList::Element *e, const Transfo
 
 			//transform
 
-			if (particles->draw_order != VS::PARTICLES_DRAW_ORDER_LIFETIME) {
+			if (particles->draw_order != ParticlesData::DRAW_ORDER_LIFETIME) {
 				glEnableVertexAttribArray(8); //xform x
 				glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, stride, CAST_INT_TO_UCHAR_PTR(sizeof(float) * 4 * 3));
 				glVertexAttribDivisor(8, 1);
@@ -1653,7 +1653,7 @@ void RasterizerSceneGLES3::_render_geometry(RenderList::Element *e) {
 
 			int amount = particles->amount;
 
-			if (particles->draw_order == VS::PARTICLES_DRAW_ORDER_LIFETIME) {
+			if (particles->draw_order == ParticlesData::DRAW_ORDER_LIFETIME) {
 				//split
 
 				int stride = sizeof(float) * 4 * 6;
