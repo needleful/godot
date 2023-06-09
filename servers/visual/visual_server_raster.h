@@ -365,7 +365,7 @@ public:
 
 	BIND0R(RID, particles_create)
 
-	BIND1(particles_set, const ParticlesData &);
+	BIND2(particles_set, RID, const ParticlesData &);
 
 	BIND2(particles_set_emitting, RID, bool)
 	BIND1R(bool, particles_get_emitting, RID)

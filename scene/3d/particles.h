@@ -42,10 +42,14 @@ private:
 
 	Ref<Material> process_material;
 	Vector<Ref<Mesh>> draw_passes;
-	ParticlesData data;
 	RID particles;
+	ParticlesData data;
+	bool emitting : 1;
 	bool dirty : 1;
 	bool emit_changed : 1;
+
+	void _mark_dirty();
+	void _update_dirty();
 
 protected:
 	static void _bind_methods();

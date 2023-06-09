@@ -1208,50 +1208,43 @@ public:
 	/* PARTICLES */
 
 	struct Particles : public GeometryOwner {
-		bool inactive;
+		SelfList<Particles> particle_element;
+		RID draw_passes[ParticlesData::MAX_DRAW_PASSES];
+		AABB custom_aabb;
+		RID process_material;
+		ParticlesData::DrawOrder draw_order;
+		Transform emission_transform;
 		float inactive_time;
-		bool emitting;
-		bool one_shot;
-		int amount;
 		float lifetime;
 		float pre_process_time;
 		float explosiveness;
 		float randomness;
-		bool restart_request;
-		AABB custom_aabb;
-		bool use_local_coords;
-		RID process_material;
-
-		ParticlesData::DrawOrder draw_order;
-
-		Vector<RID> draw_passes;
+		float speed_scale;
+		float phase;
+		float prev_phase;
+		float frame_remainder;
+		int fixed_fps;
+		int amount;
 
 		GLuint particle_buffers[2];
 		GLuint particle_vaos[2];
 
 		GLuint particle_buffer_histories[2];
 		GLuint particle_vao_histories[2];
-		bool particle_valid_histories[2];
-		bool histories_enabled;
 
-		SelfList<Particles> particle_element;
-
-		float phase;
-		float prev_phase;
 		uint64_t prev_ticks;
 		uint32_t random_seed;
-
 		uint32_t cycle_number;
 
-		float speed_scale;
-
-		int fixed_fps;
-		bool fractional_delta;
-		float frame_remainder;
-
-		bool clear;
-
-		Transform emission_transform;
+		bool particle_valid_histories[2];
+		bool histories_enabled : 1;
+		bool clear : 1;
+		bool fractional_delta : 1;
+		bool restart_request : 1;
+		bool inactive : 1;
+		bool emitting : 1;
+		bool one_shot : 1;
+		bool use_local_coords : 1;
 
 		Particles() :
 				inactive(true),
@@ -1277,6 +1270,9 @@ public:
 				fractional_delta(false),
 				frame_remainder(0),
 				clear(true) {
+			for (int i = 0; i < ParticlesData::MAX_DRAW_PASSES; i++) {
+				draw_passes[i] = RID();
+			}
 			particle_buffers[0] = 0;
 			particle_buffers[1] = 0;
 			glGenBuffers(2, particle_buffers);
@@ -1301,7 +1297,7 @@ public:
 
 	RID particles_create();
 
-	void particles_set(const ParticlesData &data);
+	void particles_set(RID p_particles, const ParticlesData &data);
 
 	void particles_set_emitting(RID p_particles, bool p_emitting);
 	bool particles_get_emitting(RID p_particles);

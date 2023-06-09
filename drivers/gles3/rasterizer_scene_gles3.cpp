@@ -3187,7 +3187,7 @@ void RasterizerSceneGLES3::_fill_render_list(RasterizerInstance **p_cull_result,
 				RasterizerStorageGLES3::Particles *particles = storage->particles_owner.getptr(inst->base);
 				ERR_CONTINUE(!particles);
 
-				for (int j = 0; j < particles->draw_passes.size(); j++) {
+				for (int j = 0; j < ParticlesData::MAX_DRAW_PASSES; j++) {
 					RID pmesh = particles->draw_passes[j];
 					if (!pmesh.is_valid()) {
 						continue;

@@ -537,7 +537,7 @@ public:
 
 	virtual RID particles_create() = 0;
 
-	virtual void particles_set(const ParticlesData &data) = 0;
+	virtual void particles_set(RID p_particles, const ParticlesData &data) = 0;
 
 	virtual void particles_set_emitting(RID p_particles, bool p_emitting) = 0;
 	virtual bool particles_get_emitting(RID p_particles) = 0;

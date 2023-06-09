@@ -6094,29 +6094,10 @@ RID RasterizerStorageGLES3::gi_probe_dynamic_data_create(int p_width, int p_heig
 void RasterizerStorageGLES3::gi_probe_dynamic_data_update(RID p_gi_probe_data, int p_depth_slice, int p_slice_count, int p_mipmap, const void *p_data) {
 	GIProbeData *gipd = gi_probe_data_owner.getornull(p_gi_probe_data);
 	ERR_FAIL_COND(!gipd);
-	/*
-	Vector<uint8_t> data;
-	data.resize((gipd->width>>p_mipmap)*(gipd->height>>p_mipmap)*(gipd->depth>>p_mipmap)*4);
 
-	for(int i=0;i<(gipd->width>>p_mipmap);i++) {
-		for(int j=0;j<(gipd->height>>p_mipmap);j++) {
-			for(int k=0;k<(gipd->depth>>p_mipmap);k++) {
-
-				int ofs = (k*(gipd->height>>p_mipmap)*(gipd->width>>p_mipmap)) + j *(gipd->width>>p_mipmap) + i;
-				ofs*=4;
-				data[ofs+0]=i*0xFF/(gipd->width>>p_mipmap);
-				data[ofs+1]=j*0xFF/(gipd->height>>p_mipmap);
-				data[ofs+2]=k*0xFF/(gipd->depth>>p_mipmap);
-				data[ofs+3]=0xFF;
-			}
-		}
-	}
-*/
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_3D, gipd->tex_id);
 	glTexSubImage3D(GL_TEXTURE_3D, p_mipmap, 0, 0, p_depth_slice, gipd->width >> p_mipmap, gipd->height >> p_mipmap, p_slice_count, GL_RGBA, GL_UNSIGNED_BYTE, p_data);
-	//glTexImage3D(GL_TEXTURE_3D,p_mipmap,GL_RGBA8,gipd->width>>p_mipmap,gipd->height>>p_mipmap,gipd->depth>>p_mipmap,0,GL_RGBA,GL_UNSIGNED_BYTE,p_data);
-	//glTexImage3D(GL_TEXTURE_3D,p_mipmap,GL_RGBA8,gipd->width>>p_mipmap,gipd->height>>p_mipmap,gipd->depth>>p_mipmap,0,GL_RGBA,GL_UNSIGNED_BYTE,data.ptr());
 }
 
 ///////
@@ -6127,8 +6108,30 @@ RID RasterizerStorageGLES3::particles_create() {
 	return particles_owner.make_rid(particles);
 }
 
-void RasterizerStorageGLES3::particles_set(const ParticlesData &data) {
-	return;
+void RasterizerStorageGLES3::particles_set(RID p_particles, const ParticlesData &data) {
+	Particles *particles = particles_owner.getornull(p_particles);
+	ERR_FAIL_COND(!particles);
+
+	particles->process_material = data.process_material;
+	particles->lifetime = data.lifetime;
+	particles->pre_process_time = data.pre_process_time;
+	particles->explosiveness = data.explosiveness_ratio;
+	particles->randomness = data.randomness_ratio;
+	particles->speed_scale = data.speed_scale;
+	particles->fixed_fps = data.fixed_fps;
+	particles->one_shot = data.one_shot;
+	particles->use_local_coords = data.local_coords;
+	particles->fractional_delta = data.fractional_delta;
+
+	particles_set_amount(p_particles, data.amount);
+	particles_set_draw_order(p_particles, data.draw_order);
+
+	if (!data.visibility_aabb.has_no_area()) {
+		particles_set_custom_aabb(p_particles, data.visibility_aabb);
+	}
+	for (short i = 0; i < ParticlesData::MAX_DRAW_PASSES; i++) {
+		particles->draw_passes[i] = data.draw_passes[i];
+	}
 }
 
 void RasterizerStorageGLES3::particles_set_emitting(RID p_particles, bool p_emitting) {
@@ -6313,15 +6316,16 @@ void RasterizerStorageGLES3::particles_set_draw_order(RID p_particles, Particles
 void RasterizerStorageGLES3::particles_set_draw_passes(RID p_particles, int p_passes) {
 	Particles *particles = particles_owner.getornull(p_particles);
 	ERR_FAIL_COND(!particles);
-
-	particles->draw_passes.resize(p_passes);
+	for (int i = p_passes; i < ParticlesData::MAX_DRAW_PASSES; i++) {
+		particles->draw_passes[i] = RID();
+	}
 }
 
 void RasterizerStorageGLES3::particles_set_draw_pass_mesh(RID p_particles, int p_pass, RID p_mesh) {
 	Particles *particles = particles_owner.getornull(p_particles);
 	ERR_FAIL_COND(!particles);
-	ERR_FAIL_INDEX(p_pass, particles->draw_passes.size());
-	particles->draw_passes.write[p_pass] = p_mesh;
+	ERR_FAIL_INDEX(p_pass, ParticlesData::MAX_DRAW_PASSES);
+	particles->draw_passes[p_pass] = p_mesh;
 }
 
 void RasterizerStorageGLES3::particles_restart(RID p_particles) {
@@ -6386,7 +6390,7 @@ AABB RasterizerStorageGLES3::particles_get_current_aabb(RID p_particles) {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	float longest_axis = 0;
-	for (int i = 0; i < particles->draw_passes.size(); i++) {
+	for (int i = 0; i < ParticlesData::MAX_DRAW_PASSES; i++) {
 		if (particles->draw_passes[i].is_valid()) {
 			AABB maabb = mesh_get_aabb(particles->draw_passes[i], RID());
 			longest_axis = MAX(maabb.get_longest_axis_size(), longest_axis);
@@ -6415,14 +6419,18 @@ void RasterizerStorageGLES3::particles_set_emission_transform(RID p_particles, c
 int RasterizerStorageGLES3::particles_get_draw_passes(RID p_particles) const {
 	const Particles *particles = particles_owner.getornull(p_particles);
 	ERR_FAIL_COND_V(!particles, 0);
-
-	return particles->draw_passes.size();
+	for (int i = 0; i < ParticlesData::MAX_DRAW_PASSES; i++) {
+		if (!particles->draw_passes[i].is_valid()) {
+			return i;
+		}
+	}
+	return ParticlesData::MAX_DRAW_PASSES;
 }
 
 RID RasterizerStorageGLES3::particles_get_draw_pass_mesh(RID p_particles, int p_pass) const {
 	const Particles *particles = particles_owner.getornull(p_particles);
 	ERR_FAIL_COND_V(!particles, RID());
-	ERR_FAIL_INDEX_V(p_pass, particles->draw_passes.size(), RID());
+	ERR_FAIL_INDEX_V(p_pass, ParticlesData::MAX_DRAW_PASSES, RID());
 
 	return particles->draw_passes[p_pass];
 }
