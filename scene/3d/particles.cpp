@@ -170,8 +170,7 @@ void Particles::set_draw_pass_mesh(int p_pass, const Ref<Mesh> &p_mesh) {
 		data.draw_passes[p_pass] = RID();
 	}
 
-	VS::get_singleton()->particles_set_draw_pass_mesh(particles, p_pass, mesh_rid);
-
+	_mark_dirty();
 	update_configuration_warning();
 }
 
