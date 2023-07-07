@@ -46,7 +46,6 @@ private:
 	ParticlesData data;
 	bool emitting : 1;
 	bool dirty : 1;
-	bool emit_changed : 1;
 
 	void _mark_dirty();
 	void _update_dirty();

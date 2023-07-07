@@ -43,9 +43,14 @@ PoolVector<Face3> Particles::get_faces(uint32_t p_usage_flags) const {
 }
 
 void Particles::set_emitting(bool p_emitting) {
-	emit_changed = true;
 	emitting = p_emitting;
-	set_process_internal(true);
+	VS::get_singleton()->particles_set_emitting(particles, emitting);
+
+	if (emitting && data.one_shot) {
+		set_process_internal(true);
+	} else if (!emitting) {
+		set_process_internal(false);
+	}
 }
 
 void Particles::_mark_dirty() {
@@ -54,15 +59,7 @@ void Particles::_mark_dirty() {
 }
 
 void Particles::_update_dirty() {
-	if (emit_changed) {
-		VS::get_singleton()->particles_set_emitting(particles, emitting);
-
-		if (emitting && data.one_shot) {
-			set_process_internal(true);
-		} else if (!emitting) {
-			set_process_internal(false);
-		}
-	} else {
+	if (!emitting || !data.one_shot) {
 		set_process_internal(false);
 	}
 
@@ -70,12 +67,7 @@ void Particles::_update_dirty() {
 		VS::get_singleton()->particles_set(particles, data);
 	}
 
-	if (dirty && emit_changed && !data.one_shot) {
-		VisualServer::get_singleton()->particles_restart(particles);
-	}
-
 	dirty = false;
-	emit_changed = false;
 }
 
 void Particles::set_amount(int p_amount) {
@@ -92,7 +84,15 @@ void Particles::set_lifetime(float p_lifetime) {
 
 void Particles::set_one_shot(bool p_one_shot) {
 	data.one_shot = p_one_shot;
-	emit_changed = true;
+	if (is_emitting()) {
+		set_process_internal(true);
+		if (!data.one_shot) {
+			VisualServer::get_singleton()->particles_restart(particles);
+		}
+	}
+	if (!dirty && !data.one_shot) {
+		set_process_internal(false);
+	}
 	_mark_dirty();
 }
 
@@ -331,7 +331,7 @@ void Particles::_notification(int p_what) {
 	// Use internal process when emitting and one_shot are on so that when
 	// the shot ends the editor can properly update
 	if (p_what == NOTIFICATION_INTERNAL_PROCESS) {
-		if (dirty || emit_changed) {
+		if (dirty) {
 			_update_dirty();
 		}
 		if (data.one_shot && !is_emitting()) {
@@ -417,8 +417,7 @@ void Particles::_bind_methods() {
 Particles::Particles() {
 	particles = RID_PRIME(VS::get_singleton()->particles_create());
 	set_base(particles);
-	data.one_shot = false; // Needed so that set_emitting doesn't access uninitialized values
-	set_emitting(true);
+	set_emitting(false);
 	set_one_shot(false);
 	set_amount(8);
 	set_lifetime(1);
@@ -432,8 +431,7 @@ Particles::Particles() {
 	set_draw_passes(1);
 	set_draw_order(ParticlesData::DRAW_ORDER_INDEX);
 	set_speed_scale(1);
-	dirty = true;
-	emit_changed = true;
+	dirty = false;
 }
 
 Particles::~Particles() {
