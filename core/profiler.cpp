@@ -6,9 +6,9 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #undef WIN32_LEAN_AND_MEAN
-#include <profileapi.h>
 #include "core/io/logger.h"
 #include "core/os/memory.h"
+#include <profileapi.h>
 #endif // NP_PROFILER
 
 ProfileMarker::ProfileMarker(const char *p_func) {
@@ -103,14 +103,14 @@ ProfilerManager::ProfilerManager() {
 	ProfilerManager::singleton = this;
 	capacity = 1024;
 	size = 0;
-	buffer = (ProfileToken *)memalloc(sizeof(ProfileToken) * capacity);
+	buffer = (ProfileToken *)Memory::alloc_static(sizeof(ProfileToken) * capacity, true);
 	time_offset = 0;
 #endif
 }
 
 void ProfilerManager::_realloc() {
 #ifdef NP_PROFILER
-	buffer = (ProfileToken *)memrealloc(buffer, sizeof(ProfileToken) * capacity);
+	buffer = (ProfileToken *)Memory::realloc_static(buffer, sizeof(ProfileToken) * capacity, true);
 #endif
 }
 
@@ -155,7 +155,7 @@ void ProfilerManager::log_and_wipe(uint64_t frame_time, Logger *p_logger) {
 
 ProfilerManager::~ProfilerManager() {
 #ifdef NP_PROFILER
-	memfree(buffer);
+	Memory::free_static(buffer, true);
 	buffer = nullptr;
 	size = 0;
 	capacity = 0;
