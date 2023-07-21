@@ -314,40 +314,6 @@ private:
 			custom_effect.unref();
 		}
 	};
-
-	ItemFrame *main;
-	Item *current;
-	ItemFrame *current_frame;
-
-	VScrollBar *vscroll;
-
-	bool scroll_visible;
-	bool scroll_follow;
-	bool scroll_following;
-	bool scroll_active;
-	int scroll_w;
-	bool scroll_updated;
-	bool updating_scroll;
-	int current_idx;
-	int visible_line_count;
-
-	int tab_size;
-	bool underline_meta;
-	bool override_selected_font_color;
-
-	Align default_align;
-
-	ItemMeta *meta_hovering;
-	Variant current_meta;
-
-	Vector<Ref<RichTextEffect>> custom_effects;
-
-	void _invalidate_current_line(ItemFrame *p_frame);
-	void _validate_line_caches(ItemFrame *p_frame);
-
-	void _add_item(Item *p_item, bool p_enter = false, bool p_ensure_newline = false);
-	void _remove_item(Item *p_item, const int p_line, const int p_subitem_line);
-
 	struct ProcessState {
 		int line_width;
 	};
@@ -373,11 +339,47 @@ private:
 		bool drag_attempt;
 	};
 
+	Vector<Ref<RichTextEffect>> custom_effects;
+	Variant current_meta;
+	ItemMeta *meta_hovering;
+
 	Selection selection;
-	bool deselect_on_focus_loss_enabled;
+
+	ItemFrame *main;
+	Item *current;
+	ItemFrame *current_frame;
+
+	VScrollBar *vscroll;
+	String bbcode;
 
 	int visible_characters;
+
+	int scroll_w;
+	int current_idx;
+	int visible_line_count;
+
+	int tab_size;
 	float percent_visible;
+
+	Align default_align;
+
+	bool underline_meta : 1;
+	bool override_selected_font_color : 1;
+	bool scroll_updated : 1;
+	bool updating_scroll : 1;
+	bool scroll_visible : 1;
+	bool scroll_follow : 1;
+	bool scroll_following : 1;
+	bool scroll_active : 1;
+	bool fit_to_content : 1;
+	bool use_bbcode : 1;
+	bool deselect_on_focus_loss_enabled : 1;
+
+	void _invalidate_current_line(ItemFrame *p_frame);
+	void _validate_line_caches(ItemFrame *p_frame);
+
+	void _add_item(Item *p_item, bool p_enter = false, bool p_ensure_newline = false);
+	void _remove_item(Item *p_item, const int p_line, const int p_subitem_line);
 
 	bool _is_click_inside_selection() const;
 	int _process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &y, int p_width, int p_line, ProcessMode p_mode, const Ref<Font> &p_base_font, const Color &p_base_color, const Color &p_font_color_shadow, bool p_shadow_as_outline, const Point2 &shadow_ofs, const Point2i &p_click_pos = Point2i(), Item **r_click_item = nullptr, int *r_click_char = nullptr, bool *r_outside = nullptr, int p_char_count = 0);
@@ -405,13 +407,6 @@ private:
 	Rect2 _get_text_rect();
 	Ref<RichTextEffect> _get_custom_effect_by_code(String p_bbcode_identifier);
 	virtual Dictionary parse_expressions_for_values(Vector<String> p_expressions);
-
-	bool use_bbcode;
-	String bbcode;
-
-	int fixed_width;
-
-	bool fit_content_height;
 
 protected:
 	void _notification(int p_what);
@@ -466,8 +461,8 @@ public:
 	void set_tab_size(int p_spaces);
 	int get_tab_size() const;
 
-	void set_fit_content_height(bool p_enabled);
-	bool is_fit_content_height_enabled() const;
+	void set_fit_to_content(bool p_enabled);
+	bool is_fit_to_content_enabled() const;
 
 	bool search(const String &p_string, bool p_from_selection = false, bool p_search_previous = false);
 
@@ -513,7 +508,6 @@ public:
 
 	void install_effect(const Variant effect);
 
-	void set_fixed_size_to_width(int p_width);
 	virtual Size2 get_minimum_size() const;
 
 	RichTextLabel();

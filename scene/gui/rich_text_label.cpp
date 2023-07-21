@@ -1583,9 +1583,6 @@ void RichTextLabel::_validate_line_caches(ItemFrame *p_frame) {
 
 	//validate invalid lines
 	Size2 size = get_size();
-	if (fixed_width != -1) {
-		size.width = fixed_width;
-	}
 	Rect2 text_rect = _get_text_rect();
 	Color font_color_shadow = get_color("font_color_shadow");
 	bool use_outline = get_constant("shadow_as_outline");
@@ -1620,7 +1617,7 @@ void RichTextLabel::_validate_line_caches(ItemFrame *p_frame) {
 
 	updating_scroll = false;
 
-	if (fit_content_height) {
+	if (fit_to_content) {
 		minimum_size_changed();
 	}
 }
@@ -2044,15 +2041,15 @@ int RichTextLabel::get_tab_size() const {
 	return tab_size;
 }
 
-void RichTextLabel::set_fit_content_height(bool p_enabled) {
-	if (p_enabled != fit_content_height) {
-		fit_content_height = p_enabled;
+void RichTextLabel::set_fit_to_content(bool p_enabled) {
+	if (p_enabled != fit_to_content) {
+		fit_to_content = p_enabled;
 		minimum_size_changed();
 	}
 }
 
-bool RichTextLabel::is_fit_content_height_enabled() const {
-	return fit_content_height;
+bool RichTextLabel::is_fit_to_content_enabled() const {
+	return fit_to_content;
 }
 
 void RichTextLabel::set_meta_underline(bool p_underline) {
@@ -2862,8 +2859,8 @@ void RichTextLabel::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_tab_size", "spaces"), &RichTextLabel::set_tab_size);
 	ClassDB::bind_method(D_METHOD("get_tab_size"), &RichTextLabel::get_tab_size);
 
-	ClassDB::bind_method(D_METHOD("set_fit_content_height", "enabled"), &RichTextLabel::set_fit_content_height);
-	ClassDB::bind_method(D_METHOD("is_fit_content_height_enabled"), &RichTextLabel::is_fit_content_height_enabled);
+	ClassDB::bind_method(D_METHOD("set_fit_to_content", "enabled"), &RichTextLabel::set_fit_to_content);
+	ClassDB::bind_method(D_METHOD("is_fit_to_content_enabled"), &RichTextLabel::is_fit_to_content_enabled);
 
 	ClassDB::bind_method(D_METHOD("set_selection_enabled", "enabled"), &RichTextLabel::set_selection_enabled);
 	ClassDB::bind_method(D_METHOD("is_selection_enabled"), &RichTextLabel::is_selection_enabled);
@@ -2910,7 +2907,7 @@ void RichTextLabel::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "tab_size", PROPERTY_HINT_RANGE, "0,24,1"), "set_tab_size", "get_tab_size");
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "text", PROPERTY_HINT_MULTILINE_TEXT), "set_text", "get_text");
 
-	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "fit_content_height"), "set_fit_content_height", "is_fit_content_height_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "fit_to_content"), "set_fit_to_content", "is_fit_to_content_enabled");
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "scroll_active"), "set_scroll_active", "is_scroll_active");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "scroll_following"), "set_scroll_follow", "is_scroll_following");
@@ -2987,18 +2984,9 @@ int RichTextLabel::get_total_character_count() const {
 	return tc;
 }
 
-void RichTextLabel::set_fixed_size_to_width(int p_width) {
-	fixed_width = p_width;
-	minimum_size_changed();
-}
-
 Size2 RichTextLabel::get_minimum_size() const {
 	Size2 size(0, 0);
-	if (fixed_width != -1) {
-		size.x = fixed_width;
-	}
-
-	if (fixed_width != -1 || fit_content_height) {
+	if (fit_to_content) {
 		size.y = get_content_height();
 	}
 
@@ -3123,8 +3111,7 @@ RichTextLabel::RichTextLabel() {
 	percent_visible = 1;
 	visible_line_count = 0;
 
-	fixed_width = -1;
-	fit_content_height = false;
+	fit_to_content = false;
 
 	set_clip_contents(true);
 }
