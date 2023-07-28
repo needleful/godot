@@ -35,6 +35,7 @@
 #include "core/list.h"
 #include "core/map.h"
 #include "core/object_id.h"
+#include "core/os/mutex.h"
 #include "core/os/rw_lock.h"
 #include "core/safe_refcount.h"
 #include "core/set.h"
@@ -469,6 +470,7 @@ private:
 		Signal() {}
 	};
 
+	static Mutex signal_mtx;
 	HashMap<StringName, Signal> signal_map;
 	List<Connection> connections;
 #ifdef DEBUG_ENABLED

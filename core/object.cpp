@@ -42,6 +42,8 @@
 
 #ifdef DEBUG_ENABLED
 
+Mutex Object::signal_mtx;
+
 struct _ObjectDebugLock {
 	Object *obj;
 
@@ -1935,6 +1937,7 @@ Object::Object() {
 	memset(_script_instance_bindings, 0, sizeof(void *) * MAX_SCRIPT_INSTANCE_BINDINGS);
 	script_instance = nullptr;
 	_rc.store(nullptr, std::memory_order_release);
+
 #ifdef TOOLS_ENABLED
 
 	_edited = false;
@@ -1966,24 +1969,28 @@ Object::~Object() {
 		ERR_PRINT("Object " + to_string() + " was freed or unreferenced while a signal is being emitted from it. Try connecting to the signal using 'CONNECT_DEFERRED' flag, or use queue_free() to free the object (if this object is a Node) to avoid this error and potential crashes.");
 	}
 
-	while ((S = signal_map.next(nullptr))) {
-		Signal *s = &signal_map[*S];
+	if (signal_map.size() || connections.size()) {
+		Object::signal_mtx.lock();
+		while ((S = signal_map.next(nullptr))) {
+			Signal *s = &signal_map[*S];
 
-		//brute force disconnect for performance
-		int slot_count = s->slot_map.size();
-		const VMap<Signal::Target, Signal::Slot>::Pair *slot_list = s->slot_map.get_array();
+			//brute force disconnect for performance
+			int slot_count = s->slot_map.size();
+			const VMap<Signal::Target, Signal::Slot>::Pair *slot_list = s->slot_map.get_array();
 
-		for (int i = 0; i < slot_count; i++) {
-			slot_list[i].value.conn.target->connections.erase(slot_list[i].value.cE);
+			for (int i = 0; i < slot_count; i++) {
+				slot_list[i].value.conn.target->connections.erase(slot_list[i].value.cE);
+			}
+
+			signal_map.erase(*S);
 		}
 
-		signal_map.erase(*S);
-	}
-
-	//signals from nodes that connect to this node
-	while (connections.size()) {
-		Connection c = connections.front()->get();
-		c.source->_disconnect(c.signal, c.target, c.method, true);
+		//signals from nodes that connect to this node
+		while (connections.size()) {
+			Connection c = connections.front()->get();
+			c.source->_disconnect(c.signal, c.target, c.method, true);
+		}
+		Object::signal_mtx.unlock();
 	}
 
 	ObjectDB::remove_instance(this);
