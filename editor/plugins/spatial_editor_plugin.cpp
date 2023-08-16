@@ -3884,7 +3884,14 @@ bool SpatialEditorViewport::_create_instance(Node *parent, String &path, const P
 		global_transform.origin = spatial_editor->snap_point(_get_instance_position(p_point));
 		global_transform.basis *= spatial->get_transform().basis;
 
-		editor_data->get_undo_redo().add_do_method(instanced_scene, "set_global_transform", global_transform);
+		Transform local_transform;
+		if (parent_spatial) {
+			local_transform = parent_spatial->get_global_transform().inverse() * global_transform;
+		} else {
+			local_transform = global_transform;
+		}
+
+		editor_data->get_undo_redo().add_do_method(instanced_scene, "set_transform", local_transform);
 	}
 
 	return true;
@@ -4000,10 +4007,10 @@ void SpatialEditorViewport::drop_data_fw(const Point2 &p_point, const Variant &p
 	Node *root_node = editor->get_edited_scene();
 	if (selected_nodes.size() == 1) {
 		Node *selected_node = selected_nodes[0];
-		target_node = root_node;
+		target_node = selected_node;
 		if (is_ctrl) {
-			target_node = selected_node;
-		} else if (is_shift && selected_node != root_node) {
+			target_node = root_node;
+		} else if (is_shift) {
 			target_node = selected_node->get_parent();
 		}
 	} else if (selected_nodes.size() == 0) {
@@ -4024,6 +4031,7 @@ void SpatialEditorViewport::drop_data_fw(const Point2 &p_point, const Variant &p
 	drop_pos = p_point;
 
 	_perform_drop_data();
+	EditorNode::get_singleton()->set_current_scene(EditorNode::get_editor_data().get_edited_scene());
 }
 
 SpatialEditorViewport::SpatialEditorViewport(SpatialEditor *p_spatial_editor, EditorNode *p_editor, int p_index) {

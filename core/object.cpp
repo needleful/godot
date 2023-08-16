@@ -42,8 +42,6 @@
 
 #ifdef DEBUG_ENABLED
 
-Mutex Object::signal_mtx;
-
 struct _ObjectDebugLock {
 	Object *obj;
 
@@ -63,6 +61,8 @@ struct _ObjectDebugLock {
 #define OBJ_DEBUG_LOCK
 
 #endif
+
+Mutex Object::signal_mtx;
 
 PropertyInfo::operator Dictionary() const {
 	Dictionary d;
