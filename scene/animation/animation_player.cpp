@@ -342,7 +342,7 @@ void AnimationPlayer::_animation_process_animation(AnimationData *p_anim, float 
 	ERR_FAIL_COND(p_anim->node_cache.size() != p_anim->animation->get_track_count());
 
 	Animation *a = p_anim->animation.operator->();
-	bool can_call = is_inside_tree() && !Engine::get_singleton()->is_editor_hint();
+	bool can_call = is_inside_tree() && (call_in_editor || !Engine::get_singleton()->is_editor_hint());
 
 	for (int i = 0; i < a->get_track_count(); i++) {
 		// If an animation changes this animation (or it animates itself)
@@ -1513,6 +1513,14 @@ void AnimationPlayer::get_argument_options(const StringName &p_function, int p_i
 	Node::get_argument_options(p_function, p_idx, r_options);
 }
 
+bool AnimationPlayer::can_call_in_editor() const {
+	return call_in_editor;
+}
+
+void AnimationPlayer::set_call_in_editor(bool p_play) {
+	call_in_editor = p_play;
+}
+
 #ifdef TOOLS_ENABLED
 Ref<AnimatedValuesBackup> AnimationPlayer::backup_animated_values(Node *p_root_override) {
 	Ref<AnimatedValuesBackup> backup;
@@ -1649,6 +1657,9 @@ void AnimationPlayer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_reset_on_save_enabled", "enabled"), &AnimationPlayer::set_reset_on_save_enabled);
 	ClassDB::bind_method(D_METHOD("is_reset_on_save_enabled"), &AnimationPlayer::is_reset_on_save_enabled);
 
+	ClassDB::bind_method(D_METHOD("set_call_in_editor", "enabled"), &AnimationPlayer::set_call_in_editor);
+	ClassDB::bind_method(D_METHOD("can_call_in_editor"), &AnimationPlayer::can_call_in_editor);
+
 	ClassDB::bind_method(D_METHOD("set_root", "path"), &AnimationPlayer::set_root);
 	ClassDB::bind_method(D_METHOD("get_root"), &AnimationPlayer::get_root);
 
@@ -1681,6 +1692,7 @@ void AnimationPlayer::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "playback_default_blend_time", PROPERTY_HINT_RANGE, "0,4096,0.01"), "set_default_blend_time", "get_default_blend_time");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "playback_active", PROPERTY_HINT_NONE, "", 0), "set_active", "is_active");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "playback_speed", PROPERTY_HINT_RANGE, "-64,64,0.01"), "set_speed_scale", "get_speed_scale");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "playback_call_in_editor", PROPERTY_HINT_NONE, ""), "set_call_in_editor", "can_call_in_editor");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "method_call_mode", PROPERTY_HINT_ENUM, "Deferred,Immediate"), "set_method_call_mode", "get_method_call_mode");
 
 	ADD_SIGNAL(MethodInfo("animation_finished", PropertyInfo(Variant::STRING, "anim_name")));
@@ -1712,6 +1724,7 @@ AnimationPlayer::AnimationPlayer() {
 	root = SceneStringNames::get_singleton()->path_pp;
 	playing = false;
 	active = true;
+	call_in_editor = false;
 	playback.seeked = false;
 	playback.started = false;
 }

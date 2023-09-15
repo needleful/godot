@@ -248,6 +248,8 @@ private:
 	bool processing;
 	bool active;
 
+	bool call_in_editor;
+
 	NodePath root;
 
 	void _animation_process_animation(AnimationData *p_anim, float p_time, float p_delta, float p_interp, bool p_is_current = true, bool p_seeked = false, bool p_started = false);
@@ -344,6 +346,9 @@ public:
 	void seek_delta(float p_time, float p_delta);
 	float get_current_animation_position() const;
 	float get_current_animation_length() const;
+
+	bool can_call_in_editor() const;
+	void set_call_in_editor(bool p_play);
 
 	void advance(float p_time);
 
