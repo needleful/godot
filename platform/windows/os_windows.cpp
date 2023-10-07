@@ -1362,7 +1362,6 @@ Error OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int
 	}
 
 	video_mode = p_desired;
-	//printf("**************** desired %s, mode %s\n", p_desired.fullscreen?"true":"false", video_mode.fullscreen?"true":"false");
 	RECT WindowRect;
 
 	WindowRect.left = 0;
@@ -1408,16 +1407,6 @@ Error OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int
 
 	pre_fs_valid = true;
 	if (video_mode.fullscreen) {
-		/* this returns DPI unaware size, commenting
-		DEVMODE current;
-		memset(&current, 0, sizeof(current));
-		EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &current);
-
-		WindowRect.right = current.dmPelsWidth;
-		WindowRect.bottom = current.dmPelsHeight;
-
-		*/
-
 		// Get the primary monitor without providing hwnd
 		// Solution from https://devblogs.microsoft.com/oldnewthing/20070809-00/?p=25643
 		const POINT ptZero = { 0, 0 };
@@ -1430,19 +1419,6 @@ Error OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int
 		WindowRect.right = data.size.width;
 		WindowRect.bottom = data.size.height;
 
-		/*  DEVMODE dmScreenSettings;
-		memset(&dmScreenSettings,0,sizeof(dmScreenSettings));
-		dmScreenSettings.dmSize=sizeof(dmScreenSettings);
-		dmScreenSettings.dmPelsWidth	= video_mode.width;
-		dmScreenSettings.dmPelsHeight	= video_mode.height;
-		dmScreenSettings.dmBitsPerPel	= current.dmBitsPerPel;
-		dmScreenSettings.dmFields=DM_BITSPERPEL|DM_PELSWIDTH|DM_PELSHEIGHT;
-
-		LONG err = ChangeDisplaySettings(&dmScreenSettings,CDS_FULLSCREEN);
-		if (err!=DISP_CHANGE_SUCCESSFUL) {
-
-			video_mode.fullscreen=false;
-		}*/
 		pre_fs_valid = false;
 
 		// If the user has mouse trails enabled in windows, then sometimes the cursor disappears in fullscreen mode.
@@ -2342,7 +2318,7 @@ bool OS_Windows::get_borderless_window() {
 
 void OS_Windows::_update_window_style(bool p_repaint, bool p_maximized) {
 	if (video_mode.fullscreen || video_mode.borderless_window) {
-		SetWindowLongPtr(hWnd, GWL_STYLE, WS_SYSMENU | WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE);
+		SetWindowLongPtr(hWnd, GWL_STYLE, WS_VISIBLE);
 	} else {
 		if (video_mode.resizable) {
 			if (p_maximized) {
