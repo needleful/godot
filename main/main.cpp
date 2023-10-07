@@ -1437,9 +1437,6 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	bool show_logo = true;
 #endif
 
-	if (init_screen != -1) {
-		OS::get_singleton()->set_current_screen(init_screen);
-	}
 	if (init_windowed) {
 		//do none..
 	} else if (init_maximized) {
@@ -2011,6 +2008,7 @@ bool Main::start() {
 			Size2i stretch_size = Size2(GLOBAL_DEF("display/window/size/width", 0), GLOBAL_DEF("display/window/size/height", 0));
 			// out of compatibility reasons stretch_scale is called shrink when exposed to the user.
 			real_t stretch_scale = GLOBAL_DEF("display/window/stretch/shrink", 1.0);
+			int starting_screen = GLOBAL_DEF("display/window/starting_screen", -1);
 
 			SceneTree::StretchMode sml_sm = SceneTree::STRETCH_MODE_DISABLED;
 			if (stretch_mode == "2d") {
@@ -2031,7 +2029,7 @@ bool Main::start() {
 			}
 
 			sml->set_screen_stretch(sml_sm, sml_aspect, stretch_size, stretch_scale);
-
+			sml->set_starting_screen(starting_screen);
 			sml->set_auto_accept_quit(GLOBAL_DEF("application/config/auto_accept_quit", true));
 			sml->set_quit_on_go_back(GLOBAL_DEF("application/config/quit_on_go_back", true));
 			String appname = ProjectSettings::get_singleton()->get("application/config/name");
@@ -2076,6 +2074,8 @@ bool Main::start() {
 			ProjectSettings::get_singleton()->set_custom_property_info("display/window/stretch/aspect", PropertyInfo(Variant::STRING, "display/window/stretch/aspect", PROPERTY_HINT_ENUM, "ignore,keep,keep_width,keep_height,expand"));
 			GLOBAL_DEF("display/window/stretch/shrink", 1.0);
 			ProjectSettings::get_singleton()->set_custom_property_info("display/window/stretch/shrink", PropertyInfo(Variant::REAL, "display/window/stretch/shrink", PROPERTY_HINT_RANGE, "0.1,8,0.01,or_greater"));
+			GLOBAL_DEF("display/window/starting_screen", -1);
+			ProjectSettings::get_singleton()->set_custom_property_info("display/window/starting_screen", PropertyInfo(Variant::REAL, "display/window/starting_screen"));
 			sml->set_auto_accept_quit(GLOBAL_DEF("application/config/auto_accept_quit", true));
 			sml->set_quit_on_go_back(GLOBAL_DEF("application/config/quit_on_go_back", true));
 			GLOBAL_DEF("gui/common/snap_controls_to_pixels", true);

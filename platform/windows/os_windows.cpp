@@ -1971,6 +1971,7 @@ void OS_Windows::set_current_screen(int p_screen) {
 		Vector2 ofs = get_window_position() - get_screen_position(get_current_screen());
 		set_window_position(ofs + get_screen_position(p_screen));
 	}
+	pre_fs_valid = false;
 }
 
 static BOOL CALLBACK _MonitorEnumProcPos(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMonitor, LPARAM dwData) {
@@ -2198,13 +2199,16 @@ void OS_Windows::set_window_fullscreen(bool p_enabled) {
 
 		video_mode.fullscreen = false;
 
+		int cs = get_current_screen();
+		Point2 start = get_screen_position(cs);
+
 		if (pre_fs_valid) {
 			rect = pre_fs_rect;
 		} else {
-			rect.left = 0;
-			rect.right = video_mode.width;
-			rect.top = 0;
-			rect.bottom = video_mode.height;
+			rect.left = start.x;
+			rect.right = start.x + video_mode.width;
+			rect.top = start.y;
+			rect.bottom = start.y + video_mode.height;
 		}
 
 		_update_window_style(false, was_maximized);

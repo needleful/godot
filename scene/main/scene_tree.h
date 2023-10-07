@@ -160,6 +160,7 @@ private:
 	StretchAspect stretch_aspect;
 	Size2i stretch_min;
 	real_t stretch_scale;
+	int starting_screen;
 
 	void _update_font_oversampling(float p_ratio);
 	void _update_root_rect();
@@ -380,6 +381,9 @@ public:
 	bool has_group(const StringName &p_identifier) const;
 
 	void set_screen_stretch(StretchMode p_mode, StretchAspect p_aspect, const Size2 &p_minsize, real_t p_scale = 1.0);
+
+	void set_starting_screen(int p_screen);
+	int get_starting_screen() const;
 
 	void set_use_font_oversampling(bool p_oversampling);
 	bool is_using_font_oversampling() const;

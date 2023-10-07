@@ -1368,6 +1368,22 @@ void SceneTree::set_screen_stretch(StretchMode p_mode, StretchAspect p_aspect, c
 	_update_root_rect();
 }
 
+void SceneTree::set_starting_screen(int p_screen) {
+	if (starting_screen == p_screen) {
+		return;
+	}
+
+	starting_screen = p_screen;
+	if (starting_screen >= 0) {
+		OS::get_singleton()->set_current_screen(starting_screen);
+		_update_root_rect();
+	}
+}
+
+int SceneTree::get_starting_screen() const {
+	return starting_screen;
+}
+
 void SceneTree::set_edited_scene_root(Node *p_node) {
 #ifdef TOOLS_ENABLED
 	edited_scene_root = p_node;
@@ -1996,6 +2012,9 @@ void SceneTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("quit", "exit_code"), &SceneTree::quit, DEFVAL(-1));
 
 	ClassDB::bind_method(D_METHOD("set_screen_stretch", "mode", "aspect", "minsize", "scale"), &SceneTree::set_screen_stretch, DEFVAL(1));
+
+	ClassDB::bind_method(D_METHOD("set_starting_screen", "screen"), &SceneTree::set_starting_screen, DEFVAL(-1));
+	ClassDB::bind_method(D_METHOD("get_starting_screen"), &SceneTree::get_starting_screen);
 
 	ClassDB::bind_method(D_METHOD("set_physics_interpolation_enabled", "enabled"), &SceneTree::set_physics_interpolation_enabled);
 	ClassDB::bind_method(D_METHOD("is_physics_interpolation_enabled"), &SceneTree::is_physics_interpolation_enabled);
