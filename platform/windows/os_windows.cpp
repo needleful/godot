@@ -2317,19 +2317,29 @@ bool OS_Windows::get_borderless_window() {
 }
 
 void OS_Windows::_update_window_style(bool p_repaint, bool p_maximized) {
+	DWORD style = WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
+	DWORD ex_style = WS_EX_WINDOWEDGE | WS_EX_ACCEPTFILES | WS_EX_APPWINDOW;
+
 	if (video_mode.fullscreen || video_mode.borderless_window) {
-		SetWindowLongPtr(hWnd, GWL_STYLE, WS_VISIBLE);
+		style |= WS_POPUP;
 	} else {
 		if (video_mode.resizable) {
+			style |= WS_OVERLAPPEDWINDOW;
 			if (p_maximized) {
-				SetWindowLongPtr(hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_MAXIMIZE);
-			} else {
-				SetWindowLongPtr(hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_VISIBLE);
+				style |= WS_OVERLAPPEDWINDOW | WS_MAXIMIZE;
 			}
 		} else {
-			SetWindowLongPtr(hWnd, GWL_STYLE, WS_CAPTION | WS_MINIMIZEBOX | WS_POPUPWINDOW | WS_VISIBLE);
+			style |= WS_CAPTION | WS_MINIMIZEBOX | WS_OVERLAPPED;
 		}
 	}
+	if (video_mode.fullscreen && video_mode.borderless_window) {
+		// I think this breaks the exclusive fullscreen stuff?
+		// Ironically this means it's not actually borderless
+		style |= WS_BORDER;
+	}
+
+	SetWindowLongPtr(hWnd, GWL_STYLE, style);
+	SetWindowLongPtr(hWnd, GWL_EXSTYLE, ex_style);
 
 	if (icon.is_valid()) {
 		set_icon(icon);
