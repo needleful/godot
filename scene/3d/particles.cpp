@@ -44,6 +44,9 @@ PoolVector<Face3> Particles::get_faces(uint32_t p_usage_flags) const {
 
 void Particles::set_emitting(bool p_emitting) {
 	emitting = p_emitting;
+	if (dirty) {
+		_update_dirty();
+	}
 	VS::get_singleton()->particles_set_emitting(particles, emitting);
 
 	if (emitting && data.one_shot) {
@@ -301,6 +304,9 @@ String Particles::get_configuration_warning() const {
 }
 
 void Particles::restart() {
+	if (dirty) {
+		_update_dirty();
+	}
 	VisualServer::get_singleton()->particles_restart(particles);
 	VisualServer::get_singleton()->particles_set_emitting(particles, true);
 }
