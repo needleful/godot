@@ -273,6 +273,7 @@ public:
 	FUNC2(reflection_probe_set_update_mode, RID, ReflectionProbeUpdateMode)
 	FUNC2(reflection_probe_set_intensity, RID, float)
 	FUNC2(reflection_probe_set_interior_ambient, RID, const Color &)
+	FUNC2(reflection_probe_set_interior_dark_ambient, RID, const Color &)
 	FUNC2(reflection_probe_set_interior_ambient_energy, RID, float)
 	FUNC2(reflection_probe_set_interior_ambient_probe_contribution, RID, float)
 	FUNC2(reflection_probe_set_max_distance, RID, float)

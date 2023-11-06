@@ -889,8 +889,9 @@ uniform highp sampler2DShadow shadow_atlas; // texunit:-6
 struct ReflectionData {
 	mediump vec4 box_extents;
 	mediump vec4 box_offset;
-	mediump vec4 params; // intensity, 0, interior , boxproject
+	mediump vec4 params; // intensity, 0, interior, boxproject
 	mediump vec4 ambient; // ambient color, energy
+	mediump vec4 ambient_dark; // dark ambient color
 	mediump vec4 atlas_clamp;
 	highp mat4 local_matrix; // up to here for spot and omni, rest is for directional
 	// notes: for ambientblend, use distance to edge to blend between already existing global environment
@@ -1443,7 +1444,7 @@ void light_process_spot(int idx, vec3 vertex, vec3 eye_vec, vec3 normal, vec3 bi
 	light_compute(normal, normalize(light_rel_vec), eye_vec, binormal, tangent, spot_lights[idx].light_color_energy.rgb, light_attenuation, albedo, transmission, spot_lights[idx].light_params.z * p_blob_intensity, roughness, metallic, specular, rim * spot_attenuation, rim_tint, clearcoat, clearcoat_gloss, anisotropy, diffuse_light, specular_light, alpha, ambient_light);
 }
 
-void reflection_process(int idx, vec3 vertex, vec3 normal, vec3 binormal, vec3 tangent, float roughness, float anisotropy, vec3 ambient, vec3 skybox, inout highp vec4 reflection_accum, inout highp vec4 ambient_accum) {
+void reflection_process(int idx, vec3 vertex, vec3 normal, vec3 world_normal, float roughness, vec3 ambient, vec3 skybox, inout highp vec4 reflection_accum, inout highp vec4 ambient_accum) {
 	vec3 ref_vec = normalize(reflect(vertex, normal));
 	vec3 local_pos = (reflections[idx].local_matrix * vec4(vertex, 1.0)).xyz;
 	vec3 box_extents = reflections[idx].box_extents.xyz;
@@ -1462,6 +1463,7 @@ void reflection_process(int idx, vec3 vertex, vec3 normal, vec3 binormal, vec3 t
 	if (reflections[idx].params.x > 0.0) { // compute reflection
 
 		vec3 local_ref_vec = (reflections[idx].local_matrix * vec4(ref_vec, 0.0)).xyz;
+		vec3 norm = normalize(local_ref_vec);
 
 		if (reflections[idx].params.w > 0.5) { //box project
 
@@ -1477,7 +1479,6 @@ void reflection_process(int idx, vec3 vertex, vec3 normal, vec3 binormal, vec3 t
 		}
 
 		vec4 clamp_rect = reflections[idx].atlas_clamp;
-		vec3 norm = normalize(local_ref_vec);
 		norm.xy /= 1.0 + abs(norm.z);
 		norm.xy = norm.xy * vec2(0.5, 0.25) + vec2(0.5, 0.25);
 		if (norm.z > 0.0) {
@@ -1500,52 +1501,16 @@ void reflection_process(int idx, vec3 vertex, vec3 normal, vec3 binormal, vec3 t
 		reflection_accum += reflection;
 	}
 
-	if (reflections[idx].ambient.a > 0.0) { //compute ambient using skybox
-		vec3 local_amb_vec = (reflections[idx].local_matrix * vec4(normal, 0.0)).xyz;
-		vec3 splane = normalize(local_amb_vec);
-		vec4 clamp_rect = reflections[idx].atlas_clamp;
-
-		splane.z *= -1.0;
-		if (splane.z >= 0.0) {
-			splane.z += 1.0;
-			clamp_rect.y += clamp_rect.w;
-		} else {
-			splane.z = 1.0 - splane.z;
-			splane.y = -splane.y;
-		}
-
-		splane.xy /= splane.z;
-		splane.xy = splane.xy * 0.5 + 0.5;
-		splane.xy = splane.xy * clamp_rect.zw + clamp_rect.xy;
-		splane.xy = clamp(splane.xy, clamp_rect.xy, clamp_rect.xy + clamp_rect.zw);
-
-		highp vec4 ambient_out;
-		ambient_out.a = blend;
-		ambient_out.rgb = textureLod(reflection_atlas, splane.xy, 5.0).rgb;
-		ambient_out.rgb = mix(reflections[idx].ambient.rgb, ambient_out.rgb, reflections[idx].ambient.a);
-
-		if (reflections[idx].params.z < 0.5) {
-			ambient_out.rgb = mix(ambient, ambient_out.rgb, blend);
-		}
-
-		ambient_out.rgb *= ambient_out.a;
-		ambient_accum += ambient_out;
+	highp vec4 ambient_out;
+	ambient_out.a = blend;
+	if (reflections[idx].params.z > 0.5) {
+		ambient_out.rgb = mix(reflections[idx].ambient_dark.rgb, reflections[idx].ambient.rgb, world_normal.y * 0.5 + 0.5);
 	} else {
-		highp vec4 ambient_out;
-		ambient_out.a = blend;
-		if (reflections[idx].params.z > 0.5) {
-			ambient_out.rgb = reflections[idx].ambient.rgb;
-		} else {
-			ambient_out.rgb = ambient.rgb;
-		}
-
-		if (reflections[idx].params.z < 0.5) {
-			ambient_out.rgb = mix(ambient, ambient_out.rgb, blend);
-		}
-
-		ambient_out.rgb *= ambient_out.a;
-		ambient_accum += ambient_out;
+		ambient_out.rgb = mix(ambient, ambient_out.rgb, blend);
 	}
+
+	ambient_out.rgb *= ambient_out.a;
+	ambient_accum += ambient_out;
 }
 
 void main() {
@@ -1749,7 +1714,7 @@ FRAGMENT_SHADER_CODE
 	highp vec4 reflection_accum = vec4(0.0, 0.0, 0.0, 0.0);
 	highp vec4 ambient_accum = vec4(0.0, 0.0, 0.0, 0.0);
 	for (int i = 0; i < reflection_count; i++) {
-		reflection_process(reflection_indices[i], vertex, normal, binormal, tangent, roughness, anisotropy, ambient_light, env_reflection_light, reflection_accum, ambient_accum);
+		reflection_process(reflection_indices[i], vertex, normal, world_normal_interp, roughness, ambient_light, env_reflection_light, reflection_accum, ambient_accum);
 	}
 
 	if (reflection_accum.a > 0.0) {

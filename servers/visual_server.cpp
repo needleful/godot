@@ -1985,6 +1985,7 @@ void VisualServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("reflection_probe_set_update_mode", "probe", "mode"), &VisualServer::reflection_probe_set_update_mode);
 	ClassDB::bind_method(D_METHOD("reflection_probe_set_intensity", "probe", "intensity"), &VisualServer::reflection_probe_set_intensity);
 	ClassDB::bind_method(D_METHOD("reflection_probe_set_interior_ambient", "probe", "color"), &VisualServer::reflection_probe_set_interior_ambient);
+	ClassDB::bind_method(D_METHOD("reflection_probe_set_interior_dark_ambient", "probe", "color"), &VisualServer::reflection_probe_set_interior_ambient);
 	ClassDB::bind_method(D_METHOD("reflection_probe_set_interior_ambient_energy", "probe", "energy"), &VisualServer::reflection_probe_set_interior_ambient_energy);
 	ClassDB::bind_method(D_METHOD("reflection_probe_set_interior_ambient_probe_contribution", "probe", "contrib"), &VisualServer::reflection_probe_set_interior_ambient_probe_contribution);
 	ClassDB::bind_method(D_METHOD("reflection_probe_set_max_distance", "probe", "distance"), &VisualServer::reflection_probe_set_max_distance);

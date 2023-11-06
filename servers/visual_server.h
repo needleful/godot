@@ -522,6 +522,7 @@ public:
 	virtual void reflection_probe_set_update_mode(RID p_probe, ReflectionProbeUpdateMode p_mode) = 0;
 	virtual void reflection_probe_set_intensity(RID p_probe, float p_intensity) = 0;
 	virtual void reflection_probe_set_interior_ambient(RID p_probe, const Color &p_color) = 0;
+	virtual void reflection_probe_set_interior_dark_ambient(RID p_probe, const Color &p_color) = 0;
 	virtual void reflection_probe_set_interior_ambient_energy(RID p_probe, float p_energy) = 0;
 	virtual void reflection_probe_set_interior_ambient_probe_contribution(RID p_probe, float p_contrib) = 0;
 	virtual void reflection_probe_set_max_distance(RID p_probe, float p_distance) = 0;

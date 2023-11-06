@@ -57,6 +57,15 @@ Color ReflectionProbe::get_interior_ambient() const {
 	return interior_ambient;
 }
 
+void ReflectionProbe::set_interior_dark_ambient(Color p_ambient) {
+	interior_dark_ambient = p_ambient;
+	VS::get_singleton()->reflection_probe_set_interior_dark_ambient(probe, p_ambient);
+}
+
+Color ReflectionProbe::get_interior_dark_ambient() const {
+	return interior_dark_ambient;
+}
+
 void ReflectionProbe::set_interior_ambient_probe_contribution(float p_contribution) {
 	interior_ambient_probe_contribution = p_contribution;
 	VS::get_singleton()->reflection_probe_set_interior_ambient_probe_contribution(probe, p_contribution);
@@ -183,6 +192,9 @@ void ReflectionProbe::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_interior_ambient", "ambient"), &ReflectionProbe::set_interior_ambient);
 	ClassDB::bind_method(D_METHOD("get_interior_ambient"), &ReflectionProbe::get_interior_ambient);
 
+	ClassDB::bind_method(D_METHOD("set_interior_dark_ambient", "dark_ambient"), &ReflectionProbe::set_interior_dark_ambient);
+	ClassDB::bind_method(D_METHOD("get_interior_dark_ambient"), &ReflectionProbe::get_interior_dark_ambient);
+
 	ClassDB::bind_method(D_METHOD("set_interior_ambient_energy", "ambient_energy"), &ReflectionProbe::set_interior_ambient_energy);
 	ClassDB::bind_method(D_METHOD("get_interior_ambient_energy"), &ReflectionProbe::get_interior_ambient_energy);
 
@@ -226,6 +238,7 @@ void ReflectionProbe::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "interior_enable"), "set_as_interior", "is_set_as_interior");
 	ADD_PROPERTY(PropertyInfo(Variant::COLOR, "interior_ambient_color", PROPERTY_HINT_COLOR_NO_ALPHA), "set_interior_ambient", "get_interior_ambient");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "interior_ambient_energy", PROPERTY_HINT_RANGE, "0,16,0.01"), "set_interior_ambient_energy", "get_interior_ambient_energy");
+	ADD_PROPERTY(PropertyInfo(Variant::COLOR, "interior_dark_ambient_color", PROPERTY_HINT_COLOR_NO_ALPHA), "set_interior_dark_ambient", "get_interior_dark_ambient");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "interior_ambient_contrib", PROPERTY_HINT_RANGE, "0,1,0.01"), "set_interior_ambient_probe_contribution", "get_interior_ambient_probe_contribution");
 
 	BIND_ENUM_CONSTANT(UPDATE_ONCE);

@@ -3027,10 +3027,14 @@ void RasterizerSceneGLES3::_setup_reflections(RID *p_reflection_probe_cull_resul
 
 		if (rpi->probe_ptr->interior) {
 			Color ambient_linear = rpi->probe_ptr->interior_ambient.to_linear();
+			Color dark_ambient = rpi->probe_ptr->interior_dark_ambient.to_linear();
 			reflection_ubo.ambient[0] = ambient_linear.r * rpi->probe_ptr->interior_ambient_energy;
 			reflection_ubo.ambient[1] = ambient_linear.g * rpi->probe_ptr->interior_ambient_energy;
 			reflection_ubo.ambient[2] = ambient_linear.b * rpi->probe_ptr->interior_ambient_energy;
 			reflection_ubo.ambient[3] = rpi->probe_ptr->interior_ambient_probe_contrib;
+			reflection_ubo.dark_ambient[0] = dark_ambient.r;
+			reflection_ubo.dark_ambient[1] = dark_ambient.g;
+			reflection_ubo.dark_ambient[2] = dark_ambient.b;
 		} else {
 			Color ambient_linear;
 			if (p_env) {
@@ -5159,7 +5163,7 @@ void RasterizerSceneGLES3::initialize() {
 		state.scene_shader.add_custom_define("#define MAX_LIGHT_DATA_STRUCTS " + itos(state.max_ubo_lights) + "\n");
 		state.scene_shader.add_custom_define("#define MAX_FORWARD_LIGHTS " + itos(state.max_forward_lights_per_object) + "\n");
 
-		state.max_ubo_reflections = MIN(render_list.max_reflections, max_ubo_size / (int)sizeof(ReflectionProbeDataUBO));
+		state.max_ubo_reflections = MIN(render_list.max_reflections * 2, max_ubo_size / (int)sizeof(ReflectionProbeDataUBO));
 
 		state.reflection_array_tmp = (uint8_t *)memalloc(sizeof(ReflectionProbeDataUBO) * state.max_ubo_reflections);
 

@@ -360,6 +360,7 @@ public:
 		float box_ofs[4];
 		float params[4]; // intensity, 0, 0, boxproject
 		float ambient[4]; //color, probe contrib
+		float dark_ambient[4]; // color, uh
 		float atlas_clamp[4];
 		float local_matrix[16]; //up to here for spot and omni, rest is for directional
 		//notes: for ambientblend, use distance to edge to blend between already existing global environment

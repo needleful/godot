@@ -5707,6 +5707,7 @@ RID RasterizerStorageGLES3::reflection_probe_create() {
 
 	reflection_probe->intensity = 1.0;
 	reflection_probe->interior_ambient = Color();
+	reflection_probe->interior_dark_ambient = Color();
 	reflection_probe->interior_ambient_energy = 1.0;
 	reflection_probe->interior_ambient_probe_contrib = 0.0;
 
@@ -5749,6 +5750,13 @@ void RasterizerStorageGLES3::reflection_probe_set_interior_ambient_energy(RID p_
 	ERR_FAIL_COND(!reflection_probe);
 
 	reflection_probe->interior_ambient_energy = p_energy;
+}
+
+void RasterizerStorageGLES3::reflection_probe_set_interior_dark_ambient(RID p_probe, const Color &p_dark_ambient) {
+	ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND(!reflection_probe);
+
+	reflection_probe->interior_dark_ambient = p_dark_ambient;
 }
 
 void RasterizerStorageGLES3::reflection_probe_set_interior_ambient_probe_contribution(RID p_probe, float p_contrib) {

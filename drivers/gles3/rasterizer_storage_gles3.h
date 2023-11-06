@@ -1091,6 +1091,7 @@ public:
 		VS::ReflectionProbeUpdateMode update_mode;
 		float intensity;
 		Color interior_ambient;
+		Color interior_dark_ambient;
 		float interior_ambient_energy;
 		float interior_ambient_probe_contrib;
 		float max_distance;
@@ -1110,6 +1111,7 @@ public:
 	void reflection_probe_set_intensity(RID p_probe, float p_intensity);
 	void reflection_probe_set_interior_ambient(RID p_probe, const Color &p_ambient);
 	void reflection_probe_set_interior_ambient_energy(RID p_probe, float p_energy);
+	void reflection_probe_set_interior_dark_ambient(RID p_probe, const Color &p_dark_ambient);
 	void reflection_probe_set_interior_ambient_probe_contribution(RID p_probe, float p_contrib);
 	void reflection_probe_set_max_distance(RID p_probe, float p_distance);
 	void reflection_probe_set_extents(RID p_probe, const Vector3 &p_extents);
