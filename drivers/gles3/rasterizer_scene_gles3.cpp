@@ -3047,10 +3047,21 @@ void RasterizerSceneGLES3::_setup_reflections(RID *p_reflection_probe_cull_resul
 		}
 
 		int cell_size = reflection_atlas->size / reflection_atlas->subdiv;
-		int x = (rpi->reflection_atlas_index % reflection_atlas->subdiv) * cell_size;
-		int y = (rpi->reflection_atlas_index / reflection_atlas->subdiv) * cell_size;
-		int width = cell_size;
-		int height = cell_size;
+		int x, y, width, height;
+		if (rpi->reflection_atlas_index >= 0) {
+			x = (rpi->reflection_atlas_index % reflection_atlas->subdiv) * cell_size;
+			y = (rpi->reflection_atlas_index / reflection_atlas->subdiv) * cell_size;
+			width = cell_size;
+			height = cell_size;
+		} else {
+			// TODO: a proper fallback when the reflections don't work
+			// black for interior probes, the clear color for exteriors.
+			// Right now this just grabs a pixel from the atlas
+			x = 0;
+			y = 0;
+			width = 1;
+			height = 1;
+		}
 
 		reflection_ubo.atlas_clamp[0] = float(x) / reflection_atlas->size;
 		reflection_ubo.atlas_clamp[1] = float(y) / reflection_atlas->size;
