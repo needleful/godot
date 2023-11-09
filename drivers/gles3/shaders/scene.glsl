@@ -1463,7 +1463,6 @@ void reflection_process(int idx, vec3 vertex, vec3 normal, vec3 world_normal, fl
 	if (reflections[idx].params.x > 0.0) { // compute reflection
 
 		vec3 local_ref_vec = (reflections[idx].local_matrix * vec4(ref_vec, 0.0)).xyz;
-		vec3 norm = normalize(local_ref_vec);
 
 		if (reflections[idx].params.w > 0.5) { //box project
 
@@ -1479,6 +1478,7 @@ void reflection_process(int idx, vec3 vertex, vec3 normal, vec3 world_normal, fl
 		}
 
 		vec4 clamp_rect = reflections[idx].atlas_clamp;
+		vec3 norm = normalize(local_ref_vec);
 		norm.xy /= 1.0 + abs(norm.z);
 		norm.xy = norm.xy * vec2(0.5, 0.25) + vec2(0.5, 0.25);
 		if (norm.z > 0.0) {
@@ -1501,16 +1501,52 @@ void reflection_process(int idx, vec3 vertex, vec3 normal, vec3 world_normal, fl
 		reflection_accum += reflection;
 	}
 
-	highp vec4 ambient_out;
-	ambient_out.a = blend;
-	if (reflections[idx].params.z > 0.5) {
-		ambient_out.rgb = mix(reflections[idx].ambient_dark.rgb, reflections[idx].ambient.rgb, world_normal.y * 0.5 + 0.5);
-	} else {
-		ambient_out.rgb = mix(ambient, ambient_out.rgb, blend);
-	}
+	if (reflections[idx].ambient.a > 0.0) { //compute ambient using skybox
+		vec3 local_amb_vec = (reflections[idx].local_matrix * vec4(normal, 0.0)).xyz;
+		vec3 splane = normalize(local_amb_vec);
+		vec4 clamp_rect = reflections[idx].atlas_clamp;
 
-	ambient_out.rgb *= ambient_out.a;
-	ambient_accum += ambient_out;
+		splane.z *= -1.0;
+		if (splane.z >= 0.0) {
+			splane.z += 1.0;
+			clamp_rect.y += clamp_rect.w;
+		} else {
+			splane.z = 1.0 - splane.z;
+			splane.y = -splane.y;
+		}
+
+		splane.xy /= splane.z;
+		splane.xy = splane.xy * 0.5 + 0.5;
+		splane.xy = splane.xy * clamp_rect.zw + clamp_rect.xy;
+		splane.xy = clamp(splane.xy, clamp_rect.xy, clamp_rect.xy + clamp_rect.zw);
+
+		highp vec4 ambient_out;
+		ambient_out.a = blend;
+		ambient_out.rgb = textureLod(reflection_atlas, splane.xy, 5.0).rgb;
+		ambient_out.rgb = mix(reflections[idx].ambient.rgb, ambient_out.rgb, reflections[idx].ambient.a);
+
+		if (reflections[idx].params.z < 0.5) {
+			ambient_out.rgb = mix(ambient, ambient_out.rgb, blend);
+		}
+
+		ambient_out.rgb *= ambient_out.a;
+		ambient_accum += ambient_out;
+	} else {
+		highp vec4 ambient_out;
+		ambient_out.a = blend;
+		if (reflections[idx].params.z > 0.5) {
+			ambient_out.rgb = mix(reflections[idx].ambient_dark.rgb, reflections[idx].ambient.rgb, world_normal.y * 0.5 + 0.5);
+		} else {
+			ambient_out.rgb = ambient.rgb;
+		}
+
+		if (reflections[idx].params.z < 0.5) {
+			ambient_out.rgb = mix(ambient, ambient_out.rgb, blend);
+		}
+
+		ambient_out.rgb *= ambient_out.a;
+		ambient_accum += ambient_out;
+	}
 }
 
 void main() {
