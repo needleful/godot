@@ -3000,8 +3000,6 @@ void RasterizerSceneGLES3::_setup_reflections(RID *p_reflection_probe_cull_resul
 		ReflectionAtlas *reflection_atlas = reflection_atlas_owner.getornull(p_reflection_atlas);
 		ERR_CONTINUE(!reflection_atlas);
 
-		ERR_CONTINUE(rpi->reflection_atlas_index < 0);
-
 		if (state.reflection_probe_count >= state.max_ubo_reflections) {
 			break;
 		}
@@ -3020,7 +3018,7 @@ void RasterizerSceneGLES3::_setup_reflections(RID *p_reflection_probe_cull_resul
 		reflection_ubo.box_ofs[2] = rpi->probe_ptr->origin_offset.z;
 		reflection_ubo.box_ofs[3] = 0;
 
-		reflection_ubo.params[0] = rpi->probe_ptr->intensity;
+		reflection_ubo.params[0] = rpi->reflection_atlas_index == -1 ? 0.0 : rpi->probe_ptr->intensity;
 		reflection_ubo.params[1] = 0;
 		reflection_ubo.params[2] = rpi->probe_ptr->interior ? 1.0 : 0.0;
 		reflection_ubo.params[3] = rpi->probe_ptr->box_projection ? 1.0 : 0.0;
@@ -3058,9 +3056,6 @@ void RasterizerSceneGLES3::_setup_reflections(RID *p_reflection_probe_cull_resul
 			width = cell_size;
 			height = cell_size;
 		} else {
-			// TODO: a proper fallback when the reflections don't work
-			// black for interior probes, the clear color for exteriors.
-			// Right now this just grabs a pixel from the atlas
 			x = 0;
 			y = 0;
 			width = 1;

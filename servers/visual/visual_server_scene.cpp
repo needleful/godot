@@ -2600,10 +2600,8 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 							reflection_probe.reflection_dirty = false;
 						}
 
-						if (VSG::scene_render->reflection_probe_instance_has_reflection(reflection_probe.instance)) {
-							reflection_probe_instance_cull_result[reflection_probe_cull_count] = reflection_probe.instance;
-							reflection_probe_cull_count++;
-						}
+						reflection_probe_instance_cull_result[reflection_probe_cull_count] = reflection_probe.instance;
+						reflection_probe_cull_count++;
 					}
 				}
 			}
