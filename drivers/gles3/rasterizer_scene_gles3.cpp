@@ -1759,13 +1759,14 @@ void RasterizerSceneGLES3::_render_geometry(RenderList::Element *e) {
 	}
 }
 
+#define MAX_REFLECTION_INDICES 16
 void RasterizerSceneGLES3::_setup_light(RenderList::Element *e, const Transform &p_view_transform) {
 	int maxobj = state.max_forward_lights_per_object;
 	int *omni_indices = (int *)alloca(maxobj * sizeof(int));
 	int omni_count = 0;
 	int *spot_indices = (int *)alloca(maxobj * sizeof(int));
 	int spot_count = 0;
-	int reflection_indices[16];
+	int reflection_indices[MAX_REFLECTION_INDICES];
 	int reflection_count = 0;
 
 	int lc = e->instance->light_instances.size();
@@ -1808,7 +1809,7 @@ void RasterizerSceneGLES3::_setup_light(RenderList::Element *e, const Transform 
 	if (rc) {
 		const RID *reflections = e->instance->reflection_probe_instances.ptr();
 
-		for (int i = 0; i < rc; i++) {
+		for (int i = 0; i < rc && i < MAX_REFLECTION_INDICES; i++) {
 			ReflectionProbeInstance *rpi = reflection_probe_instance_owner.getptr(reflections[i]);
 			if (rpi->last_pass != render_pass) { //not visible
 				continue;

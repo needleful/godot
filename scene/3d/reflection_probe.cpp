@@ -185,6 +185,9 @@ void ReflectionProbe::_validate_property(PropertyInfo &property) const {
 	}
 }
 
+void ReflectionProbe::_notification(int p_what) {
+}
+
 void ReflectionProbe::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_intensity", "intensity"), &ReflectionProbe::set_intensity);
 	ClassDB::bind_method(D_METHOD("get_intensity"), &ReflectionProbe::get_intensity);

@@ -85,12 +85,6 @@ void VisualInstance::set_instance_use_identity_transform(bool p_enable) {
 void VisualInstance::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_WORLD: {
-			// CHECK SKELETON => moving skeleton attaching logic to MeshInstance
-			/*
-			Skeleton *skeleton=Object::cast_to<Skeleton>(get_parent());
-			if (skeleton)
-				VisualServer::get_singleton()->instance_attach_skeleton( instance, skeleton->get_skeleton() );
-			*/
 			ERR_FAIL_COND(get_world().is_null());
 			VisualServer::get_singleton()->instance_set_scenario(instance, get_world()->get_scenario());
 			_update_visibility();
@@ -132,8 +126,6 @@ void VisualInstance::_notification(int p_what) {
 		case NOTIFICATION_EXIT_WORLD: {
 			VisualServer::get_singleton()->instance_set_scenario(instance, RID());
 			VisualServer::get_singleton()->instance_attach_skeleton(instance, RID());
-			//VS::get_singleton()->instance_geometry_set_baked_light_sampler(instance, RID() );
-
 			// the vi visible flag is always set to invisible when outside the tree,
 			// so it can detect re-entering the tree and becoming visible, and send
 			// the transform to the visual server
