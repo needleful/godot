@@ -46,8 +46,10 @@ private:
 	ParticlesData data;
 	bool emitting : 1;
 	bool dirty : 1;
+	bool dirty_emit : 1;
 
 	void _mark_dirty();
+	void _mark_dirty_emit();
 	void _update_dirty();
 
 protected:
