@@ -68,11 +68,9 @@ void Particles::_update_dirty() {
 	}
 
 	if (dirty) {
-		print_line("Update particles: " + String(get_name()));
 		VS::get_singleton()->particles_set(particles, data);
 	}
 	if (dirty_emit) {
-		print_line("Update emission: " + String(get_name()));
 		VS::get_singleton()->particles_set_one_shot(particles, data.one_shot);
 		VS::get_singleton()->particles_set_emitting(particles, emitting);
 	}
