@@ -1,25 +1,45 @@
-
-
 #include "profiler.h"
 
 #ifdef NP_PROFILER
+#if defined(__WIN32__)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <profileapi.h>
 #undef WIN32_LEAN_AND_MEAN
+#else
+#include <time.h>
+#endif //WIN32
 #include "core/io/logger.h"
 #include "core/os/memory.h"
-#include <profileapi.h>
 #endif // NP_PROFILER
+
+#ifdef NP_PROFILER
+static int64_t current_time() {
+#if defined(__WIN32__)
+	LARGE_INTEGER ticks;
+	if (QueryPerformanceCounter(&ticks)) {
+		return ticks.QuadPart;
+	}
+
+	else {
+		return - 1;
+	}
+#else
+	struct timespec time;
+	if(!clock_gettime(CLOCK_MONOTONIC, &time)) {
+		return time.tv_sec*1000000 + time.tv_nsec/1000;	
+	}
+	else {
+		return -1;
+	}
+#endif
+}
+#endif
 
 ProfileMarker::ProfileMarker(const char *p_func) {
 #ifdef NP_PROFILER
-	func_name = p_func;
-	LARGE_INTEGER ticks;
-	if (QueryPerformanceCounter(&ticks)) {
-		start_time = ticks.QuadPart;
-	} else {
-		start_time = -1;
-	}
+  	func_name = p_func;
+	start_time = current_time();
 #endif
 }
 
@@ -30,14 +50,7 @@ ProfileMarker::~ProfileMarker() {
 	token.start_time = start_time;
 	token.special_value = -1;
 
-	LARGE_INTEGER ticks;
-	if (QueryPerformanceCounter(&ticks)) {
-		token.end_time = ticks.QuadPart;
-	}
-
-	else {
-		token.end_time = -1;
-	}
+	start_time = current_time();
 
 	ProfilerManager::singleton->append(token);
 #endif
@@ -47,32 +60,19 @@ ProfileTimer::ProfileTimer(const char *p_func) {
 #ifdef NP_PROFILER
 	func_name = p_func;
 	running_timer = 0;
-	LARGE_INTEGER ticks;
-	if (QueryPerformanceCounter(&ticks)) {
-		start_time = ticks.QuadPart;
-	} else {
-		start_time = -1;
-	}
+	start_time = current_time();
 #endif
 }
 
 void ProfileTimer::start() {
 #ifdef NP_PROFILER
-	LARGE_INTEGER ticks;
-	if (QueryPerformanceCounter(&ticks)) {
-		timer_last_start = ticks.QuadPart;
-	} else {
-		timer_last_start = -1;
-	}
+	timer_last_start = current_time();
 #endif
 }
 
 void ProfileTimer::stop() {
 #ifdef NP_PROFILER
-	LARGE_INTEGER ticks;
-	if (QueryPerformanceCounter(&ticks)) {
-		running_timer += ticks.QuadPart - timer_last_start;
-	}
+	running_timer += current_time() - timer_last_start;
 #endif
 }
 
@@ -83,14 +83,7 @@ ProfileTimer::~ProfileTimer() {
 	token.start_time = start_time;
 	token.special_value = running_timer;
 
-	LARGE_INTEGER ticks;
-	if (QueryPerformanceCounter(&ticks)) {
-		token.end_time = ticks.QuadPart;
-	}
-
-	else {
-		token.end_time = -1;
-	}
+	token.end_time = current_time();
 
 	ProfilerManager::singleton->append(token);
 #endif
@@ -128,13 +121,13 @@ void ProfilerManager::append(ProfileToken p_marker) {
 void ProfilerManager::log_and_wipe(uint64_t frame_time, Logger *p_logger) {
 #ifdef NP_PROFILER
 	if (p_logger) {
-		p_logger->logf("%u\n", frame_time);
+		p_logger->logf("%lu\n", frame_time);
 		for (int i = 0; i < size; i++) {
 			int64_t start = buffer[i].start_time - time_offset;
 			int64_t end = buffer[i].end_time - time_offset;
 			int64_t sv = buffer[i].special_value;
 
-			p_logger->logf("%s [%d] : %d, %d\n",
+			p_logger->logf("%s [%ld] : %ld, %ld\n",
 					buffer[i].func_name,
 					sv > 0 ? sv : end - start,
 					start, end);
@@ -142,14 +135,7 @@ void ProfilerManager::log_and_wipe(uint64_t frame_time, Logger *p_logger) {
 		p_logger->logf("------\n");
 	}
 	size = 0;
-	LARGE_INTEGER ticks;
-	if (QueryPerformanceCounter(&ticks)) {
-		time_offset = ticks.QuadPart;
-	}
-
-	else {
-		time_offset = 0;
-	}
+	time_offset = current_time();
 #endif
 }
 
