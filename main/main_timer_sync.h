@@ -106,6 +106,8 @@ class MainTimerSync {
 
 	} _delta_smoother;
 
+	MainFrameTime last_result = {};
+
 	// wall clock time measured on the main thread
 	uint64_t last_cpu_ticks_usec;
 	uint64_t current_cpu_ticks_usec;

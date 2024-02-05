@@ -1,10 +1,10 @@
 #include "profiler.h"
 
 #ifdef NP_PROFILER
-#if defined(__WIN32__)
+#if defined(_MSC_VER)
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 #include <profileapi.h>
+#include <windows.h>
 #undef WIN32_LEAN_AND_MEAN
 #else
 #include <time.h>
@@ -15,21 +15,20 @@
 
 #ifdef NP_PROFILER
 static int64_t current_time() {
-#if defined(__WIN32__)
+#if defined(_MSC_VER)
 	LARGE_INTEGER ticks;
 	if (QueryPerformanceCounter(&ticks)) {
 		return ticks.QuadPart;
 	}
 
 	else {
-		return - 1;
+		return -1;
 	}
 #else
 	struct timespec time;
-	if(!clock_gettime(CLOCK_MONOTONIC, &time)) {
-		return time.tv_sec*1000000 + time.tv_nsec/1000;	
-	}
-	else {
+	if (!clock_gettime(CLOCK_MONOTONIC, &time)) {
+		return time.tv_sec * 1000000 + time.tv_nsec / 1000;
+	} else {
 		return -1;
 	}
 #endif
@@ -38,7 +37,7 @@ static int64_t current_time() {
 
 ProfileMarker::ProfileMarker(const char *p_func) {
 #ifdef NP_PROFILER
-  	func_name = p_func;
+	func_name = p_func;
 	start_time = current_time();
 #endif
 }
