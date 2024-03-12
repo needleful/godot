@@ -958,10 +958,12 @@ void RigidBody::_reload_physics_characteristics() {
 //////////////////////////////////////////////////////
 //////////////////////////
 
-Ref<KinematicCollision> KinematicBody::_move(const Vector3 &p_motion, bool p_infinite_inertia, bool p_exclude_raycast_shapes, bool p_test_only) {
+Ref<KinematicCollision> KinematicBody::_move(const Vector3 &p_motion, bool p_infinite_inertia, bool p_exclude_raycast_shapes, bool p_test_only, RID excluded_node) {
 	Collision col;
 
-	bool collided = move_and_collide(p_motion, p_infinite_inertia, col, p_exclude_raycast_shapes, p_test_only);
+	Set<RID> exclusion;
+	exclusion.insert(excluded_node);
+	bool collided = move_and_collide(p_motion, p_infinite_inertia, col, p_exclude_raycast_shapes, p_test_only, false, exclusion);
 
 	// Ugly hack as a hot fix, 65b3200 fix an issue but cause a problem with Bullet that broke games using Bullet.
 	// The bug is something internal to Bullet, seems to be related to the Bullet’s margin. As not proper fix was found yet,

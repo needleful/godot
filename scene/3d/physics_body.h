@@ -306,7 +306,7 @@ private:
 	Vector<Ref<KinematicCollision>> slide_colliders;
 	Ref<KinematicCollision> motion_cache;
 
-	Ref<KinematicCollision> _move(const Vector3 &p_motion, bool p_infinite_inertia = true, bool p_exclude_raycast_shapes = true, bool p_test_only = false);
+	Ref<KinematicCollision> _move(const Vector3 &p_motion, bool p_infinite_inertia = true, bool p_exclude_raycast_shapes = true, bool p_test_only = false, RID excluded_node = RID());
 	Ref<KinematicCollision> _get_slide_collision(int p_bounce);
 	Ref<KinematicCollision> _get_last_slide_collision();
 
