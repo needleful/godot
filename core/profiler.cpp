@@ -1,37 +1,13 @@
 #include "profiler.h"
 
 #ifdef NP_PROFILER
-#if defined(_MSC_VER)
-#define WIN32_LEAN_AND_MEAN
-#include <profileapi.h>
-#include <windows.h>
-#undef WIN32_LEAN_AND_MEAN
-#else
-#include <time.h>
-#endif //WIN32
 #include "core/io/logger.h"
-#include "core/os/memory.h"
+#include "core/os/os.h"
 #endif // NP_PROFILER
 
 #ifdef NP_PROFILER
 static int64_t current_time() {
-#if defined(_MSC_VER)
-	LARGE_INTEGER ticks;
-	if (QueryPerformanceCounter(&ticks)) {
-		return ticks.QuadPart;
-	}
-
-	else {
-		return -1;
-	}
-#else
-	struct timespec time;
-	if (!clock_gettime(CLOCK_MONOTONIC, &time)) {
-		return time.tv_sec * 1000000 + time.tv_nsec / 1000;
-	} else {
-		return -1;
-	}
-#endif
+	return OS::get_singleton()->get_ticks_usec();
 }
 #endif
 
