@@ -1617,7 +1617,6 @@ void main() {
 #endif
 
 #if defined(ENABLE_NORMALMAP)
-
 	vec3 normalmap = vec3(0.5);
 #endif
 
@@ -1630,6 +1629,46 @@ void main() {
 #if defined(ENABLE_SSS)
 	float sss_strength = 0.0;
 #endif
+
+	// Ambient lighting
+	vec3 ambient_light;
+	vec3 env_reflection_light = vec3(0.0, 0.0, 0.0);
+
+#ifdef USE_RADIANCE_MAP //ubershader-runtime
+
+#if defined(AMBIENT_LIGHT_DISABLED)
+	ambient_light = vec3(0.0, 0.0, 0.0);
+#else
+	{ //read radiance from dual paraboloid
+		vec3 ref_vec = reflect(-eye_vec, normal);
+		float horizon = min(1.0 + dot(ref_vec, normal), 1.0);
+		ref_vec = normalize((radiance_inverse_xform * vec4(ref_vec, 0.0)).xyz);
+		vec3 radiance;
+#ifdef USE_RADIANCE_MAP_ARRAY //ubershader-runtime
+		radiance = textureDualParaboloidArray(radiance_map_array, ref_vec, roughness) * bg_energy;
+#else //ubershader-runtime
+		radiance = textureDualParaboloid(radiance_map, ref_vec, roughness) * bg_energy;
+#endif //ubershader-runtime
+		env_reflection_light = radiance;
+		env_reflection_light *= horizon * horizon;
+	}
+#endif //AMBIENT_LIGHT_DISABLED
+
+#else //ubershader-runtime
+
+#if defined(AMBIENT_LIGHT_DISABLED)
+	ambient_light = vec3(0.0, 0.0, 0.0);
+#else
+
+	vec3 world_normal = world_normal_interp;
+	ambient_light = mix(ambient_light_color.rgb, indirect_light_color.rgb, 0.5 * (world_normal.y + 1.0));
+
+	env_reflection_light = bg_color.rgb * bg_energy;
+#endif //AMBIENT_LIGHT_DISABLED
+
+#endif //ubershader-runtime
+
+	ambient_light *= ambient_energy;
 
 	{
 		/* clang-format off */
@@ -1697,51 +1736,12 @@ FRAGMENT_SHADER_CODE
 
 #endif //ubershader-runtime
 
-	vec3 ambient_light;
-	vec3 env_reflection_light = vec3(0.0, 0.0, 0.0);
-
 	vec3 eye_vec = view;
 
 	// IBL precalculations
 	float ndotv = clamp(dot(normal, eye_vec), 0.0, 1.0);
 	vec3 f0 = F0(metallic, specular, albedo);
 	vec3 F = f0 + (max(vec3(1.0 - roughness), f0) - f0) * pow(1.0 - ndotv, 5.0);
-
-#ifdef USE_RADIANCE_MAP //ubershader-runtime
-
-#if defined(AMBIENT_LIGHT_DISABLED)
-	ambient_light = vec3(0.0, 0.0, 0.0);
-#else
-	{ //read radiance from dual paraboloid
-		vec3 ref_vec = reflect(-eye_vec, normal);
-		float horizon = min(1.0 + dot(ref_vec, normal), 1.0);
-		ref_vec = normalize((radiance_inverse_xform * vec4(ref_vec, 0.0)).xyz);
-		vec3 radiance;
-#ifdef USE_RADIANCE_MAP_ARRAY //ubershader-runtime
-		radiance = textureDualParaboloidArray(radiance_map_array, ref_vec, roughness) * bg_energy;
-#else //ubershader-runtime
-		radiance = textureDualParaboloid(radiance_map, ref_vec, roughness) * bg_energy;
-#endif //ubershader-runtime
-		env_reflection_light = radiance;
-		env_reflection_light *= horizon * horizon;
-	}
-#endif //AMBIENT_LIGHT_DISABLED
-
-#else //ubershader-runtime
-
-#if defined(AMBIENT_LIGHT_DISABLED)
-	ambient_light = vec3(0.0, 0.0, 0.0);
-#else
-
-	vec3 world_normal = world_normal_interp;
-	ambient_light = mix(ambient_light_color.rgb, indirect_light_color.rgb, 0.5 * (world_normal.y + 1.0));
-
-	env_reflection_light = bg_color.rgb * bg_energy;
-#endif //AMBIENT_LIGHT_DISABLED
-
-#endif //ubershader-runtime
-
-	ambient_light *= ambient_energy;
 
 	float specular_blob_intensity = 1.0;
 
