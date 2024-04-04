@@ -1631,6 +1631,7 @@ void main() {
 #endif
 
 	// Ambient lighting
+	vec3 eye_vec = view;
 	vec3 ambient_light;
 	vec3 env_reflection_light = vec3(0.0, 0.0, 0.0);
 
@@ -1735,8 +1736,6 @@ FRAGMENT_SHADER_CODE
 	diffuse_light = vec3(0.0, 0.0, 0.0);
 
 #endif //ubershader-runtime
-
-	vec3 eye_vec = view;
 
 	// IBL precalculations
 	float ndotv = clamp(dot(normal, eye_vec), 0.0, 1.0);
