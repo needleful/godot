@@ -124,6 +124,9 @@ AABB Light::get_aabb() const {
 	} else if (type == VisualServer::LIGHT_SPOT) {
 		float len = param[PARAM_RANGE];
 		float size = Math::tan(Math::deg2rad(param[PARAM_SPOT_ANGLE])) * len;
+		if (size > len) {
+			size = len;
+		}
 		return AABB(Vector3(-size, -size, -len), Vector3(size * 2, size * 2, len));
 	}
 
