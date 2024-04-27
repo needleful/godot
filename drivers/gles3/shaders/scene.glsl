@@ -187,7 +187,7 @@ uniform int spot_light_count;
 out vec4 diffuse_light_interp;
 out vec4 specular_light_interp;
 
-void light_compute(vec3 N, vec3 L, vec3 V, vec3 light_color, float roughness, inout vec3 diffuse, inout vec3 specular, vec3 ambient_light) {
+void light_compute(vec3 N, vec3 L, vec3 V, vec3 light_color, float roughness, inout vec3 diffuse, inout vec3 specular, vec3 ambient_light, float ao) {
 	float NdotL = dot(N, L);
 	float cNdotL = max(NdotL, 0.0); // clamped NdotL
 	float NdotV = dot(N, V);
@@ -254,7 +254,7 @@ float get_omni_attenuation(float distance, float inv_range, float decay) {
 }
 #endif
 
-void light_process_omni(int idx, vec3 vertex, vec3 eye_vec, vec3 normal, float roughness, inout vec3 diffuse, inout vec3 specular, vec3 ambient_light) {
+void light_process_omni(int idx, vec3 vertex, vec3 eye_vec, vec3 normal, float roughness, inout vec3 diffuse, inout vec3 specular, vec3 ambient_light, float ao) {
 	vec3 light_rel_vec = omni_lights[idx].light_pos_inv_radius.xyz - vertex;
 	float light_length = length(light_rel_vec);
 
@@ -265,10 +265,10 @@ void light_process_omni(int idx, vec3 vertex, vec3 eye_vec, vec3 normal, float r
 	vec3 light_attenuation = vec3(pow(max(1.0 - normalized_distance, 0.0), omni_lights[idx].light_direction_attenuation.w));
 #endif
 
-	light_compute(normal, normalize(light_rel_vec), eye_vec, omni_lights[idx].light_color_energy.rgb * light_attenuation, roughness, diffuse, specular, ambient_light);
+	light_compute(normal, normalize(light_rel_vec), eye_vec, omni_lights[idx].light_color_energy.rgb * light_attenuation, roughness, diffuse, specular, ambient_light, ao);
 }
 
-void light_process_spot(int idx, vec3 vertex, vec3 eye_vec, vec3 normal, float roughness, inout vec3 diffuse, inout vec3 specular, vec3 ambient_light) {
+void light_process_spot(int idx, vec3 vertex, vec3 eye_vec, vec3 normal, float roughness, inout vec3 diffuse, inout vec3 specular, vec3 ambient_light, float ao) {
 	vec3 light_rel_vec = spot_lights[idx].light_pos_inv_radius.xyz - vertex;
 	float light_length = length(light_rel_vec);
 
@@ -285,7 +285,7 @@ void light_process_spot(int idx, vec3 vertex, vec3 eye_vec, vec3 normal, float r
 	float spot_rim = (1.0 - scos) / (1.0 - spot_cutoff);
 	light_attenuation *= 1.0 - pow(max(spot_rim, 0.001), spot_lights[idx].light_params.x);
 
-	light_compute(normal, normalize(light_rel_vec), eye_vec, spot_lights[idx].light_color_energy.rgb * light_attenuation, roughness, diffuse, specular, ambient_light);
+	light_compute(normal, normalize(light_rel_vec), eye_vec, spot_lights[idx].light_color_energy.rgb * light_attenuation, roughness, diffuse, specular, ambient_light, ao);
 }
 
 #endif //ubershader-skip
@@ -610,11 +610,11 @@ VERTEX_SHADER_CODE
 #ifdef USE_FORWARD_LIGHTING //ubershader-runtime
 
 	for (int i = 0; i < omni_light_count; i++) {
-		light_process_omni(omni_light_indices[i], vertex_interp, -normalize(vertex_interp), normal_interp, roughness, diffuse_light_interp.rgb, specular_light_interp.rgb, ambient_light);
+		light_process_omni(omni_light_indices[i], vertex_interp, -normalize(vertex_interp), normal_interp, roughness, diffuse_light_interp.rgb, specular_light_interp.rgb, ambient_light, 1.0);
 	}
 
 	for (int i = 0; i < spot_light_count; i++) {
-		light_process_spot(spot_light_indices[i], vertex_interp, -normalize(vertex_interp), normal_interp, roughness, diffuse_light_interp.rgb, specular_light_interp.rgb, ambient_light);
+		light_process_spot(spot_light_indices[i], vertex_interp, -normalize(vertex_interp), normal_interp, roughness, diffuse_light_interp.rgb, specular_light_interp.rgb, ambient_light, 1.0);
 	}
 #endif //ubershader-runtime
 
@@ -622,7 +622,7 @@ VERTEX_SHADER_CODE
 
 	vec3 directional_diffuse = vec3(0.0);
 	vec3 directional_specular = vec3(0.0);
-	light_compute(normal_interp, -light_direction_attenuation.xyz, -normalize(vertex_interp), light_color_energy.rgb, roughness, directional_diffuse, directional_specular, ambient_light);
+	light_compute(normal_interp, -light_direction_attenuation.xyz, -normalize(vertex_interp), light_color_energy.rgb, roughness, directional_diffuse, directional_specular, ambient_light, 1.0);
 
 	float diff_avg = dot(diffuse_light_interp.rgb, vec3(0.33333));
 	float diff_dir_avg = dot(directional_diffuse, vec3(0.33333));
@@ -1079,7 +1079,7 @@ vec3 F0(float metallic, float specular, vec3 albedo) {
 	return mix(vec3(dielectric), albedo, vec3(metallic));
 }
 
-void light_compute(vec3 N, vec3 L, vec3 V, vec3 B, vec3 T, vec3 light_color, vec3 attenuation, vec3 diffuse_color, vec3 transmission, float specular_blob_intensity, float roughness, float metallic, float specular, float rim, float rim_tint, float clearcoat, float clearcoat_gloss, float anisotropy, inout vec3 diffuse_light, inout vec3 specular_light, inout float alpha, vec3 ambient_light) {
+void light_compute(vec3 N, vec3 L, vec3 V, vec3 B, vec3 T, vec3 light_color, vec3 attenuation, vec3 diffuse_color, vec3 transmission, float specular_blob_intensity, float roughness, float metallic, float specular, float rim, float rim_tint, float clearcoat, float clearcoat_gloss, float anisotropy, inout vec3 diffuse_light, inout vec3 specular_light, inout float alpha, vec3 ambient_light, float ao) {
 #if defined(USE_LIGHT_SHADER_CODE)
 	// light is written by the light shader
 
@@ -1336,7 +1336,7 @@ float get_omni_attenuation(float distance, float inv_range, float decay) {
 }
 #endif
 
-void light_process_omni(int idx, vec3 vertex, vec3 eye_vec, vec3 normal, vec3 binormal, vec3 tangent, vec3 albedo, vec3 transmission, float roughness, float metallic, float specular, float rim, float rim_tint, float clearcoat, float clearcoat_gloss, float anisotropy, float p_blob_intensity, inout vec3 diffuse_light, inout vec3 specular_light, inout float alpha, vec3 ambient_light) {
+void light_process_omni(int idx, vec3 vertex, vec3 eye_vec, vec3 normal, vec3 binormal, vec3 tangent, vec3 albedo, vec3 transmission, float roughness, float metallic, float specular, float rim, float rim_tint, float clearcoat, float clearcoat_gloss, float anisotropy, float p_blob_intensity, inout vec3 diffuse_light, inout vec3 specular_light, inout float alpha, vec3 ambient_light, float ao) {
 	vec3 light_rel_vec = omni_lights[idx].light_pos_inv_radius.xyz - vertex;
 	float light_length = length(light_rel_vec);
 	float normalized_distance = light_length * omni_lights[idx].light_pos_inv_radius.w;
@@ -1397,10 +1397,10 @@ void light_process_omni(int idx, vec3 vertex, vec3 eye_vec, vec3 normal, vec3 bi
 	}
 #endif //USE_SHADOW //ubershader-runtime
 #endif //SHADOWS_DISABLED
-	light_compute(normal, normalize(light_rel_vec), eye_vec, binormal, tangent, omni_lights[idx].light_color_energy.rgb, light_attenuation, albedo, transmission, omni_lights[idx].light_params.z * p_blob_intensity, roughness, metallic, specular, rim * omni_attenuation, rim_tint, clearcoat, clearcoat_gloss, anisotropy, diffuse_light, specular_light, alpha, ambient_light);
+	light_compute(normal, normalize(light_rel_vec), eye_vec, binormal, tangent, omni_lights[idx].light_color_energy.rgb, light_attenuation, albedo, transmission, omni_lights[idx].light_params.z * p_blob_intensity, roughness, metallic, specular, rim * omni_attenuation, rim_tint, clearcoat, clearcoat_gloss, anisotropy, diffuse_light, specular_light, alpha, ambient_light, ao);
 }
 
-void light_process_spot(int idx, vec3 vertex, vec3 eye_vec, vec3 normal, vec3 binormal, vec3 tangent, vec3 albedo, vec3 transmission, float roughness, float metallic, float specular, float rim, float rim_tint, float clearcoat, float clearcoat_gloss, float anisotropy, float p_blob_intensity, inout vec3 diffuse_light, inout vec3 specular_light, inout float alpha, vec3 ambient_light) {
+void light_process_spot(int idx, vec3 vertex, vec3 eye_vec, vec3 normal, vec3 binormal, vec3 tangent, vec3 albedo, vec3 transmission, float roughness, float metallic, float specular, float rim, float rim_tint, float clearcoat, float clearcoat_gloss, float anisotropy, float p_blob_intensity, inout vec3 diffuse_light, inout vec3 specular_light, inout float alpha, vec3 ambient_light, float ao) {
 	vec3 light_rel_vec = spot_lights[idx].light_pos_inv_radius.xyz - vertex;
 	float light_length = length(light_rel_vec);
 	float normalized_distance = light_length * spot_lights[idx].light_pos_inv_radius.w;
@@ -1441,7 +1441,7 @@ void light_process_spot(int idx, vec3 vertex, vec3 eye_vec, vec3 normal, vec3 bi
 #endif //USE_SHADOW //ubershader-runtime
 #endif //SHADOWS_DISABLED
 
-	light_compute(normal, normalize(light_rel_vec), eye_vec, binormal, tangent, spot_lights[idx].light_color_energy.rgb, light_attenuation, albedo, transmission, spot_lights[idx].light_params.z * p_blob_intensity, roughness, metallic, specular, rim * spot_attenuation, rim_tint, clearcoat, clearcoat_gloss, anisotropy, diffuse_light, specular_light, alpha, ambient_light);
+	light_compute(normal, normalize(light_rel_vec), eye_vec, binormal, tangent, spot_lights[idx].light_color_energy.rgb, light_attenuation, albedo, transmission, spot_lights[idx].light_params.z * p_blob_intensity, roughness, metallic, specular, rim * spot_attenuation, rim_tint, clearcoat, clearcoat_gloss, anisotropy, diffuse_light, specular_light, alpha, ambient_light, ao);
 }
 
 void reflection_process(int idx, vec3 vertex, vec3 normal, vec3 world_normal, float roughness, vec3 ambient, vec3 skybox, inout highp vec4 reflection_accum, inout highp vec4 ambient_accum) {
@@ -1574,8 +1574,8 @@ void main() {
 	float shadow_normal_offset = 0.0;
 	float shadow_normal_parallel = 20.0;
 
-#if defined(ENABLE_AO)
 	float ao = 1.0;
+#if defined(ENABLE_AO)
 	float ao_light_affect = 0.0;
 #endif
 
@@ -1917,7 +1917,7 @@ FRAGMENT_SHADER_CODE
 	diffuse_light *= mix(vec3(1.0), light_attenuation, diffuse_light_interp.a);
 	specular_light *= mix(vec3(1.0), light_attenuation, specular_light_interp.a);
 #else //ubershader-runtime
-	light_compute(normal, -light_direction_attenuation.xyz, eye_vec, binormal, tangent, light_color_energy.rgb, light_attenuation, albedo, transmission, light_params.z * specular_blob_intensity, roughness, metallic, specular, rim, rim_tint, clearcoat, clearcoat_gloss, anisotropy, diffuse_light, specular_light, alpha, ambient_light);
+	light_compute(normal, -light_direction_attenuation.xyz, eye_vec, binormal, tangent, light_color_energy.rgb, light_attenuation, albedo, transmission, light_params.z * specular_blob_intensity, roughness, metallic, specular, rim, rim_tint, clearcoat, clearcoat_gloss, anisotropy, diffuse_light, specular_light, alpha, ambient_light, ao);
 #endif //ubershader-runtime
 
 #endif //#USE_LIGHT_DIRECTIONAL //ubershader-runtime
@@ -1931,11 +1931,11 @@ FRAGMENT_SHADER_CODE
 #ifndef USE_VERTEX_LIGHTING //ubershader-runtime
 
 	for (int i = 0; i < omni_light_count; i++) {
-		light_process_omni(omni_light_indices[i], vertex, eye_vec, normal, binormal, tangent, albedo, transmission, roughness, metallic, specular, rim, rim_tint, clearcoat, clearcoat_gloss, anisotropy, specular_blob_intensity, diffuse_light, specular_light, alpha, ambient_light);
+		light_process_omni(omni_light_indices[i], vertex, eye_vec, normal, binormal, tangent, albedo, transmission, roughness, metallic, specular, rim, rim_tint, clearcoat, clearcoat_gloss, anisotropy, specular_blob_intensity, diffuse_light, specular_light, alpha, ambient_light, ao);
 	}
 
 	for (int i = 0; i < spot_light_count; i++) {
-		light_process_spot(spot_light_indices[i], vertex, eye_vec, normal, binormal, tangent, albedo, transmission, roughness, metallic, specular, rim, rim_tint, clearcoat, clearcoat_gloss, anisotropy, specular_blob_intensity, diffuse_light, specular_light, alpha, ambient_light);
+		light_process_spot(spot_light_indices[i], vertex, eye_vec, normal, binormal, tangent, albedo, transmission, roughness, metallic, specular, rim, rim_tint, clearcoat, clearcoat_gloss, anisotropy, specular_blob_intensity, diffuse_light, specular_light, alpha, ambient_light, ao);
 	}
 
 #endif //USE_VERTEX_LIGHTING //ubershader-runtime
