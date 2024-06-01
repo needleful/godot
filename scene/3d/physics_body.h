@@ -323,6 +323,7 @@ protected:
 	static void _bind_methods();
 
 public:
+	Array recover_from_penetration();
 	bool move_and_collide(const Vector3 &p_motion, bool p_infinite_inertia, Collision &r_collision, bool p_exclude_raycast_shapes = true, bool p_test_only = false, bool p_cancel_sliding = true, const Set<RID> &p_exclude = Set<RID>());
 	bool test_move(const Transform &p_from, const Vector3 &p_motion, bool p_infinite_inertia);
 

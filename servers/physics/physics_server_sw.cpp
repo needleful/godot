@@ -869,6 +869,10 @@ bool PhysicsServerSW::body_test_motion(RID p_body, const Transform &p_from, cons
 	return body->get_space()->test_body_motion(body, p_from, p_motion, p_infinite_inertia, body->get_kinematic_margin(), r_result, p_exclude_raycast_shapes, p_exclude);
 }
 
+Array PhysicsServerSW::body_recover_from_penetration(RID p_body) {
+	return Array();
+}
+
 int PhysicsServerSW::body_test_ray_separation(RID p_body, const Transform &p_transform, bool p_infinite_inertia, Vector3 &r_recover_motion, SeparationResult *r_results, int p_result_max, float p_margin) {
 	BodySW *body = body_owner.get(p_body);
 	ERR_FAIL_COND_V(!body, false);

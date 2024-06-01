@@ -216,6 +216,7 @@ public:
 
 	bool test_body_motion(RigidBodyBullet *p_body, const Transform &p_from, const Vector3 &p_motion, bool p_infinite_inertia, PhysicsServer::MotionResult *r_result, bool p_exclude_raycast_shapes, const Set<RID> &p_exclude = Set<RID>());
 	int test_ray_separation(RigidBodyBullet *p_body, const Transform &p_transform, bool p_infinite_inertia, Vector3 &r_recover_motion, PhysicsServer::SeparationResult *r_results, int p_result_max, float p_margin);
+	Array recover_from_penetration(RigidBodyBullet *p_body, const Transform &p_transform);
 
 private:
 	void create_empty_world(bool p_create_soft_world);

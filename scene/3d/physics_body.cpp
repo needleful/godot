@@ -986,6 +986,10 @@ Ref<KinematicCollision> KinematicBody::_move(const Vector3 &p_motion, bool p_inf
 	return Ref<KinematicCollision>();
 }
 
+Array KinematicBody::recover_from_penetration() {
+	return PhysicsServer::get_singleton()->body_recover_from_penetration(get_rid());
+}
+
 bool KinematicBody::move_and_collide(const Vector3 &p_motion, bool p_infinite_inertia, Collision &r_collision, bool p_exclude_raycast_shapes, bool p_test_only, bool p_cancel_sliding, const Set<RID> &p_exclude) {
 	if (sync_to_physics) {
 		ERR_PRINT("Functions move_and_slide and move_and_collide do not work together with 'sync to physics' option. Please read the documentation.");
@@ -1473,6 +1477,7 @@ void KinematicBody::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("move_and_slide", "linear_velocity", "up_direction", "stop_on_slope", "max_slides", "floor_max_angle", "infinite_inertia"), &KinematicBody::move_and_slide, DEFVAL(Vector3(0, 0, 0)), DEFVAL(false), DEFVAL(4), DEFVAL(Math::deg2rad((float)45)), DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("move_and_slide_with_snap", "linear_velocity", "snap", "up_direction", "stop_on_slope", "max_slides", "floor_max_angle", "infinite_inertia"), &KinematicBody::move_and_slide_with_snap, DEFVAL(Vector3(0, 0, 0)), DEFVAL(false), DEFVAL(4), DEFVAL(Math::deg2rad((float)45)), DEFVAL(true));
 
+	ClassDB::bind_method(D_METHOD("recover_from_penetration"), &KinematicBody::recover_from_penetration);
 	ClassDB::bind_method(D_METHOD("test_move", "from", "rel_vec", "infinite_inertia"), &KinematicBody::test_move, DEFVAL(true));
 
 	ClassDB::bind_method(D_METHOD("is_on_floor"), &KinematicBody::is_on_floor);

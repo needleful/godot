@@ -102,7 +102,7 @@ bool BulletPhysicsDirectSpaceState::intersect_ray(const Vector3 &p_from, const V
 	if (btResult.hasHit()) {
 		B_TO_G(btResult.m_hitPointWorld, r_result.position);
 		B_TO_G(btResult.m_hitNormalWorld.normalize(), r_result.normal);
-		
+
 		CollisionObjectBullet *gObj = static_cast<CollisionObjectBullet *>(btResult.m_collisionObject->getUserPointer());
 		if (gObj) {
 			r_result.shape = btResult.m_shapeId;
@@ -1085,6 +1085,41 @@ int SpaceBullet::test_ray_separation(RigidBodyBullet *p_body, const Transform &p
 	return rays_found;
 }
 
+Array SpaceBullet::recover_from_penetration(RigidBodyBullet *p_body, const Transform &p_transform) {
+	btTransform body_transform;
+	G_TO_B(p_transform, body_transform);
+	UNSCALE_BT_BASIS(body_transform);
+	Set<RID> no_exclusions{};
+	btVector3 initial_recover_motion(0, 0, 0);
+
+	Array result{};
+
+	for (int t(RECOVERING_MOVEMENT_CYCLES); 0 < t; --t) {
+		RecoverResult r;
+		if (recover_from_penetration(p_body, body_transform, RECOVERING_MOVEMENT_SCALE, false, initial_recover_motion, &r, no_exclusions)) {
+			Dictionary movement{};
+			Vector3 normal;
+			B_TO_G(r.normal, normal);
+			movement[StringName("normal")] = normal;
+			movement[StringName("depth")] = -r.penetration_distance;
+
+			CollisionObjectBullet *gObj = static_cast<CollisionObjectBullet *>(r.other_collision_object->getUserPointer());
+			if (gObj) {
+				RID rid = gObj->get_self();
+				ObjectID collider_id = gObj->get_instance_id();
+				movement[StringName("collider")] = 0 == collider_id ? nullptr : ObjectDB::get_instance(collider_id);
+				;
+			} else {
+				WARN_PRINT("The movement recovery did not collide with a valid Godot collision object.");
+			}
+			result.push_back(movement);
+		} else {
+			break;
+		}
+	}
+	body_transform.getOrigin() += initial_recover_motion;
+	return result;
+}
 struct RecoverPenetrationBroadPhaseCallback : public btBroadphaseAabbCallback {
 private:
 	btDbvtVolume bounds;
