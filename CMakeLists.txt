@@ -6,6 +6,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 option(editor "Build the editor tools")
 
+add_definitions(-DOPENGL_ENABLED)
+if(editor)
+	add_definitions(-DCRASH_HANDLER_EXCEPTION)
+endif()
+
 add_subdirectory(core)
 add_subdirectory(servers)
 add_subdirectory(scene)
