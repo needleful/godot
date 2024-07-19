@@ -1,0 +1,3 @@
+target_sources(drivers PRIVATE audio_driver_xaudio2.cpp)
+target_link_libraries(drivers xaudio2_8)
+add_compile_definitions(XAUDIO2_ENABLED)
