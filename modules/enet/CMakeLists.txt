@@ -1,7 +1,10 @@
 project(enet)
 set(base_dir "${thirdparty_dir}/${PROJECT_NAME}/")
 
-file(GLOB fp_sources *.cpp)
+set(fp_sources
+	networked_multiplayer_enet.cpp
+	register_types.cpp
+)
 list(APPEND tp_sources
 	godot.cpp
 	callbacks.c

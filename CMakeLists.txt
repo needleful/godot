@@ -59,11 +59,6 @@ set(enabled_modules
 	upnp
 	vhacd
 	vorbis
-	webm
-	webp
-	webrtc
-	websocket
-	webxr
 )
 
 add_subdirectory(core)
