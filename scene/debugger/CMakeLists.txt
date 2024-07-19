@@ -1,0 +1,1 @@
+target_sources(scene PRIVATE script_debugger_remote.cpp)

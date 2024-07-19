@@ -9,4 +9,8 @@ add_executable(godot
     power_x11.cpp
     detect_prime.cpp
     godot_x11.cpp
+    libudev-so_wrap.c
+    # Text-to-speech
+    speechd-so_wrap.c
+    tts_linux.cpp
 )
