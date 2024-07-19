@@ -21,19 +21,56 @@ add_compile_definitions(
 	$<$<CONFIG:Editor>:TOOLS_ENABLED>
 )
 
-add_subdirectory(editor)
 
 # What are you gonna do about it, punk?
 include_directories(${PROJECT_SOURCE_DIR})
 
+set(thirdparty_dir "${CMAKE_SOURCE_DIR}/thirdparty")
+
+set(enabled_modules
+	bmp
+	bullet
+	csg
+	cvtt
+	dds
+	enet
+	etc
+	freetype
+	gdscript
+	gltf
+	hdr
+	jpg
+	jsonrpc
+	mbedtls
+	minimp3
+	navigation
+	np_multi_mesh
+	ogg
+	opensimplex
+	opus
+	pvr
+	regex
+	squish
+	stb_vorbis
+	svg
+	tga
+	theora
+	tinyexr
+	upnp
+	vhacd
+	vorbis
+	webm
+	webp
+	webrtc
+	websocket
+	webxr
+)
+
 add_subdirectory(core)
 add_subdirectory(drivers)
-add_subdirectory(servers)
-add_subdirectory(scene)
-add_subdirectory(platform)
-add_subdirectory(modules)
+add_subdirectory(editor)
 add_subdirectory(main)
-
-if(editor)
-	add_subdirectory(tools)
-endif()
+add_subdirectory(modules)
+add_subdirectory(platform)
+add_subdirectory(scene)
+add_subdirectory(servers)

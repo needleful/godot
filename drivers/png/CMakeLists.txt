@@ -1,5 +1,5 @@
 file(GLOB png_sources
-	"${CMAKE_SOURCE_DIR}/thirdparty/libpng/*.c")
+	"${thirdparty_dir}/libpng/*.c")
 target_sources(drivers PRIVATE
 	${png_sources}
 	image_loader_png.cpp
