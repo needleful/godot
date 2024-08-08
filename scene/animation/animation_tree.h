@@ -90,7 +90,7 @@ public:
 	AnimationNode *parent;
 
 	HashMap<NodePath, bool> filter;
-	bool filter_enabled;
+	bool filter_enabled, relative_time;
 
 	Array _get_filters() const;
 	void _set_filters(const Array &p_filters);
@@ -102,6 +102,7 @@ protected:
 	float blend_node(const StringName &p_sub_path, Ref<AnimationNode> p_node, float p_time, bool p_seek, float p_blend, FilterAction p_filter = FILTER_IGNORE, bool p_optimize = true);
 	float blend_input(int p_input, float p_time, bool p_seek, float p_blend, FilterAction p_filter = FILTER_IGNORE, bool p_optimize = true);
 	void make_invalid(const String &p_reason);
+	virtual float get_blended_length();
 
 	static void _bind_methods();
 
@@ -136,6 +137,9 @@ public:
 
 	void set_filter_enabled(bool p_enable);
 	bool is_filter_enabled() const;
+
+	void set_relative_time(bool p_relative);
+	bool is_relative_time() const;
 
 	virtual bool has_filter() const;
 

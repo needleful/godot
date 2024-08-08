@@ -44,6 +44,7 @@ class AnimationNodeAnimation : public AnimationRootNode {
 
 protected:
 	void _validate_property(PropertyInfo &property) const;
+	virtual float get_blended_length();
 
 	static void _bind_methods();
 

@@ -131,6 +131,17 @@ AnimationNodeAnimation::AnimationNodeAnimation() {
 	time = "time";
 }
 
+float AnimationNodeAnimation::get_blended_length() {
+	AnimationPlayer *ap = state->player;
+	ERR_FAIL_COND_V(!ap, 0);
+
+	if (ap->has_animation(animation)) {
+		return ap->get_animation(animation)->get_length();
+	} else {
+		return 0;
+	}
+}
+
 ////////////////////////////////////////////////////////
 
 void AnimationNodeOneShot::get_parameter_list(List<PropertyInfo> *r_list) const {
