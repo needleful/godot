@@ -5,7 +5,7 @@ project(Godot)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 if(MSVC)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++20 /Wall")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++20")
 else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++20 -Wall -Wextra -Wpedantic")
 endif(MSVC)
@@ -24,6 +24,11 @@ add_compile_definitions(
 
 # What are you gonna do about it, punk?
 include_directories(${PROJECT_SOURCE_DIR})
+if(WIN32)
+	include_directories(platform/windows)
+else()
+	include_directories(platform/x11)
+endif()
 
 set(thirdparty_dir "${CMAKE_SOURCE_DIR}/thirdparty")
 
