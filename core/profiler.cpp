@@ -23,9 +23,8 @@ ProfileMarker::~ProfileMarker() {
 	ProfileToken token;
 	token.func_name = func_name;
 	token.start_time = start_time;
+	token.end_time = current_time();
 	token.special_value = -1;
-
-	start_time = current_time();
 
 	ProfilerManager::singleton->append(token);
 #endif
