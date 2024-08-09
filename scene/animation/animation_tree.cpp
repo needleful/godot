@@ -142,10 +142,13 @@ void AnimationNode::make_invalid(const String &p_reason) {
 }
 
 float AnimationNode::get_blended_length() {
+	if (blends.size() == 0) {
+		return 0;
+	}
 	float total_weight = 0, total_length = 0;
 	int blend_index = 0;
 	List<ChildNode> children;
-	this->get_child_nodes(&children);
+	get_child_nodes(&children);
 	for (auto e = children.front(); e; e = e->next()) {
 		total_length += e->get().node->get_blended_length();
 		total_weight += blends[blend_index++];

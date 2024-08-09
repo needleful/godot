@@ -132,6 +132,9 @@ AnimationNodeAnimation::AnimationNodeAnimation() {
 }
 
 float AnimationNodeAnimation::get_blended_length() {
+	if (!state) {
+		return 0;
+	}
 	AnimationPlayer *ap = state->player;
 	ERR_FAIL_COND_V(!ap, 0);
 
