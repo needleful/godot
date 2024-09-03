@@ -14,4 +14,4 @@ de 'Terminal=false'
 de 'Categories=Development'
 
 desktop-file-validate godot.desktop
-echo 'You can now call "sudo cp godot.desktop /usr/share/applications" to install godot, probably'
+cp godot.desktop ~/.local/share/applications
