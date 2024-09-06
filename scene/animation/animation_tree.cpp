@@ -479,6 +479,7 @@ AnimationNode::AnimationNode() {
 	state = nullptr;
 	parent = nullptr;
 	filter_enabled = false;
+	relative_time = false;
 }
 
 ////////////////////
