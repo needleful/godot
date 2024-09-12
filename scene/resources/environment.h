@@ -179,6 +179,8 @@ private:
 	float fog_height_max;
 	float fog_height_curve;
 
+	bool emission_enabled;
+
 protected:
 	static void _bind_methods();
 	virtual void _validate_property(PropertyInfo &property) const;
@@ -411,6 +413,9 @@ public:
 
 	void set_fog_height_curve(float p_distance);
 	float get_fog_height_curve() const;
+
+	void set_emission_enabled(bool p_enabled);
+	bool is_emission_enabled() const;
 
 	virtual RID get_rid() const;
 
