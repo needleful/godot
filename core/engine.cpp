@@ -72,6 +72,10 @@ float Engine::get_physics_step() const {
 	return _physics_step;
 }
 
+float Engine::get_frame_step() const {
+	return _frame_step;
+}
+
 void Engine::set_target_fps(int p_fps) {
 	_target_fps = p_fps > 0 ? p_fps : 0;
 }

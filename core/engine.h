@@ -93,6 +93,8 @@ public:
 	void set_physics_step(float p_step);
 	float get_physics_step() const;
 
+	float get_frame_step() const;
+
 	float get_frames_per_second() const { return _fps; }
 
 	uint64_t get_frames_drawn();

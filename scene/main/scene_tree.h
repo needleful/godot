@@ -53,7 +53,7 @@ class SceneTreeTimer : public Reference {
 
 	float time_left;
 	bool process_pause;
-	bool ignore_time_scale = false;
+	bool ignore_time_scale = true;
 
 protected:
 	static void _bind_methods();
