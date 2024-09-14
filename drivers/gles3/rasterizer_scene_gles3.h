@@ -547,8 +547,8 @@ public:
 				fog_height_enabled(false),
 				fog_height_min(10),
 				fog_height_max(0),
-				emission_enabled(true),
-				fog_height_curve(1) {
+				fog_height_curve(1),
+				emission_enabled(true) {
 		}
 	};
 
