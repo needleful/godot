@@ -503,8 +503,6 @@ public:
 	BIND7(environment_set_fog_depth, RID, bool, float, float, float, bool, float)
 	BIND5(environment_set_fog_height, RID, bool, float, float, float)
 
-	BIND2(environment_set_emission_enabled, RID, bool)
-
 #undef BINDBASE
 #define BINDBASE VSG::scene
 

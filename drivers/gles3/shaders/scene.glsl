@@ -122,7 +122,6 @@ layout(std140) uniform SceneData { // ubo:0
 	highp float fog_height_min;
 	highp float fog_height_max;
 	highp float fog_height_curve;
-	bool emission_enabled;
 
 	int view_index;
 };
@@ -827,7 +826,6 @@ layout(std140) uniform SceneData {
 	highp float fog_height_min;
 	highp float fog_height_max;
 	highp float fog_height_curve;
-	bool emission_enabled;
 
 	int view_index;
 };
@@ -1728,7 +1726,6 @@ FRAGMENT_SHADER_CODE
 
 	vec3 specular_light;
 	vec3 diffuse_light;
-	float emission_factor = float(emission_enabled);
 #ifdef USE_VERTEX_LIGHTING //ubershader-runtime
 
 	specular_light = specular_light_interp.rgb;
@@ -2037,7 +2034,7 @@ FRAGMENT_SHADER_CODE
 #else //ubershader-runtime
 
 	//approximate ambient scale for SSAO, since we will lack full ambient
-	float max_emission = emission_factor * max(emission.r, max(emission.g, emission.b));
+	float max_emission = max(emission.r, max(emission.g, emission.b));
 	float max_ambient = max(ambient_light.r, max(ambient_light.g, ambient_light.b));
 	float max_diffuse = max(diffuse_light.r, max(diffuse_light.g, diffuse_light.b));
 	float total_ambient = max_ambient + max_diffuse;
@@ -2053,7 +2050,7 @@ FRAGMENT_SHADER_CODE
 	specular_buffer = vec4(specular_light, metallic);
 
 #ifdef USE_FORWARD_LIGHTING //ubershader-runtime
-	diffuse_buffer.rgb += emission_factor * emission;
+	diffuse_buffer.rgb += emission;
 #endif //ubershader-runtime
 #endif //SHADELESS //ubershader-runtime
 
@@ -2070,7 +2067,7 @@ FRAGMENT_SHADER_CODE
 #else //ubershader-runtime
 	frag_color = vec4(ambient_light + diffuse_light + specular_light, alpha);
 #ifdef USE_FORWARD_LIGHTING //ubershader-runtime
-	frag_color.rgb += emission_factor * emission;
+	frag_color.rgb += emission;
 #endif //ubershader-runtime
 #endif //SHADELESS //ubershader-runtime
 

@@ -986,13 +986,6 @@ void RasterizerSceneGLES3::environment_set_fog_height(RID p_env, bool p_enable, 
 	env->fog_height_curve = p_height_curve;
 }
 
-void RasterizerSceneGLES3::environment_set_emission_enabled(RID p_env, bool p_enabled) {
-	Environment *env = environment_owner.getornull(p_env);
-	ERR_FAIL_COND(!env);
-
-	env->emission_enabled = p_enabled;
-}
-
 bool RasterizerSceneGLES3::is_environment(RID p_env) {
 	return environment_owner.owns(p_env);
 }
@@ -2629,7 +2622,6 @@ void RasterizerSceneGLES3::_setup_environment(Environment *env, const CameraMatr
 		state.ubo_data.fog_height_min = env->fog_height_min;
 		state.ubo_data.fog_height_max = env->fog_height_max;
 		state.ubo_data.fog_height_curve = env->fog_height_curve;
-		state.ubo_data.emission_enabled = env->emission_enabled;
 
 	} else {
 		state.ubo_data.bg_energy = 1.0;
@@ -2649,7 +2641,6 @@ void RasterizerSceneGLES3::_setup_environment(Environment *env, const CameraMatr
 		state.env_radiance_data.ambient_contribution = 0;
 		state.ubo_data.ambient_occlusion_affect_light = 0;
 
-		state.ubo_data.emission_enabled = 1;
 		state.ubo_data.fog_color_enabled[3] = 0.0;
 	}
 
