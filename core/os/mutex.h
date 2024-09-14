@@ -41,7 +41,7 @@
 template <class StdMutexT>
 class MutexImpl {
 	mutable StdMutexT mutex;
-	friend class MutexLock;
+	template<class> friend class MutexLock;
 
 public:
 	_ALWAYS_INLINE_ void lock() const {
@@ -57,33 +57,18 @@ public:
 	}
 };
 
-// This is written this way instead of being a template to overcome a limitation of C++ pre-17
-// that would require MutexLock to be used like this: MutexLock<Mutex> lock;
+template<class StdMutexT>
 class MutexLock {
-	union {
-		std::recursive_mutex *recursive_mutex;
-		std::mutex *mutex;
-	};
-	bool recursive;
+	StdMutexT *mutex;
 
 public:
-	_ALWAYS_INLINE_ explicit MutexLock(const MutexImpl<std::recursive_mutex> &p_mutex) :
-			recursive_mutex(&p_mutex.mutex),
-			recursive(true) {
-		recursive_mutex->lock();
-	}
-	_ALWAYS_INLINE_ explicit MutexLock(const MutexImpl<std::mutex> &p_mutex) :
-			mutex(&p_mutex.mutex),
-			recursive(false) {
+	_ALWAYS_INLINE_ explicit MutexLock(const MutexImpl<StdMutexT> &p_mutex) :
+			mutex(&p_mutex.mutex){
 		mutex->lock();
 	}
 
 	_ALWAYS_INLINE_ ~MutexLock() {
-		if (recursive) {
-			recursive_mutex->unlock();
-		} else {
-			mutex->unlock();
-		}
+		mutex->unlock();
 	}
 };
 
@@ -93,7 +78,7 @@ using BinaryMutex = MutexImpl<std::mutex>; // Non-recursive, handle with care
 extern template class MutexImpl<std::recursive_mutex>;
 extern template class MutexImpl<std::mutex>;
 
-#else
+#else // NO_THREADS
 
 class FakeMutex {
 	FakeMutex() {}
@@ -107,6 +92,8 @@ public:
 	_ALWAYS_INLINE_ Error try_lock() const { return OK; }
 };
 
+
+template<class MutexT>
 class MutexLock {
 public:
 	explicit MutexLock(const MutexImpl<FakeMutex> &p_mutex) {}

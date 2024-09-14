@@ -1362,7 +1362,6 @@ void EditorExport::add_export_preset(const Ref<EditorExportPreset> &p_preset, in
 
 String EditorExportPlatform::test_etc2() const {
 	String driver = ProjectSettings::get_singleton()->get("rendering/quality/driver/driver_name");
-	bool etc_supported = ProjectSettings::get_singleton()->get("rendering/vram_compression/import_etc");
 	bool etc2_supported = ProjectSettings::get_singleton()->get("rendering/vram_compression/import_etc2");
 
 	if (driver == "GLES3") {
