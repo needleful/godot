@@ -236,9 +236,12 @@ class GDScriptInstance : public ScriptInstance {
 	Map<StringName, int> member_indices_cache; //used only for hot script reloading
 #endif
 	Vector<Variant> members;
+	Vector<uint8_t> stack;
+	uint64_t stack_size;
 	bool base_ref;
 
 	SelfList<GDScriptFunctionState>::List pending_func_states;
+
 
 	void _ml_call_reversed(GDScript *sptr, const StringName &p_method, const Variant **p_args, int p_argcount);
 
@@ -269,6 +272,9 @@ public:
 
 	virtual MultiplayerAPI::RPCMode get_rpc_mode(const StringName &p_method) const;
 	virtual MultiplayerAPI::RPCMode get_rset_mode(const StringName &p_variable) const;
+
+	virtual uint8_t* alloc_stack(uint64_t size);
+	virtual void free_stack(uint64_t size);
 
 	GDScriptInstance();
 	~GDScriptInstance();

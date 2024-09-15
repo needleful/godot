@@ -34,6 +34,15 @@
 #include "gdscript.h"
 #include "gdscript_functions.h"
 
+#ifdef DEBUG_ENABLED
+#define ALLOC_STACK(size) p_instance->alloc_stack(size)
+#define FREE_STACK(size) p_instance->free_stack(size)
+#else
+#define ALLOC_STACK(size) (uint8_t*) alloca(size)
+#define FREE_STACK(size)
+#endif // DEBUG_ENABLED
+
+
 Variant *GDScriptFunction::_get_variant(int p_address, GDScriptInstance *p_instance, GDScript *p_script, Variant &self, Variant &static_ref, Variant *p_stack, String &r_error) const {
 	int address = p_address & ADDR_MASK;
 
@@ -266,6 +275,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 	Variant *stack = nullptr;
 	Variant **call_args;
 	int defarg = 0;
+	bool stack_was_alloc = false;
 
 #ifdef DEBUG_ENABLED
 
@@ -310,7 +320,8 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 		alloca_size = sizeof(Variant *) * _call_size + sizeof(Variant) * _stack_size;
 
 		if (alloca_size) {
-			uint8_t *aptr = (uint8_t *)alloca(alloca_size);
+			uint8_t *aptr = ALLOC_STACK(alloca_size);
+			stack_was_alloc = true;
 
 			if (_stack_size) {
 				stack = (Variant *)aptr;
@@ -1586,6 +1597,9 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 	}
 #endif
 
+	if(stack_was_alloc){
+		FREE_STACK(alloca_size);
+	}
 	return retvalue;
 }
 

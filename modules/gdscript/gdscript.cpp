@@ -1344,9 +1344,11 @@ void GDScriptInstance::reload_members() {
 #endif
 }
 
-GDScriptInstance::GDScriptInstance() {
-	owner = nullptr;
-	base_ref = false;
+GDScriptInstance::GDScriptInstance():
+	owner(nullptr),
+	stack_size(0),
+	base_ref(false) {
+		stack.resize(8*1024*1024);
 }
 
 GDScriptInstance::~GDScriptInstance() {
@@ -1364,6 +1366,18 @@ GDScriptInstance::~GDScriptInstance() {
 	}
 
 	GDScriptLanguage::singleton->lock.unlock();
+}
+
+uint8_t* GDScriptInstance::alloc_stack(uint64_t size) {
+	CRASH_COND_MSG(size + stack_size >= (uint64_t) stack.size(), "Stack Overflow!");
+	uint8_t* ptr = &stack.ptrw()[stack_size];
+	stack_size += size;
+	return ptr;
+}
+
+void GDScriptInstance::free_stack(uint64_t size) {
+	CRASH_COND_MSG(size > stack_size, "Stack Underflow!");
+	stack_size -= size;
 }
 
 /************* SCRIPT LANGUAGE **************/
