@@ -183,8 +183,6 @@ void MultiMeshSystem::_notification(int p_what) {
 		while ((mesh_id = meshes.next(mesh_id))) {
 			MultiMeshInstance *m = meshes[*mesh_id];
 			Vector<MultiMeshComponent *> &comps = components[*mesh_id];
-			int visible_count = 0;
-
 			m->get_multimesh()->set_instance_count(comps.size());
 			for (int i = 0; i < comps.size(); i++) {
 				m->get_multimesh()->set_instance_transform(i, inv_transform * comps[i]->get_global_transform());

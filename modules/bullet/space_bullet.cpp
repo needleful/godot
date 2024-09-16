@@ -1105,10 +1105,8 @@ Array SpaceBullet::recover_from_penetration(RigidBodyBullet *p_body, const Trans
 
 			CollisionObjectBullet *gObj = static_cast<CollisionObjectBullet *>(r.other_collision_object->getUserPointer());
 			if (gObj) {
-				RID rid = gObj->get_self();
 				ObjectID collider_id = gObj->get_instance_id();
 				movement[StringName("collider")] = 0 == collider_id ? nullptr : ObjectDB::get_instance(collider_id);
-				;
 			} else {
 				WARN_PRINT("The movement recovery did not collide with a valid Godot collision object.");
 			}

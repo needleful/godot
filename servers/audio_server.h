@@ -210,7 +210,7 @@ private:
 			Ref<AudioEffect> effect;
 			bool enabled;
 #ifdef DEBUG_ENABLED
-			uint64_t prof_time;
+			uint64_t prof_time = 0;
 #endif
 		};
 

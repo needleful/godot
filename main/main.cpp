@@ -147,7 +147,6 @@ HashMap<Main::CLIScope, Vector<String>> forwardable_cli_arguments;
 // Display
 
 static OS::VideoMode video_mode;
-static int init_screen = -1;
 static bool init_fullscreen = false;
 static bool init_maximized = false;
 static bool init_windowed = false;

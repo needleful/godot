@@ -1214,7 +1214,6 @@ public:
 		RID draw_passes[ParticlesData::MAX_DRAW_PASSES];
 		AABB custom_aabb;
 		RID process_material;
-		ParticlesData::DrawOrder draw_order;
 		Transform emission_transform;
 		float inactive_time;
 		float lifetime;
@@ -1239,6 +1238,7 @@ public:
 		uint32_t cycle_number;
 
 		bool particle_valid_histories[2];
+		ParticlesData::DrawOrder draw_order : 2;
 		bool histories_enabled : 1;
 		bool clear : 1;
 		bool fractional_delta : 1;
@@ -1249,29 +1249,32 @@ public:
 		bool use_local_coords : 1;
 
 		Particles() :
-				inactive(true),
+				particle_element(this),
+				custom_aabb(AABB(Vector3(-4, -4, -4), Vector3(8, 8, 8))),
+
 				inactive_time(0.0),
-				emitting(false),
-				one_shot(false),
-				amount(0),
 				lifetime(1.0),
 				pre_process_time(0.0),
 				explosiveness(0.0),
 				randomness(0.0),
-				restart_request(false),
-				custom_aabb(AABB(Vector3(-4, -4, -4), Vector3(8, 8, 8))),
-				use_local_coords(true),
-				draw_order(ParticlesData::DRAW_ORDER_INDEX),
-				histories_enabled(false),
-				particle_element(this),
+				speed_scale(1.0),
+				frame_remainder(0),
+				fixed_fps(0),
+				amount(0),
+
 				prev_ticks(0),
 				random_seed(0),
 				cycle_number(0),
-				speed_scale(1.0),
-				fixed_fps(0),
+
+				draw_order(ParticlesData::DRAW_ORDER_INDEX),
+				histories_enabled(false),
+				clear(true),
 				fractional_delta(false),
-				frame_remainder(0),
-				clear(true) {
+				restart_request(false),
+				inactive(true),
+				emitting(false),
+				one_shot(false),
+				use_local_coords(true) {
 			for (int i = 0; i < ParticlesData::MAX_DRAW_PASSES; i++) {
 				draw_passes[i] = RID();
 			}

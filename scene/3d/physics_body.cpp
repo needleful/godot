@@ -1247,7 +1247,6 @@ void KinematicBody::_set_collision_direction(const Collision &p_collision, const
 		//all is a wall
 		on_wall = true;
 	} else {
-		RID col = p_collision.collider_rid;
 		bool excluded_floor = moving_platform_exclude_mask & PhysicsServer::get_singleton()->body_get_collision_layer(p_collision.collider_rid);
 
 		if (!excluded_floor && Math::acos(p_collision.normal.dot(p_up_direction)) <= p_floor_max_angle + FLOOR_ANGLE_THRESHOLD) { //floor
