@@ -413,8 +413,6 @@ public:
 	FUNC7(environment_set_fog_depth, RID, bool, float, float, float, bool, float)
 	FUNC5(environment_set_fog_height, RID, bool, float, float, float)
 
-	FUNC2(environment_set_emission_enabled, RID, bool)
-
 	/* INTERPOLATION API */
 
 	FUNC1(set_physics_interpolation_enabled, bool)

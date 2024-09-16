@@ -41,7 +41,8 @@
 template <class StdMutexT>
 class MutexImpl {
 	mutable StdMutexT mutex;
-	template<class> friend class MutexLock;
+	template <class>
+	friend class MutexLock;
 
 public:
 	_ALWAYS_INLINE_ void lock() const {
@@ -57,13 +58,13 @@ public:
 	}
 };
 
-template<class StdMutexT>
+template <class StdMutexT>
 class MutexLock {
 	StdMutexT *mutex;
 
 public:
 	_ALWAYS_INLINE_ explicit MutexLock(const MutexImpl<StdMutexT> &p_mutex) :
-			mutex(&p_mutex.mutex){
+			mutex(&p_mutex.mutex) {
 		mutex->lock();
 	}
 
@@ -92,8 +93,7 @@ public:
 	_ALWAYS_INLINE_ Error try_lock() const { return OK; }
 };
 
-
-template<class MutexT>
+template <class MutexT>
 class MutexLock {
 public:
 	explicit MutexLock(const MutexImpl<FakeMutex> &p_mutex) {}

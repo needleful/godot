@@ -1238,7 +1238,7 @@ public:
 		uint32_t cycle_number;
 
 		bool particle_valid_histories[2];
-		ParticlesData::DrawOrder draw_order:2;
+		ParticlesData::DrawOrder draw_order : 2;
 		bool histories_enabled : 1;
 		bool clear : 1;
 		bool fractional_delta : 1;
