@@ -439,7 +439,18 @@ int btDiscreteDynamicsWorld::stepSimulation(btScalar timeStep, int maxSubSteps, 
 	{
 		// needleful's mod: I need collision detection when time is stopped.
 		if(maxSubSteps) {
-			internalSingleStepSimulation(0);
+			if (0 != m_internalPreTickCallback)
+			{
+				(*m_internalPreTickCallback)(this, timeStep);
+			}
+			
+			///perform collision detection
+			performDiscreteCollisionDetection();
+
+			if (0 != m_internalTickCallback)
+			{
+				(*m_internalTickCallback)(this, timeStep);
+			}
 		}
 		// Resume normal code
 		synchronizeMotionStates();
