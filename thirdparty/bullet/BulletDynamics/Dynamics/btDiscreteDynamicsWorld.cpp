@@ -405,7 +405,7 @@ int btDiscreteDynamicsWorld::stepSimulation(btScalar timeStep, int maxSubSteps, 
 		if (btFuzzyZero(timeStep))
 		{
 			numSimulationSubSteps = 0;
-			maxSubSteps = 0;
+			maxSubSteps = 1;
 		}
 		else
 		{
@@ -437,6 +437,11 @@ int btDiscreteDynamicsWorld::stepSimulation(btScalar timeStep, int maxSubSteps, 
 	}
 	else
 	{
+		// needleful's mod: I need collision detection when time is stopped.
+		if(maxSubSteps) {
+			internalSingleStepSimulation(0);
+		}
+		// Resume normal code
 		synchronizeMotionStates();
 	}
 
