@@ -1671,6 +1671,7 @@ void main() {
 
 #endif //ubershader-runtime
 
+	float emission_factor = float(emission_enabled);
 	ambient_light *= ambient_energy;
 
 	{
@@ -1728,7 +1729,6 @@ FRAGMENT_SHADER_CODE
 
 	vec3 specular_light;
 	vec3 diffuse_light;
-	float emission_factor = float(emission_enabled);
 #ifdef USE_VERTEX_LIGHTING //ubershader-runtime
 
 	specular_light = specular_light_interp.rgb;
