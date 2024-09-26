@@ -3487,6 +3487,7 @@ void NavigationMeshSpatialGizmoPlugin::redraw(EditorSpatialGizmo *p_gizmo) {
 	Map<_EdgeKey, bool> edge_map;
 	PoolVector<Vector3> tmeshfaces;
 	tmeshfaces.resize(faces.size() * 3);
+	Vector<Vector3> lines;
 
 	{
 		PoolVector<Vector3>::Write tw = tmeshfaces.write();
@@ -3504,23 +3505,28 @@ void NavigationMeshSpatialGizmoPlugin::redraw(EditorSpatialGizmo *p_gizmo) {
 					SWAP(ek.from, ek.to);
 				}
 
-				Map<_EdgeKey, bool>::Element *F = edge_map.find(ek);
-
-				if (F) {
-					F->get() = false;
-
+				if (navmesh->is_enabled()) {
+					lines.push_back(f.vertex[j]);
 				} else {
-					edge_map[ek] = true;
+					Map<_EdgeKey, bool>::Element *F = edge_map.find(ek);
+					if (F) {
+						F->get() = false;
+					} else {
+						edge_map[ek] = true;
+					}
 				}
+			}
+			if (navmesh->is_enabled()) {
+				lines.push_back(f.vertex[0]);
 			}
 		}
 	}
-	Vector<Vector3> lines;
-
-	for (Map<_EdgeKey, bool>::Element *E = edge_map.front(); E; E = E->next()) {
-		if (E->get()) {
-			lines.push_back(E->key().from);
-			lines.push_back(E->key().to);
+	if (!navmesh->is_enabled()) {
+		for (Map<_EdgeKey, bool>::Element *E = edge_map.front(); E; E = E->next()) {
+			if (E->get()) {
+				lines.push_back(E->key().from);
+				lines.push_back(E->key().to);
+			}
 		}
 	}
 
