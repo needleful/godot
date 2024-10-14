@@ -79,6 +79,8 @@ public:
 	virtual void set_blend_shape_name(int p_index, const StringName &p_name);
 	virtual AABB get_aabb() const;
 	virtual RID get_rid() const;
+	virtual ShadowRenderDistance get_shadow_render_distance() const;
+	virtual void set_shadow_render_distance(ShadowRenderDistance p_shadow_distance);
 
 	void set_material(const Ref<Material> &p_material);
 	Ref<Material> get_material() const;

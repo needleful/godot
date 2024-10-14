@@ -3890,6 +3890,19 @@ PoolVector<float> RasterizerStorageGLES3::mesh_get_blend_shape_values(RID p_mesh
 	return mesh->blend_shape_values;
 }
 
+// TODO implement
+void RasterizerStorageGLES3::mesh_set_shadow_render_distance(RID p_mesh, VS::ShadowRenderDistance p_distance) {
+	Mesh *mesh = mesh_owner.getornull(p_mesh);
+	ERR_FAIL_COND(!mesh);
+	mesh->shadow_render_distance = p_distance;
+}
+
+VS::ShadowRenderDistance RasterizerStorageGLES3::mesh_get_shadow_render_distance(RID p_mesh) const {
+	Mesh *mesh = mesh_owner.getornull(p_mesh);
+	ERR_FAIL_COND_V(!mesh, VS::SHADOW_DIST_ALL);
+	return mesh->shadow_render_distance;
+}
+
 void RasterizerStorageGLES3::mesh_surface_update_region(RID p_mesh, int p_surface, int p_offset, const PoolVector<uint8_t> &p_data) {
 	Mesh *mesh = mesh_owner.getornull(p_mesh);
 	ERR_FAIL_COND(!mesh);
@@ -5694,6 +5707,7 @@ RID RasterizerStorageGLES3::reflection_probe_create() {
 
 	reflection_probe->intensity = 1.0;
 	reflection_probe->interior_ambient = Color();
+	reflection_probe->interior_dark_ambient = Color();
 	reflection_probe->interior_ambient_energy = 1.0;
 	reflection_probe->interior_ambient_probe_contrib = 0.0;
 
@@ -5736,6 +5750,13 @@ void RasterizerStorageGLES3::reflection_probe_set_interior_ambient_energy(RID p_
 	ERR_FAIL_COND(!reflection_probe);
 
 	reflection_probe->interior_ambient_energy = p_energy;
+}
+
+void RasterizerStorageGLES3::reflection_probe_set_interior_dark_ambient(RID p_probe, const Color &p_dark_ambient) {
+	ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND(!reflection_probe);
+
+	reflection_probe->interior_dark_ambient = p_dark_ambient;
 }
 
 void RasterizerStorageGLES3::reflection_probe_set_interior_ambient_probe_contribution(RID p_probe, float p_contrib) {
@@ -5858,6 +5879,32 @@ RID RasterizerStorageGLES3::particles_create() {
 	return particles_owner.make_rid(particles);
 }
 
+void RasterizerStorageGLES3::particles_set(RID p_particles, const ParticlesData &data) {
+	Particles *particles = particles_owner.getornull(p_particles);
+	ERR_FAIL_COND(!particles);
+
+	particles->process_material = data.process_material;
+	particles->lifetime = data.lifetime;
+	particles->pre_process_time = data.pre_process_time;
+	particles->explosiveness = data.explosiveness_ratio;
+	particles->randomness = data.randomness_ratio;
+	particles->speed_scale = data.speed_scale;
+	particles->fixed_fps = data.fixed_fps;
+	particles->one_shot = data.one_shot;
+	particles->use_local_coords = data.local_coords;
+	particles->fractional_delta = data.fractional_delta;
+
+	particles_set_amount(p_particles, data.amount);
+	particles_set_draw_order(p_particles, data.draw_order);
+
+	if (!data.visibility_aabb.has_no_area()) {
+		particles_set_custom_aabb(p_particles, data.visibility_aabb);
+	}
+	for (short i = 0; i < ParticlesData::MAX_DRAW_PASSES; i++) {
+		particles->draw_passes[i] = data.draw_passes[i];
+	}
+}
+
 void RasterizerStorageGLES3::particles_set_emitting(RID p_particles, bool p_emitting) {
 	Particles *particles = particles_owner.getornull(p_particles);
 	ERR_FAIL_COND(!particles);
@@ -5951,7 +5998,7 @@ void RasterizerStorageGLES3::particles_set_randomness_ratio(RID p_particles, flo
 }
 
 void RasterizerStorageGLES3::_particles_update_histories(Particles *particles) {
-	bool needs_histories = particles->draw_order == VS::PARTICLES_DRAW_ORDER_VIEW_DEPTH;
+	bool needs_histories = particles->draw_order == ParticlesData::DRAW_ORDER_VIEW_DEPTH;
 
 	if (needs_histories == particles->histories_enabled) {
 		return;
@@ -6029,7 +6076,7 @@ void RasterizerStorageGLES3::particles_set_process_material(RID p_particles, RID
 	particles->process_material = p_material;
 }
 
-void RasterizerStorageGLES3::particles_set_draw_order(RID p_particles, VS::ParticlesDrawOrder p_order) {
+void RasterizerStorageGLES3::particles_set_draw_order(RID p_particles, ParticlesData::DrawOrder p_order) {
 	Particles *particles = particles_owner.getornull(p_particles);
 	ERR_FAIL_COND(!particles);
 
@@ -6040,15 +6087,16 @@ void RasterizerStorageGLES3::particles_set_draw_order(RID p_particles, VS::Parti
 void RasterizerStorageGLES3::particles_set_draw_passes(RID p_particles, int p_passes) {
 	Particles *particles = particles_owner.getornull(p_particles);
 	ERR_FAIL_COND(!particles);
-
-	particles->draw_passes.resize(p_passes);
+	for (int i = p_passes; i < ParticlesData::MAX_DRAW_PASSES; i++) {
+		particles->draw_passes[i] = RID();
+	}
 }
 
 void RasterizerStorageGLES3::particles_set_draw_pass_mesh(RID p_particles, int p_pass, RID p_mesh) {
 	Particles *particles = particles_owner.getornull(p_particles);
 	ERR_FAIL_COND(!particles);
-	ERR_FAIL_INDEX(p_pass, particles->draw_passes.size());
-	particles->draw_passes.write[p_pass] = p_mesh;
+	ERR_FAIL_INDEX(p_pass, ParticlesData::MAX_DRAW_PASSES);
+	particles->draw_passes[p_pass] = p_mesh;
 }
 
 void RasterizerStorageGLES3::particles_restart(RID p_particles) {
@@ -6113,7 +6161,7 @@ AABB RasterizerStorageGLES3::particles_get_current_aabb(RID p_particles) {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	float longest_axis = 0;
-	for (int i = 0; i < particles->draw_passes.size(); i++) {
+	for (int i = 0; i < ParticlesData::MAX_DRAW_PASSES; i++) {
 		if (particles->draw_passes[i].is_valid()) {
 			AABB maabb = mesh_get_aabb(particles->draw_passes[i], RID());
 			longest_axis = MAX(maabb.get_longest_axis_size(), longest_axis);
@@ -6142,14 +6190,18 @@ void RasterizerStorageGLES3::particles_set_emission_transform(RID p_particles, c
 int RasterizerStorageGLES3::particles_get_draw_passes(RID p_particles) const {
 	const Particles *particles = particles_owner.getornull(p_particles);
 	ERR_FAIL_COND_V(!particles, 0);
-
-	return particles->draw_passes.size();
+	for (int i = 0; i < ParticlesData::MAX_DRAW_PASSES; i++) {
+		if (!particles->draw_passes[i].is_valid()) {
+			return i;
+		}
+	}
+	return ParticlesData::MAX_DRAW_PASSES;
 }
 
 RID RasterizerStorageGLES3::particles_get_draw_pass_mesh(RID p_particles, int p_pass) const {
 	const Particles *particles = particles_owner.getornull(p_particles);
 	ERR_FAIL_COND_V(!particles, RID());
-	ERR_FAIL_INDEX_V(p_pass, particles->draw_passes.size(), RID());
+	ERR_FAIL_INDEX_V(p_pass, ParticlesData::MAX_DRAW_PASSES, RID());
 
 	return particles->draw_passes[p_pass];
 }

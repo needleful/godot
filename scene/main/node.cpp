@@ -35,6 +35,7 @@
 #include "core/io/resource_loader.h"
 #include "core/message_queue.h"
 #include "core/print_string.h"
+#include "core/profiler.h"
 #include "instance_placeholder.h"
 #include "scene/animation/scene_tree_tween.h"
 #include "scene/resources/packed_scene.h"
@@ -133,6 +134,7 @@ void Node::_notification(int p_notification) {
 			}
 		} break;
 		case NOTIFICATION_READY: {
+			ProfileMarker __mk("notification(ready)");
 			if (get_script_instance()) {
 				if (get_script_instance()->has_method(SceneStringNames::get_singleton()->_input)) {
 					set_process_input(true);
@@ -176,6 +178,7 @@ void Node::_notification(int p_notification) {
 }
 
 void Node::_propagate_ready() {
+	PROFILE
 	data.ready_notified = true;
 	data.blocked++;
 	for (int i = 0; i < data.children.size(); i++) {
@@ -890,11 +893,11 @@ void Node::reset_physics_interpolation() {
 
 float Node::get_physics_process_delta_time() const {
 	if (data.tree) {
-		float t = data.tree->get_physics_process_time();
-		if (!data.time_scale_response) {
-			t /= _Engine::get_singleton()->get_time_scale();
+		if (data.time_scale_response) {
+			return data.tree->get_physics_process_time();
+		} else {
+			return Engine::get_singleton()->get_physics_step();
 		}
-		return t;
 	} else {
 		return 0;
 	}
@@ -902,11 +905,11 @@ float Node::get_physics_process_delta_time() const {
 
 float Node::get_process_delta_time() const {
 	if (data.tree) {
-		float t = data.tree->get_idle_process_time();
-		if (!data.time_scale_response) {
-			t /= _Engine::get_singleton()->get_time_scale();
+		if (data.time_scale_response) {
+			return data.tree->get_idle_process_time();
+		} else {
+			return Engine::get_singleton()->get_frame_step();
 		}
-		return t;
 	} else {
 		return 0;
 	}
@@ -1294,6 +1297,7 @@ void Node::_add_child_nocheck(Node *p_child, const StringName &p_name) {
 }
 
 void Node::add_child(Node *p_child, bool p_legible_unique_name) {
+	PROFILE
 	ERR_FAIL_NULL(p_child);
 	ERR_FAIL_COND_MSG(p_child == this, vformat("Can't add child '%s' to itself.", p_child->get_name())); // adding to itself!
 	ERR_FAIL_COND_MSG(p_child->data.parent, vformat("Can't add child '%s' to '%s', already has a parent '%s'.", p_child->get_name(), get_name(), p_child->data.parent->get_name())); //Fail if node has a parent

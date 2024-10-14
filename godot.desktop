@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Godot
+Comment=Godot Engine Editor
+Path=/home/needleful/gamedev/godot
+Exec=bin/godot.x11.opt.tools.64
+Icon=/home/needleful/gamedev/godot/icon.svg
+Terminal=false
+Categories=Development

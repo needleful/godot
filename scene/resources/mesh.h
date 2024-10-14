@@ -49,13 +49,11 @@ protected:
 
 public:
 	enum {
-
 		NO_INDEX_ARRAY = VisualServer::NO_INDEX_ARRAY,
 		ARRAY_WEIGHTS_SIZE = VisualServer::ARRAY_WEIGHTS_SIZE
 	};
 
 	enum ArrayType {
-
 		ARRAY_VERTEX = VisualServer::ARRAY_VERTEX,
 		ARRAY_NORMAL = VisualServer::ARRAY_NORMAL,
 		ARRAY_TANGENT = VisualServer::ARRAY_TANGENT,
@@ -112,10 +110,18 @@ public:
 	};
 
 	enum BlendShapeMode {
-
 		BLEND_SHAPE_MODE_NORMALIZED = VS::BLEND_SHAPE_MODE_NORMALIZED,
 		BLEND_SHAPE_MODE_RELATIVE = VS::BLEND_SHAPE_MODE_RELATIVE,
 	};
+
+	enum ShadowRenderDistance {
+		SHADOW_DIST_CLOSE = VS::SHADOW_DIST_CLOSE,
+		SHADOW_DIST_MEDIUM = VS::SHADOW_DIST_MEDIUM,
+		SHADOW_DIST_FAR = VS::SHADOW_DIST_FAR,
+		SHADOW_DIST_ALL = VS::SHADOW_DIST_ALL
+	};
+
+	ShadowRenderDistance shadow_render_distance = ShadowRenderDistance::SHADOW_DIST_ALL;
 
 	virtual int get_surface_count() const = 0;
 	virtual int surface_get_array_len(int p_idx) const = 0;
@@ -130,6 +136,9 @@ public:
 	virtual int get_blend_shape_count() const = 0;
 	virtual StringName get_blend_shape_name(int p_index) const = 0;
 	virtual void set_blend_shape_name(int p_index, const StringName &p_name) = 0;
+
+	virtual ShadowRenderDistance get_shadow_render_distance() const = 0;
+	virtual void set_shadow_render_distance(ShadowRenderDistance p_shadow_distance) = 0;
 
 	PoolVector<Face3> get_faces() const;
 	Ref<TriangleMesh> generate_triangle_mesh() const;
@@ -215,6 +224,9 @@ public:
 	virtual void surface_set_material(int p_idx, const Ref<Material> &p_material);
 	virtual Ref<Material> surface_get_material(int p_idx) const;
 
+	virtual ShadowRenderDistance get_shadow_render_distance() const;
+	virtual void set_shadow_render_distance(ShadowRenderDistance p_shadow_distance);
+
 	int surface_find_by_name(const String &p_name) const;
 	void surface_set_name(int p_idx, const String &p_name);
 	String surface_get_name(int p_idx) const;
@@ -240,5 +252,6 @@ VARIANT_ENUM_CAST(Mesh::ArrayType);
 VARIANT_ENUM_CAST(Mesh::ArrayFormat);
 VARIANT_ENUM_CAST(Mesh::PrimitiveType);
 VARIANT_ENUM_CAST(Mesh::BlendShapeMode);
+VARIANT_ENUM_CAST(Mesh::ShadowRenderDistance);
 
 #endif // MESH_H

@@ -189,6 +189,8 @@ opts.Add(BoolVariable("builtin_zlib", "Use the built-in zlib library", True))
 opts.Add(BoolVariable("builtin_zstd", "Use the built-in Zstd library", True))
 
 opts.Add(BoolVariable("single_threaded", "Disable multithreading entirely", False))
+opts.Add(BoolVariable("np_profiler", "Enable needleful's magic profiler", True))
+opts.Add(BoolVariable("bt_profile", "Add the Bullet profiler to np_profiler's output", False))
 
 # Compilation environment setup
 opts.Add("CXX", "C++ compiler")
@@ -333,6 +335,11 @@ if env_base["target"] == "debug":
     # working on the engine itself.
     env_base.Append(CPPDEFINES=["DEV_ENABLED"])
 
+if env_base["np_profiler"]:
+    env_base.Append(CPPDEFINES=["NP_PROFILER"])
+if env_base["bt_profile"]:
+    env_base.Append(CPPDEFINES=["BT_ENABLE_PROFILE"])
+
 # SCons speed optimization controlled by the `fast_unsafe` option, which provide
 # more than 10 s speed up for incremental rebuilds.
 # Unsafe as they reduce the certainty of rebuilding all changed files, so it's
@@ -459,11 +466,11 @@ if selected_platform in platform_list:
         # both GCC and Clang. This mirrors GCC and Clang's current default
         # compile flags if no -std is specified.
         env.Prepend(CFLAGS=["-std=gnu11"])
-        env.Prepend(CXXFLAGS=["-std=gnu++14"])
+        env.Prepend(CXXFLAGS=["-std=gnu++17"])
     else:
         # MSVC doesn't have clear C standard support, /std only covers C++.
         # We apply it to CCFLAGS (both C and C++ code) in case it impacts C features.
-        env.Prepend(CCFLAGS=["/std:c++14"])
+        env.Prepend(CCFLAGS=["/std:c++17"])
 
     # Handle renamed options.
     if "use_lto" in ARGUMENTS or "use_thinlto" in ARGUMENTS:

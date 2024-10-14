@@ -35,7 +35,6 @@
 #include "scene/3d/audio_stream_player_3d.h"
 #include "scene/3d/collision_polygon.h"
 #include "scene/3d/collision_shape.h"
-#include "scene/3d/cpu_particles.h"
 #include "scene/3d/label_3d.h"
 #include "scene/3d/light.h"
 #include "scene/3d/listener.h"
@@ -2387,33 +2386,6 @@ void VisibilityNotifierGizmoPlugin::redraw(EditorSpatialGizmo *p_gizmo) {
 
 ////
 
-CPUParticlesGizmoPlugin::CPUParticlesGizmoPlugin() {
-	create_icon_material("particles_icon", SpatialEditor::get_singleton()->get_icon("GizmoCPUParticles", "EditorIcons"));
-}
-
-bool CPUParticlesGizmoPlugin::has_gizmo(Spatial *p_spatial) {
-	return Object::cast_to<CPUParticles>(p_spatial) != nullptr;
-}
-
-String CPUParticlesGizmoPlugin::get_name() const {
-	return "CPUParticles";
-}
-
-int CPUParticlesGizmoPlugin::get_priority() const {
-	return -1;
-}
-
-bool CPUParticlesGizmoPlugin::is_selectable_when_hidden() const {
-	return true;
-}
-
-void CPUParticlesGizmoPlugin::redraw(EditorSpatialGizmo *p_gizmo) {
-	Ref<Material> icon = get_material("particles_icon", p_gizmo);
-	p_gizmo->add_unscaled_billboard(icon, 0.05);
-}
-
-////
-
 ParticlesGizmoPlugin::ParticlesGizmoPlugin() {
 	Color gizmo_color = EDITOR_DEF("editors/3d_gizmos/gizmo_colors/particles", Color(0.8, 0.7, 0.4));
 	create_material("particles_material", gizmo_color);
@@ -2763,7 +2735,6 @@ void ReflectionProbeGizmoPlugin::redraw(EditorSpatialGizmo *p_gizmo) {
 }
 
 ////
-
 CollisionObjectGizmoPlugin::CollisionObjectGizmoPlugin() {
 	const Color gizmo_color = EDITOR_GET("editors/3d_gizmos/gizmo_colors/shape");
 	create_material("shape_material", gizmo_color);
@@ -3517,6 +3488,7 @@ void NavigationMeshSpatialGizmoPlugin::redraw(EditorSpatialGizmo *p_gizmo) {
 	Map<_EdgeKey, bool> edge_map;
 	PoolVector<Vector3> tmeshfaces;
 	tmeshfaces.resize(faces.size() * 3);
+	Vector<Vector3> lines;
 
 	{
 		PoolVector<Vector3>::Write tw = tmeshfaces.write();
@@ -3534,23 +3506,28 @@ void NavigationMeshSpatialGizmoPlugin::redraw(EditorSpatialGizmo *p_gizmo) {
 					SWAP(ek.from, ek.to);
 				}
 
-				Map<_EdgeKey, bool>::Element *F = edge_map.find(ek);
-
-				if (F) {
-					F->get() = false;
-
+				if (navmesh->is_enabled()) {
+					lines.push_back(f.vertex[j]);
 				} else {
-					edge_map[ek] = true;
+					Map<_EdgeKey, bool>::Element *F = edge_map.find(ek);
+					if (F) {
+						F->get() = false;
+					} else {
+						edge_map[ek] = true;
+					}
 				}
+			}
+			if (navmesh->is_enabled()) {
+				lines.push_back(f.vertex[0]);
 			}
 		}
 	}
-	Vector<Vector3> lines;
-
-	for (Map<_EdgeKey, bool>::Element *E = edge_map.front(); E; E = E->next()) {
-		if (E->get()) {
-			lines.push_back(E->key().from);
-			lines.push_back(E->key().to);
+	if (!navmesh->is_enabled()) {
+		for (Map<_EdgeKey, bool>::Element *E = edge_map.front(); E; E = E->next()) {
+			if (E->get()) {
+				lines.push_back(E->key().from);
+				lines.push_back(E->key().to);
+			}
 		}
 	}
 

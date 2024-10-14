@@ -341,7 +341,6 @@ Error OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 
 	ContextGL_X11::ContextType opengl_api_type = ContextGL_X11::GLES_3_0_COMPATIBLE;
 
-	bool editor = Engine::get_singleton()->is_editor_hint();
 	bool gl_initialization_error = false;
 
 	context_gl = nullptr;
@@ -617,7 +616,7 @@ Error OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 
 	AudioDriverManager::initialize(p_audio_driver);
 
-	input = memnew(InputDefault);
+	input = memnew(Input);
 
 	window_has_focus = true; // Set focus to true at init
 #ifdef JOYDEV_ENABLED
@@ -856,9 +855,6 @@ void OS_X11::finalize() {
 		memdelete(debugger_connection_console);
 	}
 	*/
-#ifdef ALSAMIDI_ENABLED
-	driver_alsamidi.close();
-#endif
 
 #ifdef SPEECHD_ENABLED
 	memdelete(tts);

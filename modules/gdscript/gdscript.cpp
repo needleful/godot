@@ -36,6 +36,7 @@
 #include "core/io/file_access_encrypted.h"
 #include "core/os/file_access.h"
 #include "core/os/os.h"
+#include "core/profiler.h"
 #include "core/project_settings.h"
 #include "gdscript_compiler.h"
 
@@ -1708,6 +1709,7 @@ void GDScriptLanguage::reload_tool_script(const Ref<Script> &p_script, bool p_so
 }
 
 void GDScriptLanguage::frame() {
+	PROFILE
 	calls = 0;
 
 #ifdef DEBUG_ENABLED

@@ -43,133 +43,139 @@ PoolVector<Face3> Particles::get_faces(uint32_t p_usage_flags) const {
 }
 
 void Particles::set_emitting(bool p_emitting) {
-	VS::get_singleton()->particles_set_emitting(particles, p_emitting);
-
-	if (p_emitting && one_shot) {
+	emitting = p_emitting;
+	if (emitting && data.one_shot) {
 		set_process_internal(true);
-	} else if (!p_emitting) {
+	} else if (!emitting) {
 		set_process_internal(false);
 	}
+	_mark_dirty_emit();
+}
+
+void Particles::_mark_dirty() {
+	dirty = true;
+	set_process_internal(true);
+}
+
+void Particles::_mark_dirty_emit() {
+	dirty_emit = true;
+	set_process_internal(true);
+}
+
+void Particles::_update_dirty() {
+	if (!emitting || !data.one_shot) {
+		set_process_internal(false);
+	}
+
+	if (dirty) {
+		VS::get_singleton()->particles_set(particles, data);
+	}
+	if (dirty_emit) {
+		VS::get_singleton()->particles_set_one_shot(particles, data.one_shot);
+		VS::get_singleton()->particles_set_emitting(particles, emitting);
+	}
+
+	dirty = false;
+	dirty_emit = false;
 }
 
 void Particles::set_amount(int p_amount) {
 	ERR_FAIL_COND_MSG(p_amount < 1, "Amount of particles cannot be smaller than 1.");
-	amount = p_amount;
-	VS::get_singleton()->particles_set_amount(particles, amount);
+	if (data.amount != p_amount)
+		_mark_dirty();
+	data.amount = p_amount;
 }
+
 void Particles::set_lifetime(float p_lifetime) {
 	ERR_FAIL_COND_MSG(p_lifetime <= 0, "Particles lifetime must be greater than 0.");
-	lifetime = p_lifetime;
-	VS::get_singleton()->particles_set_lifetime(particles, lifetime);
+	if (data.lifetime != p_lifetime)
+		_mark_dirty();
+	data.lifetime = p_lifetime;
 }
 
 void Particles::set_one_shot(bool p_one_shot) {
-	one_shot = p_one_shot;
-	VS::get_singleton()->particles_set_one_shot(particles, one_shot);
-
+	if (data.one_shot != p_one_shot)
+		_mark_dirty_emit();
+	data.one_shot = p_one_shot;
 	if (is_emitting()) {
 		set_process_internal(true);
-		if (!one_shot) {
+		if (!data.one_shot) {
 			VisualServer::get_singleton()->particles_restart(particles);
 		}
 	}
-
-	if (!one_shot) {
+	if (!dirty && !data.one_shot) {
 		set_process_internal(false);
 	}
 }
 
 void Particles::set_pre_process_time(float p_time) {
-	pre_process_time = p_time;
-	VS::get_singleton()->particles_set_pre_process_time(particles, pre_process_time);
+	if (data.pre_process_time != p_time)
+		_mark_dirty();
+	data.pre_process_time = p_time;
 }
+
 void Particles::set_explosiveness_ratio(float p_ratio) {
-	explosiveness_ratio = p_ratio;
-	VS::get_singleton()->particles_set_explosiveness_ratio(particles, explosiveness_ratio);
+	if (data.explosiveness_ratio != p_ratio)
+		_mark_dirty();
+	data.explosiveness_ratio = p_ratio;
 }
+
 void Particles::set_randomness_ratio(float p_ratio) {
-	randomness_ratio = p_ratio;
-	VS::get_singleton()->particles_set_randomness_ratio(particles, randomness_ratio);
+	if (data.randomness_ratio != p_ratio)
+		_mark_dirty();
+	data.randomness_ratio = p_ratio;
 }
+
 void Particles::set_visibility_aabb(const AABB &p_aabb) {
-	visibility_aabb = p_aabb;
-	VS::get_singleton()->particles_set_custom_aabb(particles, visibility_aabb);
+	if (data.visibility_aabb != p_aabb)
+		_mark_dirty();
+	data.visibility_aabb = p_aabb;
 	update_gizmo();
 	_change_notify("visibility_aabb");
 }
+
 void Particles::set_use_local_coordinates(bool p_enable) {
-	local_coords = p_enable;
-	VS::get_singleton()->particles_set_use_local_coordinates(particles, local_coords);
+	if (data.local_coords != p_enable)
+		_mark_dirty();
+	data.local_coords = p_enable;
 }
+
 void Particles::set_process_material(const Ref<Material> &p_material) {
+	if (process_material != p_material)
+		_mark_dirty();
 	process_material = p_material;
 	RID material_rid;
 	if (process_material.is_valid()) {
 		material_rid = process_material->get_rid();
+		data.process_material = material_rid;
+	} else {
+		data.process_material = RID();
 	}
-	VS::get_singleton()->particles_set_process_material(particles, material_rid);
 
 	update_configuration_warning();
 }
 
 void Particles::set_speed_scale(float p_scale) {
-	speed_scale = p_scale;
-	VS::get_singleton()->particles_set_speed_scale(particles, p_scale);
+	if (data.speed_scale != p_scale)
+		_mark_dirty();
+	data.speed_scale = p_scale;
 }
 
-bool Particles::is_emitting() const {
-	return VS::get_singleton()->particles_get_emitting(particles);
-}
-int Particles::get_amount() const {
-	return amount;
-}
-float Particles::get_lifetime() const {
-	return lifetime;
-}
-bool Particles::get_one_shot() const {
-	return one_shot;
-}
-
-float Particles::get_pre_process_time() const {
-	return pre_process_time;
-}
-float Particles::get_explosiveness_ratio() const {
-	return explosiveness_ratio;
-}
-float Particles::get_randomness_ratio() const {
-	return randomness_ratio;
-}
-AABB Particles::get_visibility_aabb() const {
-	return visibility_aabb;
-}
-bool Particles::get_use_local_coordinates() const {
-	return local_coords;
-}
-Ref<Material> Particles::get_process_material() const {
-	return process_material;
-}
-
-float Particles::get_speed_scale() const {
-	return speed_scale;
-}
-
-void Particles::set_draw_order(DrawOrder p_order) {
-	draw_order = p_order;
-	VS::get_singleton()->particles_set_draw_order(particles, VS::ParticlesDrawOrder(p_order));
-}
-
-Particles::DrawOrder Particles::get_draw_order() const {
-	return draw_order;
+void Particles::set_draw_order(ParticlesData::DrawOrder p_order) {
+	if (data.draw_order != p_order)
+		_mark_dirty();
+	data.draw_order = p_order;
 }
 
 void Particles::set_draw_passes(int p_count) {
 	ERR_FAIL_COND(p_count < 1);
+	if (draw_passes.size() != p_count)
+		_mark_dirty();
 	draw_passes.resize(p_count);
-	VS::get_singleton()->particles_set_draw_passes(particles, p_count);
+	for (int i = p_count; i < ParticlesData::MAX_DRAW_PASSES; i++) {
+		data.draw_passes[i] = RID();
+	}
 	_change_notify();
-}
-int Particles::get_draw_passes() const {
-	return draw_passes.size();
 }
 
 void Particles::set_draw_pass_mesh(int p_pass, const Ref<Mesh> &p_mesh) {
@@ -178,13 +184,65 @@ void Particles::set_draw_pass_mesh(int p_pass, const Ref<Mesh> &p_mesh) {
 	draw_passes.write[p_pass] = p_mesh;
 
 	RID mesh_rid;
+	RID old_rid = data.draw_passes[p_pass];
 	if (p_mesh.is_valid()) {
 		mesh_rid = p_mesh->get_rid();
+		data.draw_passes[p_pass] = mesh_rid;
+	} else {
+		mesh_rid = RID();
+		data.draw_passes[p_pass] = RID();
 	}
-
-	VS::get_singleton()->particles_set_draw_pass_mesh(particles, p_pass, mesh_rid);
-
+	if (old_rid != mesh_rid)
+		_mark_dirty();
 	update_configuration_warning();
+}
+
+void Particles::set_fixed_fps(int p_count) {
+	if (data.fixed_fps != p_count)
+		_mark_dirty();
+	data.fixed_fps = p_count;
+}
+
+void Particles::set_fractional_delta(bool p_enable) {
+	if (data.fractional_delta != p_enable)
+		_mark_dirty();
+	data.fractional_delta = p_enable;
+}
+
+bool Particles::is_emitting() const {
+	return emitting;
+}
+int Particles::get_amount() const {
+	return data.amount;
+}
+float Particles::get_lifetime() const {
+	return data.lifetime;
+}
+bool Particles::get_one_shot() const {
+	return data.one_shot;
+}
+
+float Particles::get_pre_process_time() const {
+	return data.pre_process_time;
+}
+float Particles::get_explosiveness_ratio() const {
+	return data.explosiveness_ratio;
+}
+float Particles::get_randomness_ratio() const {
+	return data.randomness_ratio;
+}
+AABB Particles::get_visibility_aabb() const {
+	return data.visibility_aabb;
+}
+bool Particles::get_use_local_coordinates() const {
+	return data.local_coords;
+}
+Ref<Material> Particles::get_process_material() const {
+	return process_material;
+}
+
+float Particles::get_speed_scale() const {
+	return data.speed_scale;
 }
 
 Ref<Mesh> Particles::get_draw_pass_mesh(int p_pass) const {
@@ -193,22 +251,19 @@ Ref<Mesh> Particles::get_draw_pass_mesh(int p_pass) const {
 	return draw_passes[p_pass];
 }
 
-void Particles::set_fixed_fps(int p_count) {
-	fixed_fps = p_count;
-	VS::get_singleton()->particles_set_fixed_fps(particles, p_count);
+ParticlesData::DrawOrder Particles::get_draw_order() const {
+	return data.draw_order;
+}
+int Particles::get_draw_passes() const {
+	return draw_passes.size();
 }
 
 int Particles::get_fixed_fps() const {
-	return fixed_fps;
-}
-
-void Particles::set_fractional_delta(bool p_enable) {
-	fractional_delta = p_enable;
-	VS::get_singleton()->particles_set_fractional_delta(particles, p_enable);
+	return data.fixed_fps;
 }
 
 bool Particles::get_fractional_delta() const {
-	return fractional_delta;
+	return data.fractional_delta;
 }
 
 String Particles::get_configuration_warning() const {
@@ -271,6 +326,7 @@ String Particles::get_configuration_warning() const {
 }
 
 void Particles::restart() {
+	_update_dirty();
 	VisualServer::get_singleton()->particles_restart(particles);
 	VisualServer::get_singleton()->particles_set_emitting(particles, true);
 }
@@ -292,7 +348,7 @@ void Particles::_validate_property(PropertyInfo &property) const {
 void Particles::_notification(int p_what) {
 	if (p_what == NOTIFICATION_PAUSED || p_what == NOTIFICATION_UNPAUSED) {
 		if (can_process()) {
-			VS::get_singleton()->particles_set_speed_scale(particles, speed_scale);
+			VS::get_singleton()->particles_set_speed_scale(particles, data.speed_scale);
 		} else {
 			VS::get_singleton()->particles_set_speed_scale(particles, 0);
 		}
@@ -301,7 +357,8 @@ void Particles::_notification(int p_what) {
 	// Use internal process when emitting and one_shot are on so that when
 	// the shot ends the editor can properly update
 	if (p_what == NOTIFICATION_INTERNAL_PROCESS) {
-		if (one_shot && !is_emitting()) {
+		_update_dirty();
+		if (data.one_shot && !is_emitting()) {
 			_change_notify();
 			set_process_internal(false);
 		}
@@ -375,23 +432,16 @@ void Particles::_bind_methods() {
 	ADD_GROUP("Process Material", "");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "process_material", PROPERTY_HINT_RESOURCE_TYPE, "ShaderMaterial,ParticlesMaterial"), "set_process_material", "get_process_material");
 	ADD_GROUP("Draw Passes", "draw_");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "draw_passes", PROPERTY_HINT_RANGE, "0," + itos(MAX_DRAW_PASSES) + ",1"), "set_draw_passes", "get_draw_passes");
-	for (int i = 0; i < MAX_DRAW_PASSES; i++) {
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "draw_passes", PROPERTY_HINT_RANGE, "0," + itos(ParticlesData::MAX_DRAW_PASSES) + ",1"), "set_draw_passes", "get_draw_passes");
+	for (int i = 0; i < ParticlesData::MAX_DRAW_PASSES; i++) {
 		ADD_PROPERTYI(PropertyInfo(Variant::OBJECT, "draw_pass_" + itos(i + 1), PROPERTY_HINT_RESOURCE_TYPE, "Mesh"), "set_draw_pass_mesh", "get_draw_pass_mesh", i);
 	}
-
-	BIND_ENUM_CONSTANT(DRAW_ORDER_INDEX);
-	BIND_ENUM_CONSTANT(DRAW_ORDER_LIFETIME);
-	BIND_ENUM_CONSTANT(DRAW_ORDER_VIEW_DEPTH);
-
-	BIND_CONSTANT(MAX_DRAW_PASSES);
 }
 
 Particles::Particles() {
 	particles = RID_PRIME(VS::get_singleton()->particles_create());
 	set_base(particles);
-	one_shot = false; // Needed so that set_emitting doesn't access uninitialized values
-	set_emitting(true);
+	set_emitting(false);
 	set_one_shot(false);
 	set_amount(8);
 	set_lifetime(1);
@@ -403,7 +453,7 @@ Particles::Particles() {
 	set_visibility_aabb(AABB(Vector3(-4, -4, -4), Vector3(8, 8, 8)));
 	set_use_local_coordinates(true);
 	set_draw_passes(1);
-	set_draw_order(DRAW_ORDER_INDEX);
+	set_draw_order(ParticlesData::DRAW_ORDER_INDEX);
 	set_speed_scale(1);
 }
 

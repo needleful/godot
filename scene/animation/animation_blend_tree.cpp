@@ -131,6 +131,20 @@ AnimationNodeAnimation::AnimationNodeAnimation() {
 	time = "time";
 }
 
+float AnimationNodeAnimation::get_blended_length() {
+	if (!state) {
+		return 0;
+	}
+	AnimationPlayer *ap = state->player;
+	ERR_FAIL_COND_V(!ap, 0);
+
+	if (ap->has_animation(animation)) {
+		return ap->get_animation(animation)->get_length();
+	} else {
+		return 0;
+	}
+}
+
 ////////////////////////////////////////////////////////
 
 void AnimationNodeOneShot::get_parameter_list(List<PropertyInfo> *r_list) const {
@@ -1006,12 +1020,21 @@ AnimationNodeBlendTree::ConnectionError AnimationNodeBlendTree::can_connect_node
 }
 
 void AnimationNodeBlendTree::get_node_connections(List<NodeConnection> *r_connections) const {
+	Vector<StringName> keys;
+	keys.resize(nodes.size());
+	int idx = 0;
 	for (Map<StringName, Node>::Element *E = nodes.front(); E; E = E->next()) {
-		for (int i = 0; i < E->get().connections.size(); i++) {
-			StringName output = E->get().connections[i];
+		keys.set(idx++, E->key());
+	}
+	keys.sort_custom<StringName::AlphCompare>();
+	for (int k = 0; k < keys.size(); k++) {
+		StringName key = keys[k];
+		const Node *node = &nodes[key];
+		for (int i = 0; i < node->connections.size(); i++) {
+			StringName output = node->connections[i];
 			if (output != StringName()) {
 				NodeConnection nc;
-				nc.input_node = E->key();
+				nc.input_node = key;
 				nc.input_index = i;
 				nc.output_node = output;
 				r_connections->push_back(nc);

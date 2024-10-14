@@ -238,6 +238,15 @@ Ref<SceneTreeTween> SceneTreeTween::chain() {
 	return this;
 }
 
+Ref<SceneTreeTween> SceneTreeTween::set_ignore_time_scale(bool p_ignore) {
+	ignore_time_scale = p_ignore;
+	return this;
+}
+
+bool SceneTreeTween::is_ignore_time_scale() const {
+	return ignore_time_scale;
+}
+
 bool SceneTreeTween::custom_step(float p_delta) {
 	bool r = running;
 	running = true;
@@ -601,11 +610,13 @@ void SceneTreeTween::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_speed_scale", "speed"), &SceneTreeTween::set_speed_scale);
 	ClassDB::bind_method(D_METHOD("set_trans", "trans"), &SceneTreeTween::set_trans);
 	ClassDB::bind_method(D_METHOD("set_ease", "ease"), &SceneTreeTween::set_ease);
+	ClassDB::bind_method(D_METHOD("set_ignore_time_scale", "ignore_time_scale"), &SceneTreeTween::set_ignore_time_scale);
+	ClassDB::bind_method(D_METHOD("is_ignore_time_scale"), &SceneTreeTween::is_ignore_time_scale);
 
 	ClassDB::bind_method(D_METHOD("parallel"), &SceneTreeTween::parallel);
 	ClassDB::bind_method(D_METHOD("chain"), &SceneTreeTween::chain);
 
-	ClassDB::bind_method(D_METHOD("interpolate_value", "initial_value", "delta_value", "elapsed_time", "duration", "trans_type", "ease_type"), &SceneTreeTween::interpolate_variant);
+	ClassDB::bind_method(D_METHOD("interpolate_value", "initial_value", "delta_value", "elapsed_time", "duration", "trans_type", "ignore_time_scale_type"), &SceneTreeTween::interpolate_variant);
 
 	ADD_SIGNAL(MethodInfo("step_finished", PropertyInfo(Variant::INT, "idx")));
 	ADD_SIGNAL(MethodInfo("loop_finished", PropertyInfo(Variant::INT, "loop_count")));

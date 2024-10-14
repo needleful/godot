@@ -33,6 +33,7 @@
 #include "../visual_server.h"
 #include "core/math/transform_interpolator.h"
 #include "core/os/os.h"
+#include "core/profiler.h"
 #include "drivers/gles_common/rasterizer_instance_base.h"
 #include "visual_server_globals.h"
 
@@ -2293,7 +2294,6 @@ bool VisualServerScene::_light_instance_update_shadow(RasterizerInstance *p_inst
 							instance->depth_layer = 0;
 						}
 					}
-
 					VSG::scene_render->light_instance_set_shadow_transform(light.instance, CameraMatrix(), light_transform, radius, 0, i);
 					VSG::scene_render->render_shadow(light.instance, p_shadow_atlas, i, (RasterizerInstance **)instance_shadow_cull_result, cull_count);
 				}
@@ -2379,7 +2379,6 @@ bool VisualServerScene::_light_instance_update_shadow(RasterizerInstance *p_inst
 					instance->depth_layer = 0;
 				}
 			}
-
 			VSG::scene_render->light_instance_set_shadow_transform(light.instance, cm, light_transform, radius, 0, 0);
 			VSG::scene_render->render_shadow(light.instance, p_shadow_atlas, 0, (RasterizerInstance **)instance_shadow_cull_result, cull_count);
 
@@ -2524,6 +2523,7 @@ void VisualServerScene::render_camera(Ref<ARVRInterface> &p_interface, ARVRInter
 };
 
 void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const CameraMatrix &p_cam_projection, bool p_cam_orthogonal, RID p_force_environment, uint32_t p_visible_layers, RID p_scenario, RID p_shadow_atlas, RID p_reflection_probe, int32_t &r_previous_room_id_hint) {
+	PROFILE
 	// Note, in stereo rendering:
 	// - p_cam_transform will be a transform in the middle of our two eyes
 	// - p_cam_projection is a wider frustrum that encompasses both eyes
@@ -2603,17 +2603,14 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 							reflection_probe.reflection_dirty = false;
 						}
 
-						if (VSG::scene_render->reflection_probe_instance_has_reflection(reflection_probe.instance)) {
-							reflection_probe_instance_cull_result[reflection_probe_cull_count] = reflection_probe.instance;
-							reflection_probe_cull_count++;
-						}
+						reflection_probe_instance_cull_result[reflection_probe_cull_count] = reflection_probe.instance;
+						reflection_probe_cull_count++;
 					}
 				}
 			}
 
 		} else if (((1 << ins->base_type) & VS::INSTANCE_GEOMETRY_MASK) && ins->visible && ins->cast_shadows != VS::SHADOW_CASTING_SETTING_SHADOWS_ONLY) {
 			keep = true;
-
 			GeometryInstanceData &geom = ins->data.geometry;
 
 			if (ins->redraw_if_visible) {
@@ -2641,7 +2638,6 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 
 				for (List<RasterizerInstance *>::Element *E = geom.lighting.front(); E; E = E->next()) {
 					InstanceLightData &light = E->get()->data.light;
-
 					ins->light_instances.write[l++] = light.instance;
 				}
 
@@ -2655,7 +2651,6 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 
 				for (List<RasterizerInstance *>::Element *E = geom.reflection_probes.front(); E; E = E->next()) {
 					InstanceReflectionProbeData &reflection_probe = E->get()->data.reflection;
-
 					ins->reflection_probe_instances.write[l++] = reflection_probe.instance;
 				}
 
@@ -2689,7 +2684,7 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 				break;
 			}
 
-			if (!E->get()->visible) {
+			if (!E->get()->visible || !(E->get()->layer_mask & camera_layer_mask)) {
 				continue;
 			}
 
@@ -2826,6 +2821,7 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 }
 
 void VisualServerScene::_render_scene(const Transform p_cam_transform, const CameraMatrix &p_cam_projection, const int p_eye, bool p_cam_orthogonal, RID p_force_environment, RID p_scenario, RID p_shadow_atlas, RID p_reflection_probe, int p_reflection_probe_pass) {
+	PROFILE
 	RasterizerScenario *scenario = scenario_owner.getornull(p_scenario);
 
 	/* ENVIRONMENT */
@@ -2931,6 +2927,7 @@ bool VisualServerScene::_render_reflection_probe_step(RasterizerInstance *p_inst
 }
 
 void VisualServerScene::render_probes() {
+	PROFILE
 	/* REFLECTION PROBES */
 
 	SelfList<InstanceReflectionProbeData> *ref_probe = reflection_probe_render_list.first();
@@ -3133,6 +3130,7 @@ void VisualServerScene::_update_dirty_instance(RasterizerInstance *p_instance) {
 }
 
 void VisualServerScene::update_dirty_instances() {
+	PROFILE
 	VSG::storage->update_dirty_resources();
 
 	// this is just to get access to scenario so we can update the spatial partitioning scheme
@@ -3222,8 +3220,6 @@ bool VisualServerScene::free(RID p_rid) {
 VisualServerScene *VisualServerScene::singleton = nullptr;
 
 VisualServerScene::VisualServerScene() {
-	probe_bake_thread_exit = false;
-
 	render_pass = 1;
 	singleton = this;
 	_use_bvh = GLOBAL_DEF("rendering/quality/spatial_partitioning/use_bvh", true);
@@ -3233,11 +3229,7 @@ VisualServerScene::VisualServerScene() {
 	_visual_server_callbacks = nullptr;
 }
 
-VisualServerScene::~VisualServerScene() {
-	probe_bake_thread_exit = true;
-	probe_bake_sem.post();
-	probe_bake_thread.wait_to_finish();
-}
+VisualServerScene::~VisualServerScene() {}
 
 void RasterizerInstance::base_removed() {
 	VisualServerScene::singleton->instance_set_base(self, RID());

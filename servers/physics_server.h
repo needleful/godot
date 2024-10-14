@@ -474,6 +474,7 @@ public:
 	};
 
 	virtual bool body_test_motion(RID p_body, const Transform &p_from, const Vector3 &p_motion, bool p_infinite_inertia, MotionResult *r_result = nullptr, bool p_exclude_raycast_shapes = true, const Set<RID> &p_exclude = Set<RID>()) = 0;
+	virtual Array body_recover_from_penetration(RID p_body) = 0;
 
 	struct SeparationResult {
 		float collision_depth;

@@ -85,12 +85,6 @@ void VisualInstance::set_instance_use_identity_transform(bool p_enable) {
 void VisualInstance::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_WORLD: {
-			// CHECK SKELETON => moving skeleton attaching logic to MeshInstance
-			/*
-			Skeleton *skeleton=Object::cast_to<Skeleton>(get_parent());
-			if (skeleton)
-				VisualServer::get_singleton()->instance_attach_skeleton( instance, skeleton->get_skeleton() );
-			*/
 			ERR_FAIL_COND(get_world().is_null());
 			VisualServer::get_singleton()->instance_set_scenario(instance, get_world()->get_scenario());
 			_update_visibility();

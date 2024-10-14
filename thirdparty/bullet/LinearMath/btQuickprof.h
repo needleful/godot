@@ -150,6 +150,9 @@ protected:
 	friend class CProfileManager;
 };
 
+// Added for GODOT profiling
+class Logger;
+
 ///The Manager for the Profile system
 class CProfileManager
 {
@@ -174,9 +177,9 @@ public:
 	//	}
 	static void Release_Iterator(CProfileIterator* iterator) { delete (iterator); }
 
-	static void dumpRecursive(CProfileIterator* profileIterator, int spacing);
+	static void dumpRecursive(Logger* logger, CProfileIterator* profileIterator, int spacing);
 
-	static void dumpAll();
+	static void dumpAll(Logger* logger);
 
 private:
 	static int FrameCounter;

@@ -71,7 +71,6 @@ private:
 	VS::LightType type;
 	bool editor_only;
 	void _update_visibility();
-
 	// bind helpers
 
 	virtual void owner_changed_notify();

@@ -701,7 +701,7 @@ void EditorProperty::_update_pin_flags() {
 Control *EditorProperty::make_custom_tooltip(const String &p_text) const {
 	EditorHelpBit *help_bit = memnew(EditorHelpBit);
 	help_bit->add_style_override("panel", get_stylebox("panel", "TooltipPanel"));
-	help_bit->get_rich_text()->set_fixed_size_to_width(360 * EDSCALE);
+	help_bit->get_rich_text()->set_custom_minimum_size(Size2(360 * EDSCALE, 1));
 
 	Vector<String> slices = p_text.split("::", false);
 	if (!slices.empty()) {
@@ -974,7 +974,7 @@ void EditorInspectorCategory::_notification(int p_what) {
 Control *EditorInspectorCategory::make_custom_tooltip(const String &p_text) const {
 	EditorHelpBit *help_bit = memnew(EditorHelpBit);
 	help_bit->add_style_override("panel", get_stylebox("panel", "TooltipPanel"));
-	help_bit->get_rich_text()->set_fixed_size_to_width(360 * EDSCALE);
+	help_bit->get_rich_text()->set_custom_minimum_size(Size2(360 * EDSCALE, 1));
 
 	Vector<String> slices = p_text.split("::", false);
 	if (!slices.empty()) {

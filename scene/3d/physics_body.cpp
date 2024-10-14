@@ -958,10 +958,12 @@ void RigidBody::_reload_physics_characteristics() {
 //////////////////////////////////////////////////////
 //////////////////////////
 
-Ref<KinematicCollision> KinematicBody::_move(const Vector3 &p_motion, bool p_infinite_inertia, bool p_exclude_raycast_shapes, bool p_test_only) {
+Ref<KinematicCollision> KinematicBody::_move(const Vector3 &p_motion, bool p_infinite_inertia, bool p_exclude_raycast_shapes, bool p_test_only, RID excluded_node) {
 	Collision col;
 
-	bool collided = move_and_collide(p_motion, p_infinite_inertia, col, p_exclude_raycast_shapes, p_test_only);
+	Set<RID> exclusion;
+	exclusion.insert(excluded_node);
+	bool collided = move_and_collide(p_motion, p_infinite_inertia, col, p_exclude_raycast_shapes, p_test_only, false, exclusion);
 
 	// Ugly hack as a hot fix, 65b3200 fix an issue but cause a problem with Bullet that broke games using Bullet.
 	// The bug is something internal to Bullet, seems to be related to the Bullet’s margin. As not proper fix was found yet,
@@ -982,6 +984,10 @@ Ref<KinematicCollision> KinematicBody::_move(const Vector3 &p_motion, bool p_inf
 	}
 
 	return Ref<KinematicCollision>();
+}
+
+Array KinematicBody::recover_from_penetration() {
+	return PhysicsServer::get_singleton()->body_recover_from_penetration(get_rid());
 }
 
 bool KinematicBody::move_and_collide(const Vector3 &p_motion, bool p_infinite_inertia, Collision &r_collision, bool p_exclude_raycast_shapes, bool p_test_only, bool p_cancel_sliding, const Set<RID> &p_exclude) {
@@ -1241,7 +1247,6 @@ void KinematicBody::_set_collision_direction(const Collision &p_collision, const
 		//all is a wall
 		on_wall = true;
 	} else {
-		RID col = p_collision.collider_rid;
 		bool excluded_floor = moving_platform_exclude_mask & PhysicsServer::get_singleton()->body_get_collision_layer(p_collision.collider_rid);
 
 		if (!excluded_floor && Math::acos(p_collision.normal.dot(p_up_direction)) <= p_floor_max_angle + FLOOR_ANGLE_THRESHOLD) { //floor
@@ -1467,10 +1472,11 @@ void KinematicBody::_notification(int p_what) {
 }
 
 void KinematicBody::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("move_and_collide", "rel_vec", "infinite_inertia", "exclude_raycast_shapes", "test_only"), &KinematicBody::_move, DEFVAL(true), DEFVAL(true), DEFVAL(false));
+	ClassDB::bind_method(D_METHOD("move_and_collide", "rel_vec", "infinite_inertia", "exclude_raycast_shapes", "test_only"), &KinematicBody::_move, DEFVAL(true), DEFVAL(true), DEFVAL(false), DEFVAL(RID()));
 	ClassDB::bind_method(D_METHOD("move_and_slide", "linear_velocity", "up_direction", "stop_on_slope", "max_slides", "floor_max_angle", "infinite_inertia"), &KinematicBody::move_and_slide, DEFVAL(Vector3(0, 0, 0)), DEFVAL(false), DEFVAL(4), DEFVAL(Math::deg2rad((float)45)), DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("move_and_slide_with_snap", "linear_velocity", "snap", "up_direction", "stop_on_slope", "max_slides", "floor_max_angle", "infinite_inertia"), &KinematicBody::move_and_slide_with_snap, DEFVAL(Vector3(0, 0, 0)), DEFVAL(false), DEFVAL(4), DEFVAL(Math::deg2rad((float)45)), DEFVAL(true));
 
+	ClassDB::bind_method(D_METHOD("recover_from_penetration"), &KinematicBody::recover_from_penetration);
 	ClassDB::bind_method(D_METHOD("test_move", "from", "rel_vec", "infinite_inertia"), &KinematicBody::test_move, DEFVAL(true));
 
 	ClassDB::bind_method(D_METHOD("is_on_floor"), &KinematicBody::is_on_floor);

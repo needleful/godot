@@ -927,21 +927,14 @@ static String _make_extname(const String &p_str) {
 	return ext_name;
 }
 
-void ResourceImporterScene::_find_meshes(Node *p_node, Map<Ref<ArrayMesh>, Transform> &meshes) {
+void ResourceImporterScene::_find_meshes(Node *p_node, Set<Ref<ArrayMesh>> &meshes) {
 	MeshInstance *mi = Object::cast_to<MeshInstance>(p_node);
 
 	if (mi) {
 		Ref<ArrayMesh> mesh = mi->get_mesh();
 
 		if (mesh.is_valid() && !meshes.has(mesh)) {
-			Spatial *s = Object::cast_to<Spatial>(mi);
-			Transform transform;
-			while (s) {
-				transform = transform * s->get_transform();
-				s = Object::cast_to<Spatial>(s->get_parent());
-			}
-
-			meshes[mesh] = transform;
+			meshes.insert(mesh);
 		}
 	}
 	for (int i = 0; i < p_node->get_child_count(); i++) {
@@ -1145,7 +1138,7 @@ void ResourceImporterScene::get_import_options(List<ImportOption> *r_options, in
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "meshes/compress", PROPERTY_HINT_FLAGS, "Vertex,Normal,Tangent,Color,TexUV,TexUV2,Bones,Weights,Index"), VS::ARRAY_COMPRESS_DEFAULT >> VS::ARRAY_COMPRESS_BASE));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "meshes/ensure_tangents"), true));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "meshes/storage", PROPERTY_HINT_ENUM, "Built-In,Files (.mesh),Files (.tres)"), meshes_out ? 1 : 0));
-	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "meshes/light_baking", PROPERTY_HINT_ENUM, "Disabled,Enable", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED), 0));
+	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "meshes/shadow_render_distance", PROPERTY_HINT_ENUM, "Close,Medium,Far,All", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED), VS::SHADOW_DIST_ALL));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "skins/use_named_skins"), true));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "external_files/store_in_subdir"), false));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "animation/import", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED), true));
@@ -1355,7 +1348,8 @@ Error ResourceImporterScene::import(const String &p_source_file, const String &p
 	float anim_optimizer_linerr = p_options["animation/optimizer/max_linear_error"];
 	float anim_optimizer_angerr = p_options["animation/optimizer/max_angular_error"];
 	float anim_optimizer_maxang = p_options["animation/optimizer/max_angle"];
-	int light_bake_mode = p_options["meshes/light_baking"];
+	int shadow_dist_int = p_options["meshes/shadow_render_distance"];
+	Mesh::ShadowRenderDistance shadow_render_distance = (Mesh::ShadowRenderDistance)shadow_dist_int;
 
 	Map<Ref<Mesh>, List<Ref<Shape>>> collision_map;
 	List<Pair<NodePath, Node *>> node_renames;
@@ -1411,69 +1405,13 @@ Error ResourceImporterScene::import(const String &p_source_file, const String &p
 		}
 	}
 
-	if (light_bake_mode == 2 /* || generate LOD */) {
-		Map<Ref<ArrayMesh>, Transform> meshes;
+	if (shadow_render_distance != Mesh::SHADOW_DIST_ALL) {
+		Set<Ref<ArrayMesh>> meshes;
 		_find_meshes(scene, meshes);
 
-		String file_id = src_path.get_file();
-		String cache_file_path = base_path.plus_file(file_id + ".unwrap_cache");
-
-		int *cache_data = nullptr;
-		uint64_t cache_size = 0;
-
-		if (FileAccess::exists(cache_file_path)) {
-			Error err2;
-			FileAccess *file = FileAccess::open(cache_file_path, FileAccess::READ, &err2);
-
-			if (!err2) {
-				cache_size = file->get_len();
-				cache_data = (int *)memalloc(cache_size);
-				file->get_buffer((uint8_t *)cache_data, cache_size);
-			}
-
-			if (file) {
-				memdelete(file);
-			}
-		}
-
-		Map<String, unsigned int> used_meshes;
-
-		Error err2;
-		FileAccess *file = FileAccess::open(cache_file_path, FileAccess::WRITE, &err2);
-
-		if (err2) {
-			if (file) {
-				memdelete(file);
-			}
-		} else {
-			// Store number of entries
-			file->store_32(used_meshes.size());
-
-			// Store cache entries
-			unsigned int r_idx = 1;
-			for (int i = 0; i < cache_data[0]; ++i) {
-				unsigned char *entry_start = (unsigned char *)&cache_data[r_idx];
-				String entry_hash = String::md5(entry_start);
-				if (used_meshes.has(entry_hash)) {
-					unsigned int entry_size = used_meshes[entry_hash];
-					file->store_buffer(entry_start, entry_size);
-				}
-
-				r_idx += 4; // hash
-				r_idx += 2; // size hint
-
-				int vertex_count = cache_data[r_idx];
-				r_idx += 1; // vertex count
-				r_idx += vertex_count; // vertex
-				r_idx += vertex_count * 2; // uvs
-
-				int index_count = cache_data[r_idx];
-				r_idx += 1; // index count
-				r_idx += index_count; // indices
-			}
-
-			file->close();
-			memfree(cache_data);
+		for (Set<Ref<ArrayMesh>>::Element *E = meshes.front(); E; E = E->next()) {
+			Ref<ArrayMesh> m = Ref<ArrayMesh>(E->get());
+			m->set_shadow_render_distance(shadow_render_distance);
 		}
 	}
 

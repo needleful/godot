@@ -1991,6 +1991,7 @@ void VisualServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("reflection_probe_set_update_mode", "probe", "mode"), &VisualServer::reflection_probe_set_update_mode);
 	ClassDB::bind_method(D_METHOD("reflection_probe_set_intensity", "probe", "intensity"), &VisualServer::reflection_probe_set_intensity);
 	ClassDB::bind_method(D_METHOD("reflection_probe_set_interior_ambient", "probe", "color"), &VisualServer::reflection_probe_set_interior_ambient);
+	ClassDB::bind_method(D_METHOD("reflection_probe_set_interior_dark_ambient", "probe", "color"), &VisualServer::reflection_probe_set_interior_ambient);
 	ClassDB::bind_method(D_METHOD("reflection_probe_set_interior_ambient_energy", "probe", "energy"), &VisualServer::reflection_probe_set_interior_ambient_energy);
 	ClassDB::bind_method(D_METHOD("reflection_probe_set_interior_ambient_probe_contribution", "probe", "contrib"), &VisualServer::reflection_probe_set_interior_ambient_probe_contribution);
 	ClassDB::bind_method(D_METHOD("reflection_probe_set_max_distance", "probe", "distance"), &VisualServer::reflection_probe_set_max_distance);
@@ -2081,6 +2082,7 @@ void VisualServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("environment_set_bg_energy", "env", "energy"), &VisualServer::environment_set_bg_energy);
 	ClassDB::bind_method(D_METHOD("environment_set_canvas_max_layer", "env", "max_layer"), &VisualServer::environment_set_canvas_max_layer);
 	ClassDB::bind_method(D_METHOD("environment_set_ambient_light", "env", "color", "energy", "sky_contibution"), &VisualServer::environment_set_ambient_light, DEFVAL(1.0), DEFVAL(0.0));
+	ClassDB::bind_method(D_METHOD("environment_set_indirect_light", "env", "color"), &VisualServer::environment_set_indirect_light);
 	ClassDB::bind_method(D_METHOD("environment_set_dof_blur_near", "env", "enable", "distance", "transition", "far_amount", "quality"), &VisualServer::environment_set_dof_blur_near);
 	ClassDB::bind_method(D_METHOD("environment_set_dof_blur_far", "env", "enable", "distance", "transition", "far_amount", "quality"), &VisualServer::environment_set_dof_blur_far);
 	ClassDB::bind_method(D_METHOD("environment_set_glow", "env", "enable", "level_flags", "intensity", "strength", "bloom_threshold", "blend_mode", "hdr_bleed_threshold", "hdr_bleed_scale", "hdr_luminance_cap", "bicubic_upscale", "high_quality"), &VisualServer::environment_set_glow);
@@ -2093,6 +2095,7 @@ void VisualServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("environment_set_fog_depth", "env", "enable", "depth_begin", "depth_end", "depth_curve", "transmit", "transmit_curve"), &VisualServer::environment_set_fog_depth);
 
 	ClassDB::bind_method(D_METHOD("environment_set_fog_height", "env", "enable", "min_height", "max_height", "height_curve"), &VisualServer::environment_set_fog_height);
+	ClassDB::bind_method(D_METHOD("environment_set_emission_enabled", "env", "enable"), &VisualServer::environment_set_emission_enabled);
 
 	ClassDB::bind_method(D_METHOD("scenario_create"), &VisualServer::scenario_create);
 	ClassDB::bind_method(D_METHOD("scenario_set_debug", "scenario", "debug_mode"), &VisualServer::scenario_set_debug);
@@ -2459,10 +2462,6 @@ void VisualServer::_bind_methods() {
 	BIND_ENUM_CONSTANT(REFLECTION_PROBE_UPDATE_ONCE);
 	BIND_ENUM_CONSTANT(REFLECTION_PROBE_UPDATE_ALWAYS);
 
-	BIND_ENUM_CONSTANT(PARTICLES_DRAW_ORDER_INDEX);
-	BIND_ENUM_CONSTANT(PARTICLES_DRAW_ORDER_LIFETIME);
-	BIND_ENUM_CONSTANT(PARTICLES_DRAW_ORDER_VIEW_DEPTH);
-
 	BIND_ENUM_CONSTANT(ENV_BG_CLEAR_COLOR);
 	BIND_ENUM_CONSTANT(ENV_BG_COLOR);
 	BIND_ENUM_CONSTANT(ENV_BG_SKY);
@@ -2498,6 +2497,12 @@ void VisualServer::_bind_methods() {
 	BIND_ENUM_CONSTANT(CHANGED_PRIORITY_ANY);
 	BIND_ENUM_CONSTANT(CHANGED_PRIORITY_LOW);
 	BIND_ENUM_CONSTANT(CHANGED_PRIORITY_HIGH);
+
+	BIND_ENUM_CONSTANT(ParticlesData::DRAW_ORDER_INDEX);
+	BIND_ENUM_CONSTANT(ParticlesData::DRAW_ORDER_LIFETIME);
+	BIND_ENUM_CONSTANT(ParticlesData::DRAW_ORDER_VIEW_DEPTH);
+
+	BIND_CONSTANT(ParticlesData::MAX_DRAW_PASSES);
 
 	ADD_SIGNAL(MethodInfo("frame_pre_draw"));
 	ADD_SIGNAL(MethodInfo("frame_post_draw"));
@@ -3076,6 +3081,9 @@ BIND1RC(int, mesh_get_surface_count, RID)
 BIND2(mesh_set_custom_aabb, RID, const AABB &)
 BIND1RC(AABB, mesh_get_custom_aabb, RID)
 
+BIND2(mesh_set_shadow_render_distance, RID, VisualServer::ShadowRenderDistance)
+BIND1RC(VisualServer::ShadowRenderDistance, mesh_get_shadow_render_distance, RID)
+
 BIND1(mesh_clear, RID)
 
 /* MULTIMESH API */
@@ -3164,6 +3172,7 @@ BIND0R(RID, reflection_probe_create)
 BIND2(reflection_probe_set_update_mode, RID, ReflectionProbeUpdateMode)
 BIND2(reflection_probe_set_intensity, RID, float)
 BIND2(reflection_probe_set_interior_ambient, RID, const Color &)
+BIND2(reflection_probe_set_interior_dark_ambient, RID, const Color &)
 BIND2(reflection_probe_set_interior_ambient_energy, RID, float)
 BIND2(reflection_probe_set_interior_ambient_probe_contribution, RID, float)
 BIND2(reflection_probe_set_max_distance, RID, float)
@@ -3178,6 +3187,8 @@ BIND2(reflection_probe_set_resolution, RID, int)
 /* PARTICLES */
 
 BIND0R(RID, particles_create)
+
+BIND2(particles_set, RID, const ParticlesData &)
 
 BIND2(particles_set_emitting, RID, bool)
 BIND1R(bool, particles_get_emitting, RID)
@@ -3197,7 +3208,7 @@ BIND1R(bool, particles_is_inactive, RID)
 BIND1(particles_request_process, RID)
 BIND1(particles_restart, RID)
 
-BIND2(particles_set_draw_order, RID, VS::ParticlesDrawOrder)
+BIND2(particles_set_draw_order, RID, ParticlesData::DrawOrder)
 
 BIND2(particles_set_draw_passes, RID, int)
 BIND3(particles_set_draw_pass_mesh, RID, int, RID)
@@ -3298,6 +3309,7 @@ BIND2(environment_set_bg_color, RID, const Color &)
 BIND2(environment_set_bg_energy, RID, float)
 BIND2(environment_set_canvas_max_layer, RID, int)
 BIND4(environment_set_ambient_light, RID, const Color &, float, float)
+BIND2(environment_set_indirect_light, RID, const Color &)
 BIND2(environment_set_camera_feed_id, RID, int)
 BIND7(environment_set_ssr, RID, bool, int, float, float, float, bool)
 BIND13(environment_set_ssao, RID, bool, float, float, float, float, float, float, float, const Color &, EnvironmentSSAOQuality, EnvironmentSSAOBlur, float)
@@ -3313,6 +3325,8 @@ BIND6(environment_set_adjustment, RID, bool, float, float, float, RID)
 BIND5(environment_set_fog, RID, bool, const Color &, const Color &, float)
 BIND7(environment_set_fog_depth, RID, bool, float, float, float, bool, float)
 BIND5(environment_set_fog_height, RID, bool, float, float, float)
+
+BIND2(environment_set_emission_enabled, RID, bool)
 
 #undef BINDBASE
 #define BINDBASE VSG::scene

@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  safe_refcount.cpp                                                    */
+/*  data_particles.h                                                          */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,17 +28,37 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#if defined(DEBUG_ENABLED) && !defined(NO_THREADS)
+#ifndef PARTICLES_DATA_H
+#define PARTICLES_DATA_H
 
-#include "safe_refcount.h"
+#include "core/math/aabb.h"
+#include "core/rid.h"
 
-#include "core/error_macros.h"
+struct ParticlesData {
+	enum DrawOrder {
+		DRAW_ORDER_INDEX,
+		DRAW_ORDER_LIFETIME,
+		DRAW_ORDER_VIEW_DEPTH,
+	};
 
-void check_lockless_atomics() {
-	// Doing the check for the types we actually care about
-	if (!std::atomic<uint32_t>::is_always_lock_free || !std::atomic<uint64_t>::is_always_lock_free || !std::atomic_bool::is_always_lock_free) {
-		WARN_PRINT("Your compiler doesn't seem to support lockless atomics. Performance will be degraded. Please consider upgrading to a different or newer compiler.");
-	}
-}
+	enum {
+		MAX_DRAW_PASSES = 4
+	};
 
-#endif
+	RID draw_passes[MAX_DRAW_PASSES];
+	RID process_material;
+	AABB visibility_aabb;
+	float lifetime;
+	float pre_process_time;
+	float explosiveness_ratio;
+	float randomness_ratio;
+	float speed_scale;
+	short amount;
+	short fixed_fps;
+	DrawOrder draw_order : 2;
+	bool one_shot : 1;
+	bool local_coords : 1;
+	bool fractional_delta : 1;
+};
+
+#endif //PARTICLES_DATA_H

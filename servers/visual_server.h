@@ -40,6 +40,8 @@
 #include "core/rid.h"
 #include "core/variant.h"
 
+#include "servers/visual/data_particles.h"
+
 class VisualServerCallbacks;
 
 class VisualServer : public Object {
@@ -290,8 +292,14 @@ public:
 		PRIMITIVE_MAX = 7,
 	};
 
-	RID mesh_create();
+	enum ShadowRenderDistance {
+		SHADOW_DIST_CLOSE = 0,
+		SHADOW_DIST_MEDIUM = 1,
+		SHADOW_DIST_FAR = 2,
+		SHADOW_DIST_ALL = 3
+	};
 
+	RID mesh_create();
 	uint32_t mesh_surface_get_format_offset(uint32_t p_format, int p_vertex_len, int p_index_len, int p_array_index) const;
 	uint32_t mesh_surface_get_format_stride(uint32_t p_format, int p_vertex_len, int p_index_len, int p_array_index) const;
 	/// Returns stride
@@ -301,6 +309,9 @@ public:
 
 	void mesh_set_blend_shape_count(RID p_mesh, int p_amount);
 	int mesh_get_blend_shape_count(RID p_mesh) const;
+
+	ShadowRenderDistance mesh_get_shadow_render_distance(RID p_mesh) const;
+	void mesh_set_shadow_render_distance(RID p_mesh, ShadowRenderDistance p_distance);
 
 	enum BlendShapeMode {
 		BLEND_SHAPE_MODE_NORMALIZED,
@@ -511,6 +522,7 @@ public:
 	void reflection_probe_set_update_mode(RID p_probe, ReflectionProbeUpdateMode p_mode);
 	void reflection_probe_set_intensity(RID p_probe, float p_intensity);
 	void reflection_probe_set_interior_ambient(RID p_probe, const Color &p_color);
+	void reflection_probe_set_interior_dark_ambient(RID p_probe, const Color &p_dark_ambient);
 	void reflection_probe_set_interior_ambient_energy(RID p_probe, float p_energy);
 	void reflection_probe_set_interior_ambient_probe_contribution(RID p_probe, float p_contrib);
 	void reflection_probe_set_max_distance(RID p_probe, float p_distance);
@@ -526,6 +538,7 @@ public:
 
 	RID particles_create();
 
+	void particles_set(RID p_particles, const ParticlesData &data);
 	void particles_set_emitting(RID p_particles, bool p_emitting);
 	bool particles_get_emitting(RID p_particles);
 	void particles_set_amount(RID p_particles, int p_amount);
@@ -544,13 +557,7 @@ public:
 	void particles_request_process(RID p_particles);
 	void particles_restart(RID p_particles);
 
-	enum ParticlesDrawOrder {
-		PARTICLES_DRAW_ORDER_INDEX,
-		PARTICLES_DRAW_ORDER_LIFETIME,
-		PARTICLES_DRAW_ORDER_VIEW_DEPTH,
-	};
-
-	void particles_set_draw_order(RID p_particles, ParticlesDrawOrder p_order);
+	void particles_set_draw_order(RID p_particles, ParticlesData::DrawOrder p_order);
 
 	void particles_set_draw_passes(RID p_particles, int p_count);
 	void particles_set_draw_pass_mesh(RID p_particles, int p_pass, RID p_mesh);
@@ -572,15 +579,6 @@ public:
 	void camera_set_environment(RID p_camera, RID p_env);
 	void camera_set_use_vertical_aspect(RID p_camera, bool p_enable);
 
-	/*
-	enum ParticlesCollisionMode {
-		PARTICLES_COLLISION_NONE,
-		PARTICLES_COLLISION_TEXTURE,
-		PARTICLES_COLLISION_CUBEMAP,
-	};
-
-	void particles_set_collision(RID p_particles,ParticlesCollisionMode p_mode,const Transform&, p_xform,const RID p_depth_tex,const RID p_normal_tex)=0;
-*/
 	/* VIEWPORT TARGET API */
 
 	RID viewport_create();
@@ -708,6 +706,7 @@ public:
 	void environment_set_bg_energy(RID p_env, float p_energy);
 	void environment_set_canvas_max_layer(RID p_env, int p_max_layer);
 	void environment_set_ambient_light(RID p_env, const Color &p_color, float p_energy = 1.0, float p_sky_contribution = 0.0);
+	void environment_set_indirect_light(RID p_env, const Color &p_color);
 	void environment_set_camera_feed_id(RID p_env, int p_camera_feed_id);
 
 	//set default SSAO options
@@ -762,7 +761,7 @@ public:
 	void environment_set_fog(RID p_env, bool p_enable, const Color &p_color, const Color &p_sun_color, float p_sun_amount);
 	void environment_set_fog_depth(RID p_env, bool p_enable, float p_depth_begin, float p_depth_end, float p_depth_curve, bool p_transmit, float p_transmit_curve);
 	void environment_set_fog_height(RID p_env, bool p_enable, float p_min_height, float p_max_height, float p_height_curve);
-
+	void environment_set_emission_enabled(RID p_env, bool p_enable);
 	/* INTERPOLATION API */
 
 	void set_physics_interpolation_enabled(bool p_enabled);
@@ -795,7 +794,6 @@ public:
 		INSTANCE_PARTICLES,
 		INSTANCE_LIGHT,
 		INSTANCE_REFLECTION_PROBE,
-		INSTANCE_LIGHTMAP_CAPTURE,
 		INSTANCE_MAX,
 
 		INSTANCE_GEOMETRY_MASK = (1 << INSTANCE_MESH) | (1 << INSTANCE_MULTIMESH) | (1 << INSTANCE_IMMEDIATE) | (1 << INSTANCE_PARTICLES)
@@ -816,9 +814,6 @@ public:
 	void instance_set_blend_shape_weight(RID p_instance, int p_shape, float p_weight);
 	void instance_set_surface_material(RID p_instance, int p_surface, RID p_material);
 	void instance_set_visible(RID p_instance, bool p_visible);
-
-	void instance_set_use_lightmap(RID p_instance, RID p_lightmap_instance, RID p_lightmap, int p_lightmap_slice, const Rect2 &p_lightmap_uv_rect);
-
 	void instance_set_custom_aabb(RID p_instance, AABB aabb);
 
 	void instance_attach_skeleton(RID p_instance, RID p_skeleton);
@@ -1245,7 +1240,6 @@ VARIANT_ENUM_CAST(VisualServer::LightOmniShadowDetail);
 VARIANT_ENUM_CAST(VisualServer::LightDirectionalShadowMode);
 VARIANT_ENUM_CAST(VisualServer::LightDirectionalShadowDepthRangeMode);
 VARIANT_ENUM_CAST(VisualServer::ReflectionProbeUpdateMode);
-VARIANT_ENUM_CAST(VisualServer::ParticlesDrawOrder);
 VARIANT_ENUM_CAST(VisualServer::EnvironmentBG);
 VARIANT_ENUM_CAST(VisualServer::EnvironmentDOFBlurQuality);
 VARIANT_ENUM_CAST(VisualServer::EnvironmentGlowBlendMode);
@@ -1256,6 +1250,8 @@ VARIANT_ENUM_CAST(VisualServer::InstanceFlags);
 VARIANT_ENUM_CAST(VisualServer::ShadowCastingSetting);
 VARIANT_ENUM_CAST(VisualServer::TextureType);
 VARIANT_ENUM_CAST(VisualServer::ChangedPriority);
+VARIANT_ENUM_CAST(VisualServer::ShadowRenderDistance);
+VARIANT_ENUM_CAST(ParticlesData::DrawOrder);
 
 //typedef VisualServer VS; // makes it easier to use
 #define VS VisualServer

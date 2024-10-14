@@ -5,11 +5,16 @@
 #include "core/list.h"
 #include "core/math/bvh.h"
 #include "core/math/camera_matrix.h"
+#include "core/math/geometry.h"
+#include "core/math/octree.h"
 #include "core/math/transform_interpolator.h"
+#include "core/os/semaphore.h"
+#include "core/os/thread.h"
+#include "core/safe_refcount.h"
 #include "core/self_list.h"
 #include "core/set.h"
+#include "servers/arvr/arvr_interface.h"
 #include "servers/visual/portals/portal_renderer.h"
-#include "servers/visual/portals/portal_types.h"
 #include "servers/visual_server.h"
 
 // common interface for all spatial partitioning schemes
@@ -50,95 +55,6 @@ public:
 	virtual void set_balance(float p_balance) {}
 
 	~SpatialPartitioningScene() {}
-};
-
-class SpatialPartitioningScene_Octree : public SpatialPartitioningScene {
-	Octree_CL<RasterizerInstance, true> _octree;
-
-public:
-	virtual SpatialPartitionID create(RasterizerInstance *p_userdata, const AABB &p_aabb = AABB(), int p_subindex = 0, bool p_pairable = false, uint32_t p_pairable_type = 0, uint32_t pairable_mask = 1);
-	virtual void erase(SpatialPartitionID p_handle);
-	virtual void move(SpatialPartitionID p_handle, const AABB &p_aabb);
-	virtual void set_pairable(RasterizerInstance *p_instance, bool p_pairable, uint32_t p_pairable_type, uint32_t p_pairable_mask);
-	virtual int cull_convex(const Vector<Plane> &p_convex, RasterizerInstance **p_result_array, int p_result_max, uint32_t p_mask = 0xFFFFFFFF);
-	virtual int cull_aabb(const AABB &p_aabb, RasterizerInstance **p_result_array, int p_result_max, int *p_subindex_array = nullptr, uint32_t p_mask = 0xFFFFFFFF);
-	virtual int cull_segment(const Vector3 &p_from, const Vector3 &p_to, RasterizerInstance **p_result_array, int p_result_max, int *p_subindex_array = nullptr, uint32_t p_mask = 0xFFFFFFFF);
-	virtual void set_pair_callback(PairCallback p_callback, void *p_userdata);
-	virtual void set_unpair_callback(UnpairCallback p_callback, void *p_userdata);
-	virtual void set_balance(float p_balance);
-};
-
-class SpatialPartitioningScene_BVH : public SpatialPartitioningScene {
-	template <class T>
-	class UserPairTestFunction {
-	public:
-		static bool user_pair_check(const T *p_a, const T *p_b) {
-			// return false if no collision, decided by masks etc
-			return true;
-		}
-	};
-
-	template <class T>
-	class UserCullTestFunction {
-		// write this logic once for use in all routines
-		// double check this as a possible source of bugs in future.
-		static bool _cull_pairing_mask_test_hit(uint32_t p_maskA, uint32_t p_typeA, uint32_t p_maskB, uint32_t p_typeB) {
-			// double check this as a possible source of bugs in future.
-			bool A_match_B = p_maskA & p_typeB;
-
-			if (!A_match_B) {
-				bool B_match_A = p_maskB & p_typeA;
-				if (!B_match_A) {
-					return false;
-				}
-			}
-
-			return true;
-		}
-
-	public:
-		static bool user_cull_check(const T *p_a, const T *p_b) {
-			DEV_ASSERT(p_a);
-			DEV_ASSERT(p_b);
-
-			uint32_t a_mask = p_a->bvh_pairable_mask;
-			uint32_t a_type = p_a->bvh_pairable_type;
-			uint32_t b_mask = p_b->bvh_pairable_mask;
-			uint32_t b_type = p_b->bvh_pairable_type;
-
-			if (!_cull_pairing_mask_test_hit(a_mask, a_type, b_mask, b_type)) {
-				return false;
-			}
-
-			return true;
-		}
-	};
-
-private:
-	// Note that SpatialPartitionIDs are +1 based when stored in visual server, to enable 0 to indicate invalid ID.
-	BVH_Manager<RasterizerInstance, 2, true, 256, UserPairTestFunction<RasterizerInstance>, UserCullTestFunction<RasterizerInstance>> _bvh;
-	RasterizerInstance *_dummy_cull_object;
-
-public:
-	SpatialPartitioningScene_BVH();
-	~SpatialPartitioningScene_BVH();
-	virtual SpatialPartitionID create(RasterizerInstance *p_userdata, const AABB &p_aabb = AABB(), int p_subindex = 0, bool p_pairable = false, uint32_t p_pairable_type = 0, uint32_t p_pairable_mask = 1);
-	virtual void erase(SpatialPartitionID p_handle);
-	virtual void move(SpatialPartitionID p_handle, const AABB &p_aabb);
-	void activate(SpatialPartitionID p_handle, const AABB &p_aabb);
-	void deactivate(SpatialPartitionID p_handle);
-	void force_collision_check(SpatialPartitionID p_handle);
-	void update();
-	void update_collisions();
-	virtual void set_pairable(RasterizerInstance *p_instance, bool p_pairable, uint32_t p_pairable_type, uint32_t p_pairable_mask);
-	virtual int cull_convex(const Vector<Plane> &p_convex, RasterizerInstance **p_result_array, int p_result_max, uint32_t p_mask = 0xFFFFFFFF);
-	virtual int cull_aabb(const AABB &p_aabb, RasterizerInstance **p_result_array, int p_result_max, int *p_subindex_array = nullptr, uint32_t p_mask = 0xFFFFFFFF);
-	virtual int cull_segment(const Vector3 &p_from, const Vector3 &p_to, RasterizerInstance **p_result_array, int p_result_max, int *p_subindex_array = nullptr, uint32_t p_mask = 0xFFFFFFFF);
-	virtual void set_pair_callback(PairCallback p_callback, void *p_userdata);
-	virtual void set_unpair_callback(UnpairCallback p_callback, void *p_userdata);
-
-	virtual void params_set_node_expansion(real_t p_value) { _bvh.params_set_node_expansion(p_value); }
-	virtual void params_set_pairing_expansion(real_t p_value) { _bvh.params_set_pairing_expansion(p_value); }
 };
 
 struct RasterizerScenario : RID_Data {
@@ -258,7 +174,6 @@ struct RasterizerInstance : RID_Data {
 	bool mirror : 1;
 	bool receive_shadows : 1;
 	bool visible : 1;
-	bool baked_light : 1; //this flag is only to know if it actually did use baked light
 	bool redraw_if_visible : 1;
 
 	bool on_interpolate_list : 1;
@@ -275,11 +190,6 @@ struct RasterizerInstance : RID_Data {
 
 	SelfList<RasterizerInstance> dependency_item;
 
-	RasterizerInstance *lightmap_capture;
-	RID lightmap;
-	Vector<Color> lightmap_capture_data; //in a array (12 values) to avoid wasting space if unused. Alpha is unused, but needed to send to shader
-	int lightmap_slice;
-	Rect2 lightmap_uv_rect;
 	RID self;
 	//scenario stuff
 	SpatialPartitionID spatial_partition_id;
@@ -343,11 +253,7 @@ struct RasterizerInstance : RID_Data {
 		visible = true;
 		depth_layer = 0;
 		layer_mask = 1;
-		baked_light = false;
 		redraw_if_visible = false;
-		lightmap_capture = nullptr;
-		lightmap_slice = -1;
-		lightmap_uv_rect = Rect2(0, 0, 1, 1);
 		on_interpolate_list = false;
 		on_interpolate_transform_list = false;
 		interpolated = true;
@@ -391,6 +297,95 @@ struct RasterizerInstance : RID_Data {
 			memdelete(custom_aabb);
 		}
 	}
+};
+
+class SpatialPartitioningScene_Octree : public SpatialPartitioningScene {
+	Octree_CL<RasterizerInstance, true> _octree;
+
+public:
+	virtual SpatialPartitionID create(RasterizerInstance *p_userdata, const AABB &p_aabb = AABB(), int p_subindex = 0, bool p_pairable = false, uint32_t p_pairable_type = 0, uint32_t pairable_mask = 1);
+	virtual void erase(SpatialPartitionID p_handle);
+	virtual void move(SpatialPartitionID p_handle, const AABB &p_aabb);
+	virtual void set_pairable(RasterizerInstance *p_instance, bool p_pairable, uint32_t p_pairable_type, uint32_t p_pairable_mask);
+	virtual int cull_convex(const Vector<Plane> &p_convex, RasterizerInstance **p_result_array, int p_result_max, uint32_t p_mask = 0xFFFFFFFF);
+	virtual int cull_aabb(const AABB &p_aabb, RasterizerInstance **p_result_array, int p_result_max, int *p_subindex_array = nullptr, uint32_t p_mask = 0xFFFFFFFF);
+	virtual int cull_segment(const Vector3 &p_from, const Vector3 &p_to, RasterizerInstance **p_result_array, int p_result_max, int *p_subindex_array = nullptr, uint32_t p_mask = 0xFFFFFFFF);
+	virtual void set_pair_callback(PairCallback p_callback, void *p_userdata);
+	virtual void set_unpair_callback(UnpairCallback p_callback, void *p_userdata);
+	virtual void set_balance(float p_balance);
+};
+
+class SpatialPartitioningScene_BVH : public SpatialPartitioningScene {
+	template <class T>
+	class UserPairTestFunction {
+	public:
+		static bool user_pair_check(const T *p_a, const T *p_b) {
+			// return false if no collision, decided by masks etc
+			return true;
+		}
+	};
+
+	template <class T>
+	class UserCullTestFunction {
+		// write this logic once for use in all routines
+		// double check this as a possible source of bugs in future.
+		static bool _cull_pairing_mask_test_hit(uint32_t p_maskA, uint32_t p_typeA, uint32_t p_maskB, uint32_t p_typeB) {
+			// double check this as a possible source of bugs in future.
+			bool A_match_B = p_maskA & p_typeB;
+
+			if (!A_match_B) {
+				bool B_match_A = p_maskB & p_typeA;
+				if (!B_match_A) {
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+	public:
+		static bool user_cull_check(const T *p_a, const T *p_b) {
+			DEV_ASSERT(p_a);
+			DEV_ASSERT(p_b);
+
+			uint32_t a_mask = p_a->bvh_pairable_mask;
+			uint32_t a_type = p_a->bvh_pairable_type;
+			uint32_t b_mask = p_b->bvh_pairable_mask;
+			uint32_t b_type = p_b->bvh_pairable_type;
+
+			if (!_cull_pairing_mask_test_hit(a_mask, a_type, b_mask, b_type)) {
+				return false;
+			}
+
+			return true;
+		}
+	};
+
+private:
+	// Note that SpatialPartitionIDs are +1 based when stored in visual server, to enable 0 to indicate invalid ID.
+	BVH_Manager<RasterizerInstance, 2, true, 256, UserPairTestFunction<RasterizerInstance>, UserCullTestFunction<RasterizerInstance>> _bvh;
+	RasterizerInstance *_dummy_cull_object;
+
+public:
+	SpatialPartitioningScene_BVH();
+	~SpatialPartitioningScene_BVH();
+	virtual SpatialPartitionID create(RasterizerInstance *p_userdata, const AABB &p_aabb = AABB(), int p_subindex = 0, bool p_pairable = false, uint32_t p_pairable_type = 0, uint32_t p_pairable_mask = 1);
+	virtual void erase(SpatialPartitionID p_handle);
+	virtual void move(SpatialPartitionID p_handle, const AABB &p_aabb);
+	void activate(SpatialPartitionID p_handle, const AABB &p_aabb);
+	void deactivate(SpatialPartitionID p_handle);
+	void force_collision_check(SpatialPartitionID p_handle);
+	void update();
+	void update_collisions();
+	virtual void set_pairable(RasterizerInstance *p_instance, bool p_pairable, uint32_t p_pairable_type, uint32_t p_pairable_mask);
+	virtual int cull_convex(const Vector<Plane> &p_convex, RasterizerInstance **p_result_array, int p_result_max, uint32_t p_mask = 0xFFFFFFFF);
+	virtual int cull_aabb(const AABB &p_aabb, RasterizerInstance **p_result_array, int p_result_max, int *p_subindex_array = nullptr, uint32_t p_mask = 0xFFFFFFFF);
+	virtual int cull_segment(const Vector3 &p_from, const Vector3 &p_to, RasterizerInstance **p_result_array, int p_result_max, int *p_subindex_array = nullptr, uint32_t p_mask = 0xFFFFFFFF);
+	virtual void set_pair_callback(PairCallback p_callback, void *p_userdata);
+	virtual void set_unpair_callback(UnpairCallback p_callback, void *p_userdata);
+
+	virtual void params_set_node_expansion(real_t p_value) { _bvh.params_set_node_expansion(p_value); }
+	virtual void params_set_pairing_expansion(real_t p_value) { _bvh.params_set_pairing_expansion(p_value); }
 };
 
 #endif

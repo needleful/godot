@@ -484,11 +484,9 @@ public:
 
 		Vector<ShaderLanguage::DataType> texture_types;
 		Vector<ShaderLanguage::ShaderNode::Uniform::Hint> texture_hints;
-		bool valid;
 
 		ShaderLanguage::StencilTest front_stencil;
 		ShaderLanguage::StencilTest back_stencil;
-		bool uses_stencil;
 
 		String path;
 
@@ -581,6 +579,8 @@ public:
 		struct Particles {
 		} particles;
 
+		bool valid;
+		bool uses_stencil;
 		bool uses_vertex_time;
 		bool uses_fragment_time;
 
@@ -784,6 +784,7 @@ public:
 		Vector<Surface *> surfaces;
 		int blend_shape_count;
 		VS::BlendShapeMode blend_shape_mode;
+		VS::ShadowRenderDistance shadow_render_distance;
 		PoolRealArray blend_shape_values;
 		AABB custom_aabb;
 		mutable uint64_t last_pass;
@@ -800,6 +801,7 @@ public:
 				active(false),
 				blend_shape_count(0),
 				blend_shape_mode(VS::BLEND_SHAPE_MODE_NORMALIZED),
+				shadow_render_distance(VS::SHADOW_DIST_ALL),
 				last_pass(0) {
 		}
 	};
@@ -818,6 +820,9 @@ public:
 
 	void mesh_set_blend_shape_values(RID p_mesh, PoolVector<float> p_values);
 	PoolVector<float> mesh_get_blend_shape_values(RID p_mesh) const;
+
+	void mesh_set_shadow_render_distance(RID p_mesh, VS::ShadowRenderDistance p_distance);
+	VS::ShadowRenderDistance mesh_get_shadow_render_distance(RID p_mesh) const;
 
 	void mesh_surface_update_region(RID p_mesh, int p_surface, int p_offset, const PoolVector<uint8_t> &p_data);
 
@@ -1080,6 +1085,7 @@ public:
 		VS::ReflectionProbeUpdateMode update_mode;
 		float intensity;
 		Color interior_ambient;
+		Color interior_dark_ambient;
 		float interior_ambient_energy;
 		float interior_ambient_probe_contrib;
 		float max_distance;
@@ -1099,6 +1105,7 @@ public:
 	void reflection_probe_set_intensity(RID p_probe, float p_intensity);
 	void reflection_probe_set_interior_ambient(RID p_probe, const Color &p_ambient);
 	void reflection_probe_set_interior_ambient_energy(RID p_probe, float p_energy);
+	void reflection_probe_set_interior_dark_ambient(RID p_probe, const Color &p_dark_ambient);
 	void reflection_probe_set_interior_ambient_probe_contribution(RID p_probe, float p_contrib);
 	void reflection_probe_set_max_distance(RID p_probe, float p_distance);
 	void reflection_probe_set_extents(RID p_probe, const Vector3 &p_extents);
@@ -1121,75 +1128,74 @@ public:
 	/* PARTICLES */
 
 	struct Particles : public GeometryOwner {
-		bool inactive;
+		SelfList<Particles> particle_element;
+		RID draw_passes[ParticlesData::MAX_DRAW_PASSES];
+		AABB custom_aabb;
+		RID process_material;
+		Transform emission_transform;
 		float inactive_time;
-		bool emitting;
-		bool one_shot;
-		int amount;
 		float lifetime;
 		float pre_process_time;
 		float explosiveness;
 		float randomness;
-		bool restart_request;
-		AABB custom_aabb;
-		bool use_local_coords;
-		RID process_material;
-
-		VS::ParticlesDrawOrder draw_order;
-
-		Vector<RID> draw_passes;
+		float speed_scale;
+		float phase;
+		float prev_phase;
+		float frame_remainder;
+		int fixed_fps;
+		int amount;
 
 		GLuint particle_buffers[2];
 		GLuint particle_vaos[2];
 
 		GLuint particle_buffer_histories[2];
 		GLuint particle_vao_histories[2];
-		bool particle_valid_histories[2];
-		bool histories_enabled;
 
-		SelfList<Particles> particle_element;
-
-		float phase;
-		float prev_phase;
 		uint64_t prev_ticks;
 		uint32_t random_seed;
-
 		uint32_t cycle_number;
 
-		float speed_scale;
-
-		int fixed_fps;
-		bool fractional_delta;
-		float frame_remainder;
-
-		bool clear;
-
-		Transform emission_transform;
+		bool particle_valid_histories[2];
+		ParticlesData::DrawOrder draw_order : 2;
+		bool histories_enabled : 1;
+		bool clear : 1;
+		bool fractional_delta : 1;
+		bool restart_request : 1;
+		bool inactive : 1;
+		bool emitting : 1;
+		bool one_shot : 1;
+		bool use_local_coords : 1;
 
 		Particles() :
-				inactive(true),
+				particle_element(this),
+				custom_aabb(AABB(Vector3(-4, -4, -4), Vector3(8, 8, 8))),
+
 				inactive_time(0.0),
-				emitting(false),
-				one_shot(false),
-				amount(0),
 				lifetime(1.0),
 				pre_process_time(0.0),
 				explosiveness(0.0),
 				randomness(0.0),
-				restart_request(false),
-				custom_aabb(AABB(Vector3(-4, -4, -4), Vector3(8, 8, 8))),
-				use_local_coords(true),
-				draw_order(VS::PARTICLES_DRAW_ORDER_INDEX),
-				histories_enabled(false),
-				particle_element(this),
+				speed_scale(1.0),
+				frame_remainder(0),
+				fixed_fps(0),
+				amount(0),
+
 				prev_ticks(0),
 				random_seed(0),
 				cycle_number(0),
-				speed_scale(1.0),
-				fixed_fps(0),
+
+				draw_order(ParticlesData::DRAW_ORDER_INDEX),
+				histories_enabled(false),
+				clear(true),
 				fractional_delta(false),
-				frame_remainder(0),
-				clear(true) {
+				restart_request(false),
+				inactive(true),
+				emitting(false),
+				one_shot(false),
+				use_local_coords(true) {
+			for (int i = 0; i < ParticlesData::MAX_DRAW_PASSES; i++) {
+				draw_passes[i] = RID();
+			}
 			particle_buffers[0] = 0;
 			particle_buffers[1] = 0;
 			glGenBuffers(2, particle_buffers);
@@ -1214,6 +1220,8 @@ public:
 
 	RID particles_create();
 
+	void particles_set(RID p_particles, const ParticlesData &data);
+
 	void particles_set_emitting(RID p_particles, bool p_emitting);
 	bool particles_get_emitting(RID p_particles);
 	void particles_set_amount(RID p_particles, int p_amount);
@@ -1230,7 +1238,7 @@ public:
 	void particles_set_fractional_delta(RID p_particles, bool p_enable);
 	void particles_restart(RID p_particles);
 
-	void particles_set_draw_order(RID p_particles, VS::ParticlesDrawOrder p_order);
+	void particles_set_draw_order(RID p_particles, ParticlesData::DrawOrder p_order);
 
 	void particles_set_draw_passes(RID p_particles, int p_passes);
 	void particles_set_draw_pass_mesh(RID p_particles, int p_pass, RID p_mesh);

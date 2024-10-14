@@ -55,6 +55,7 @@ private:
 	bool enable_shadows;
 	bool interior;
 	Color interior_ambient;
+	Color interior_dark_ambient;
 	float interior_ambient_energy;
 	float interior_ambient_probe_contribution;
 
@@ -64,6 +65,7 @@ private:
 protected:
 	static void _bind_methods();
 	void _validate_property(PropertyInfo &property) const;
+	void _notification(int p_what);
 
 public:
 	void set_intensity(float p_intensity);
@@ -71,6 +73,9 @@ public:
 
 	void set_interior_ambient(Color p_ambient);
 	Color get_interior_ambient() const;
+
+	void set_interior_dark_ambient(Color p_ambient);
+	Color get_interior_dark_ambient() const;
 
 	void set_interior_ambient_energy(float p_energy);
 	float get_interior_ambient_energy() const;

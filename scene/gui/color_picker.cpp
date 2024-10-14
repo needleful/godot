@@ -121,7 +121,8 @@ void ColorPicker::_update_controls() {
 	}
 
 	if (edit_alpha) {
-		values[3]->show();
+		if (advanced_input)
+			values[3]->show();
 		scroll[3]->show();
 		labels[3]->show();
 	} else {
@@ -129,6 +130,7 @@ void ColorPicker::_update_controls() {
 		scroll[3]->hide();
 		labels[3]->hide();
 	}
+	set_advanced_input(advanced_input);
 }
 
 void ColorPicker::_set_pick_color(const Color &p_color, bool p_update_sliders) {
@@ -426,8 +428,8 @@ void ColorPicker::_update_text_value() {
 		c_text->set_text(color.to_html(edit_alpha && color.a < 1));
 	}
 
-	text_type->set_visible(visible);
-	c_text->set_visible(visible);
+	text_type->set_visible(visible && advanced_input);
+	c_text->set_visible(visible && advanced_input);
 }
 
 void ColorPicker::_sample_input(const Ref<InputEvent> &p_event) {
@@ -740,6 +742,30 @@ bool ColorPicker::are_presets_visible() const {
 	return presets_visible;
 }
 
+void ColorPicker::set_advanced_input(bool p_text) {
+	advanced_input = p_text;
+	values[0]->set_visible(p_text);
+	values[1]->set_visible(p_text);
+	values[2]->set_visible(p_text);
+	values[2]->set_visible(p_text && edit_alpha);
+
+	btn_hsv->set_visible(advanced_input);
+	btn_raw->set_visible(advanced_input);
+	text_type->set_visible(advanced_input);
+	c_text->set_visible(advanced_input);
+	btn_pick->set_visible(advanced_input);
+
+	for (int i = 0; i < 4; i++) {
+		scroll[i]->set_focus_mode(advanced_input ? FOCUS_NONE : FOCUS_ALL);
+	}
+
+	sample->set_custom_minimum_size(Size2(0, advanced_input ? 0 : 45));
+}
+
+bool ColorPicker::has_advanced_input() const {
+	return advanced_input;
+}
+
 void ColorPicker::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_pick_color", "color"), &ColorPicker::set_pick_color);
 	ClassDB::bind_method(D_METHOD("get_pick_color"), &ColorPicker::get_pick_color);
@@ -758,6 +784,8 @@ void ColorPicker::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("add_preset", "color"), &ColorPicker::add_preset);
 	ClassDB::bind_method(D_METHOD("erase_preset", "color"), &ColorPicker::erase_preset);
 	ClassDB::bind_method(D_METHOD("get_presets"), &ColorPicker::get_presets);
+	ClassDB::bind_method(D_METHOD("set_advanced_input", "p_show_advanced_input"), &ColorPicker::set_advanced_input);
+	ClassDB::bind_method(D_METHOD("has_advanced_input"), &ColorPicker::has_advanced_input);
 	ClassDB::bind_method(D_METHOD("_value_changed"), &ColorPicker::_value_changed);
 	ClassDB::bind_method(D_METHOD("_html_entered"), &ColorPicker::_html_entered);
 	ClassDB::bind_method(D_METHOD("_text_type_toggled"), &ColorPicker::_text_type_toggled);
@@ -782,6 +810,7 @@ void ColorPicker::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "deferred_mode"), "set_deferred_mode", "is_deferred_mode");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "presets_enabled"), "set_presets_enabled", "are_presets_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "presets_visible"), "set_presets_visible", "are_presets_visible");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "advanced_input"), "set_advanced_input", "has_advanced_input");
 
 	ADD_SIGNAL(MethodInfo("color_changed", PropertyInfo(Variant::COLOR, "color")));
 	ADD_SIGNAL(MethodInfo("preset_added", PropertyInfo(Variant::COLOR, "color")));
@@ -799,6 +828,8 @@ ColorPicker::ColorPicker() :
 	changing_color = false;
 	presets_enabled = true;
 	presets_visible = true;
+	advanced_input = true;
+	display_old_color = false;
 	screen = nullptr;
 
 	HBoxContainer *hb_edit = memnew(HBoxContainer);

@@ -472,6 +472,10 @@ void Mesh::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("surface_set_material", "surf_idx", "material"), &Mesh::surface_set_material);
 	ClassDB::bind_method(D_METHOD("surface_get_material", "surf_idx"), &Mesh::surface_get_material);
 
+	ClassDB::bind_method(D_METHOD("get_shadow_render_distance"), &Mesh::get_shadow_render_distance);
+	ClassDB::bind_method(D_METHOD("set_shadow_render_distance", "shadow_render_distance"), &Mesh::set_shadow_render_distance);
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "shadow_render_distance", PROPERTY_HINT_ENUM, "Close,Medium,Far,All"), "set_shadow_render_distance", "get_shadow_render_distance");
+
 	BIND_ENUM_CONSTANT(PRIMITIVE_POINTS);
 	BIND_ENUM_CONSTANT(PRIMITIVE_LINES);
 	BIND_ENUM_CONSTANT(PRIMITIVE_LINE_STRIP);
@@ -520,6 +524,11 @@ void Mesh::_bind_methods() {
 	BIND_ENUM_CONSTANT(ARRAY_WEIGHTS);
 	BIND_ENUM_CONSTANT(ARRAY_INDEX);
 	BIND_ENUM_CONSTANT(ARRAY_MAX);
+
+	BIND_ENUM_CONSTANT(SHADOW_DIST_CLOSE);
+	BIND_ENUM_CONSTANT(SHADOW_DIST_MEDIUM);
+	BIND_ENUM_CONSTANT(SHADOW_DIST_FAR);
+	BIND_ENUM_CONSTANT(SHADOW_DIST_ALL);
 }
 
 void Mesh::clear_cache() const {
@@ -1059,6 +1068,15 @@ void ArrayMesh::regen_normalmaps() {
 		surfs.write[i]->generate_tangents();
 		surfs.write[i]->commit(Ref<ArrayMesh>(this));
 	}
+}
+
+Mesh::ShadowRenderDistance ArrayMesh::get_shadow_render_distance() const {
+	return (Mesh::ShadowRenderDistance)VisualServer::get_singleton()->mesh_get_shadow_render_distance(mesh);
+}
+
+void ArrayMesh::set_shadow_render_distance(Mesh::ShadowRenderDistance p_shadow_distance) {
+	shadow_render_distance = p_shadow_distance;
+	return VisualServer::get_singleton()->mesh_set_shadow_render_distance(mesh, (VS::ShadowRenderDistance)shadow_render_distance);
 }
 
 void ArrayMesh::_bind_methods() {

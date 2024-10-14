@@ -199,6 +199,15 @@ RID PrimitiveMesh::get_rid() const {
 	return mesh;
 }
 
+Mesh::ShadowRenderDistance PrimitiveMesh::get_shadow_render_distance() const {
+	return (Mesh::ShadowRenderDistance)VisualServer::get_singleton()->mesh_get_shadow_render_distance(mesh);
+}
+
+void PrimitiveMesh::set_shadow_render_distance(Mesh::ShadowRenderDistance p_shadow_distance) {
+	shadow_render_distance = p_shadow_distance;
+	return VisualServer::get_singleton()->mesh_set_shadow_render_distance(mesh, (VS::ShadowRenderDistance)shadow_render_distance);
+}
+
 void PrimitiveMesh::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_update"), &PrimitiveMesh::_update);
 

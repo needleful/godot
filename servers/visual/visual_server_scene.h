@@ -40,6 +40,7 @@
 #include "core/os/thread.h"
 #include "core/safe_refcount.h"
 #include "core/self_list.h"
+#include "drivers/gles_common/rasterizer_instance_base.h"
 #include "portals/portal_renderer.h"
 #include "servers/arvr/arvr_interface.h"
 
@@ -62,6 +63,7 @@ public:
 	void tick();
 	void pre_draw(bool p_will_draw);
 
+	/* CAMERA API */
 	struct Camera : public RID_Data {
 		enum Type {
 			PERSPECTIVE,
@@ -157,8 +159,6 @@ public:
 
 	void _instance_queue_update(RasterizerInstance *p_instance, bool p_update_aabb, bool p_update_materials = false);
 
-	SelfList<InstanceReflectionProbeData>::List reflection_probe_render_list;
-
 	int instance_cull_count;
 	RasterizerInstance *instance_cull_result[MAX_INSTANCE_CULL];
 	RasterizerInstance *instance_shadow_cull_result[MAX_INSTANCE_CULL]; //used for generating shadowmaps
@@ -166,6 +166,7 @@ public:
 	RID light_instance_cull_result[MAX_LIGHTS_CULLED];
 	int light_cull_count;
 	int directional_light_count;
+	SelfList<InstanceReflectionProbeData>::List reflection_probe_render_list;
 	RID reflection_probe_instance_cull_result[MAX_REFLECTION_PROBES_CULLED];
 	int reflection_probe_cull_count;
 
@@ -392,6 +393,7 @@ public:
 	_FORCE_INLINE_ void _update_instance(RasterizerInstance *p_instance);
 	_FORCE_INLINE_ void _update_instance_aabb(RasterizerInstance *p_instance);
 	_FORCE_INLINE_ void _update_dirty_instance(RasterizerInstance *p_instance);
+
 	_FORCE_INLINE_ bool _light_instance_update_shadow(RasterizerInstance *p_instance, const Transform p_cam_transform, const CameraMatrix &p_cam_projection, bool p_cam_orthogonal, RID p_shadow_atlas, RasterizerScenario *p_scenario, uint32_t p_visible_layers = 0xFFFFFF);
 
 	void _prepare_scene(const Transform p_cam_transform, const CameraMatrix &p_cam_projection, bool p_cam_orthogonal, RID p_force_environment, uint32_t p_visible_layers, RID p_scenario, RID p_shadow_atlas, RID p_reflection_probe, int32_t &r_previous_room_id_hint);
@@ -405,12 +407,6 @@ public:
 	// interpolation
 	void update_interpolation_tick(bool p_process = true);
 	void update_interpolation_frame(bool p_process = true);
-
-	bool probe_bake_thread_exit;
-	Thread probe_bake_thread;
-	Semaphore probe_bake_sem;
-	Mutex probe_bake_mutex;
-	List<RasterizerInstance *> probe_bake_list;
 
 	bool _render_reflection_probe_step(RasterizerInstance *p_instance, int p_step);
 	void render_probes();

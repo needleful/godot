@@ -92,8 +92,6 @@ private:
 	Container *name_container;
 	Container *path_container;
 	Container *install_path_container;
-	Container *rasterizer_container;
-	Ref<ButtonGroup> rasterizer_button_group;
 	Label *msg;
 	LineEdit *project_path;
 	LineEdit *project_name;
@@ -460,9 +458,7 @@ private:
 			} else {
 				if (mode == MODE_NEW) {
 					ProjectSettings::CustomMap initial_settings;
-					if (rasterizer_button_group->get_pressed_button()->get_meta("driver_name") == "GLES3") {
-						initial_settings["rendering/quality/driver/driver_name"] = "GLES3";
-					}
+					initial_settings["rendering/quality/driver/driver_name"] = "GLES3";
 					initial_settings["application/config/name"] = project_name->get_text().strip_edges();
 					initial_settings["application/config/icon"] = "res://icon.png";
 					initial_settings["rendering/environment/default_environment"] = "res://default_env.tres";
@@ -682,7 +678,6 @@ public:
 			msg->hide();
 			install_path_container->hide();
 			install_status_rect->hide();
-			rasterizer_container->hide();
 			get_ok()->set_disabled(false);
 
 			ProjectSettings *current = memnew(ProjectSettings);
@@ -733,7 +728,6 @@ public:
 				get_ok()->set_text(TTR("Import & Edit"));
 				name_container->hide();
 				install_path_container->hide();
-				rasterizer_container->hide();
 				project_path->grab_focus();
 
 			} else if (mode == MODE_NEW) {
@@ -741,7 +735,6 @@ public:
 				get_ok()->set_text(TTR("Create & Edit"));
 				name_container->show();
 				install_path_container->hide();
-				rasterizer_container->show();
 				project_name->call_deferred("grab_focus");
 				project_name->call_deferred("select_all");
 
@@ -751,7 +744,6 @@ public:
 				project_name->set_text(zip_title);
 				name_container->show();
 				install_path_container->hide();
-				rasterizer_container->hide();
 				project_path->grab_focus();
 			}
 

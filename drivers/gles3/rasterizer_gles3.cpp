@@ -31,6 +31,7 @@
 #include "rasterizer_gles3.h"
 
 #include "core/os/os.h"
+#include "core/profiler.h"
 #include "core/project_settings.h"
 
 RasterizerGLES3 *(*Rasterizer::_create_func)() = nullptr;
@@ -198,6 +199,7 @@ void RasterizerGLES3::initialize() {
 }
 
 void RasterizerGLES3::begin_frame(double frame_step) {
+	PROFILE
 	time_total += frame_step * time_scale;
 
 	if (frame_step == 0) {
@@ -409,6 +411,7 @@ void RasterizerGLES3::output_lens_distorted_to_screen(RID p_render_target, const
 }
 
 void RasterizerGLES3::end_frame(bool p_swap_buffers) {
+	PROFILE
 	if (OS::get_singleton()->is_layered_allowed()) {
 		if (!OS::get_singleton()->get_window_per_pixel_transparency_enabled()) {
 			//clear alpha

@@ -16,6 +16,9 @@
 #include "btQuickprof.h"
 #include "btThreads.h"
 
+// GODOT code
+#include "../../core/io/logger.h"
+
 #ifdef __CELLOS_LV2__
 #include <sys/sys_time.h>
 #include <sys/time_util.h>
@@ -637,7 +640,7 @@ float CProfileManager::Get_Time_Since_Reset(void)
 
 #include <stdio.h>
 
-void CProfileManager::dumpRecursive(CProfileIterator* profileIterator, int spacing)
+void CProfileManager::dumpRecursive(Logger* logger, CProfileIterator* profileIterator, int spacing)
 {
 	profileIterator->First();
 	if (profileIterator->Is_Done())
@@ -646,10 +649,10 @@ void CProfileManager::dumpRecursive(CProfileIterator* profileIterator, int spaci
 	float accumulated_time = 0, parent_time = profileIterator->Is_Root() ? CProfileManager::Get_Time_Since_Reset() : profileIterator->Get_Current_Parent_Total_Time();
 	int i;
 	int frames_since_reset = CProfileManager::Get_Frame_Count_Since_Reset();
-	for (i = 0; i < spacing; i++) printf(".");
-	printf("----------------------------------\n");
-	for (i = 0; i < spacing; i++) printf(".");
-	printf("Profiling: %s (total running time: %.3f ms) ---\n", profileIterator->Get_Current_Parent_Name(), parent_time);
+	for (i = 0; i < spacing; i++) logger->logf(".");
+	logger->logf("----------------------------------\n");
+	for (i = 0; i < spacing; i++) logger->logf(".");
+	logger->logf("Profiling: %s (total running time: %.3f ms) ---\n", profileIterator->Get_Current_Parent_Name(), parent_time);
 	float totalTime = 0.f;
 
 	int numChildren = 0;
@@ -662,34 +665,34 @@ void CProfileManager::dumpRecursive(CProfileIterator* profileIterator, int spaci
 		float fraction = parent_time > SIMD_EPSILON ? (current_total_time / parent_time) * 100 : 0.f;
 		{
 			int i;
-			for (i = 0; i < spacing; i++) printf(".");
+			for (i = 0; i < spacing; i++) logger->logf(".");
 		}
-		printf("%d -- %s (%.2f %%) :: %.3f ms / frame (%d calls)\n", i, profileIterator->Get_Current_Name(), fraction, (current_total_time / (double)frames_since_reset), profileIterator->Get_Current_Total_Calls());
+		logger->logf("%d -- %s (%.2f %%) :: %.3f ms / frame (%d calls)\n", i, profileIterator->Get_Current_Name(), fraction, (current_total_time / (double)frames_since_reset), profileIterator->Get_Current_Total_Calls());
 		totalTime += current_total_time;
 		//recurse into children
 	}
 
 	if (parent_time < accumulated_time)
 	{
-		//printf("what's wrong\n");
+		//logger->logf("what's wrong\n");
 	}
-	for (i = 0; i < spacing; i++) printf(".");
-	printf("%s (%.3f %%) :: %.3f ms\n", "Unaccounted:", parent_time > SIMD_EPSILON ? ((parent_time - accumulated_time) / parent_time) * 100 : 0.f, parent_time - accumulated_time);
+	for (i = 0; i < spacing; i++) logger->logf(".");
+	logger->logf("%s (%.3f %%) :: %.3f ms\n", "Unaccounted:", parent_time > SIMD_EPSILON ? ((parent_time - accumulated_time) / parent_time) * 100 : 0.f, parent_time - accumulated_time);
 
 	for (i = 0; i < numChildren; i++)
 	{
 		profileIterator->Enter_Child(i);
-		dumpRecursive(profileIterator, spacing + 3);
+		dumpRecursive(logger, profileIterator, spacing + 3);
 		profileIterator->Enter_Parent();
 	}
 }
 
-void CProfileManager::dumpAll()
+void CProfileManager::dumpAll(Logger* logger)
 {
 	CProfileIterator* profileIterator = 0;
 	profileIterator = CProfileManager::Get_Iterator();
 
-	dumpRecursive(profileIterator, 0);
+	dumpRecursive(logger, profileIterator, 0);
 
 	CProfileManager::Release_Iterator(profileIterator);
 }

@@ -31,6 +31,7 @@
 #ifndef TRANSFORM_INTERPOLATOR_H
 #define TRANSFORM_INTERPOLATOR_H
 
+#include "core/bitfield_enum.h"
 #include "core/math/math_defs.h"
 #include "core/math/quat.h"
 #include "core/math/transform.h"
@@ -50,7 +51,7 @@ class Transform;
 
 class TransformInterpolator {
 public:
-	enum Method : unsigned int {
+	enum Method BITFIELD_ENUM {
 		INTERP_LERP,
 		INTERP_SLERP,
 		INTERP_SCALED_SLERP,

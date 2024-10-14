@@ -34,42 +34,23 @@
 #include "core/rid.h"
 #include "scene/3d/visual_instance.h"
 #include "scene/resources/material.h"
+#include "servers/visual/data_particles.h"
 
 class Particles : public GeometryInstance {
 private:
 	GDCLASS(Particles, GeometryInstance);
 
-public:
-	enum DrawOrder {
-		DRAW_ORDER_INDEX,
-		DRAW_ORDER_LIFETIME,
-		DRAW_ORDER_VIEW_DEPTH,
-	};
-
-	enum {
-		MAX_DRAW_PASSES = 4
-	};
-
-private:
-	RID particles;
-
-	bool one_shot;
-	int amount;
-	float lifetime;
-	float pre_process_time;
-	float explosiveness_ratio;
-	float randomness_ratio;
-	float speed_scale;
-	AABB visibility_aabb;
-	bool local_coords;
-	int fixed_fps;
-	bool fractional_delta;
-
 	Ref<Material> process_material;
-
-	DrawOrder draw_order;
-
 	Vector<Ref<Mesh>> draw_passes;
+	RID particles;
+	ParticlesData data;
+	bool emitting : 1;
+	bool dirty : 1;
+	bool dirty_emit : 1;
+
+	void _mark_dirty();
+	void _mark_dirty_emit();
+	void _update_dirty();
 
 protected:
 	static void _bind_methods();
@@ -110,8 +91,8 @@ public:
 	void set_fractional_delta(bool p_enable);
 	bool get_fractional_delta() const;
 
-	void set_draw_order(DrawOrder p_order);
-	DrawOrder get_draw_order() const;
+	void set_draw_order(ParticlesData::DrawOrder p_order);
+	ParticlesData::DrawOrder get_draw_order() const;
 
 	void set_draw_passes(int p_count);
 	int get_draw_passes() const;
@@ -127,7 +108,5 @@ public:
 	Particles();
 	~Particles();
 };
-
-VARIANT_ENUM_CAST(Particles::DrawOrder)
 
 #endif // PARTICLES_H

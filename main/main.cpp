@@ -43,6 +43,7 @@
 #include "core/os/input.h"
 #include "core/os/os.h"
 #include "core/os/time.h"
+#include "core/profiler.h"
 #include "core/project_settings.h"
 #include "core/register_core_types.h"
 #include "core/script_debugger_local.h"
@@ -84,6 +85,10 @@
 #ifndef NO_EDITOR_SPLASH
 #include "main/splash_editor.gen.h"
 #endif
+#endif
+
+#ifdef BT_ENABLE_PROFILE
+#include "thirdparty/bullet/LinearMath/btQuickProf.h"
 #endif
 
 /* Static members */
@@ -142,7 +147,6 @@ HashMap<Main::CLIScope, Vector<String>> forwardable_cli_arguments;
 // Display
 
 static OS::VideoMode video_mode;
-static int init_screen = -1;
 static bool init_fullscreen = false;
 static bool init_maximized = false;
 static bool init_windowed = false;
@@ -163,6 +167,10 @@ static int frame_delay = 0;
 static bool disable_render_loop = false;
 static int fixed_fps = -1;
 static bool print_fps = false;
+
+// Profiling
+static Logger *profile_logger = nullptr;
+static ProfilerManager *profiler_manager = nullptr;
 
 /* Helper methods */
 
@@ -394,6 +402,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 #if defined(DEBUG_ENABLED) && !defined(NO_THREADS)
 	check_lockless_atomics();
 #endif
+	profiler_manager = memnew(ProfilerManager());
 
 	RID_OwnerBase::init_rid();
 
@@ -1064,6 +1073,9 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		String base_path = GLOBAL_GET("logging/file_logging/log_path");
 		int max_files = GLOBAL_GET("logging/file_logging/max_log_files");
 		OS::get_singleton()->add_logger(memnew(RotatedFileLogger(base_path, max_files)));
+#ifdef NP_PROFILER
+		profile_logger = memnew(RotatedFileLogger("user://logs/profiler.log", 5));
+#endif
 	}
 
 	if (main_args.size() == 0 && String(GLOBAL_DEF("application/run/main_scene", "")) == "") {
@@ -1245,7 +1257,10 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	}
 
 	Engine::get_singleton()->set_iterations_per_second(GLOBAL_DEF("physics/common/physics_fps", 60));
+	Engine::get_singleton()->set_min_iterations_per_second(GLOBAL_DEF("physics/common/min_physics_fps", 60));
+
 	ProjectSettings::get_singleton()->set_custom_property_info("physics/common/physics_fps", PropertyInfo(Variant::INT, "physics/common/physics_fps", PROPERTY_HINT_RANGE, "1,1000,1"));
+	ProjectSettings::get_singleton()->set_custom_property_info("physics/common/min_physics_fps", PropertyInfo(Variant::INT, "physics/common/min_physics_fps", PROPERTY_HINT_RANGE, "1,1000,1"));
 	Engine::get_singleton()->set_physics_jitter_fix(GLOBAL_DEF("physics/common/physics_jitter_fix", 0.5));
 	Engine::get_singleton()->set_target_fps(GLOBAL_DEF("debug/settings/fps/force_fps", 0));
 	ProjectSettings::get_singleton()->set_custom_property_info("debug/settings/fps/force_fps", PropertyInfo(Variant::INT, "debug/settings/fps/force_fps", PROPERTY_HINT_RANGE, "0,1000,1"));
@@ -1421,9 +1436,6 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	bool show_logo = true;
 #endif
 
-	if (init_screen != -1) {
-		OS::get_singleton()->set_current_screen(init_screen);
-	}
 	if (init_windowed) {
 		//do none..
 	} else if (init_maximized) {
@@ -1995,6 +2007,7 @@ bool Main::start() {
 			Size2i stretch_size = Size2(GLOBAL_DEF("display/window/size/width", 0), GLOBAL_DEF("display/window/size/height", 0));
 			// out of compatibility reasons stretch_scale is called shrink when exposed to the user.
 			real_t stretch_scale = GLOBAL_DEF("display/window/stretch/shrink", 1.0);
+			int starting_screen = GLOBAL_DEF("display/window/starting_screen", -1);
 
 			SceneTree::StretchMode sml_sm = SceneTree::STRETCH_MODE_DISABLED;
 			if (stretch_mode == "2d") {
@@ -2015,7 +2028,7 @@ bool Main::start() {
 			}
 
 			sml->set_screen_stretch(sml_sm, sml_aspect, stretch_size, stretch_scale);
-
+			sml->set_starting_screen(starting_screen);
 			sml->set_auto_accept_quit(GLOBAL_DEF("application/config/auto_accept_quit", true));
 			sml->set_quit_on_go_back(GLOBAL_DEF("application/config/quit_on_go_back", true));
 			String appname = ProjectSettings::get_singleton()->get("application/config/name");
@@ -2060,6 +2073,8 @@ bool Main::start() {
 			ProjectSettings::get_singleton()->set_custom_property_info("display/window/stretch/aspect", PropertyInfo(Variant::STRING, "display/window/stretch/aspect", PROPERTY_HINT_ENUM, "ignore,keep,keep_width,keep_height,expand"));
 			GLOBAL_DEF("display/window/stretch/shrink", 1.0);
 			ProjectSettings::get_singleton()->set_custom_property_info("display/window/stretch/shrink", PropertyInfo(Variant::REAL, "display/window/stretch/shrink", PROPERTY_HINT_RANGE, "0.1,8,0.01,or_greater"));
+			GLOBAL_DEF("display/window/starting_screen", -1);
+			ProjectSettings::get_singleton()->set_custom_property_info("display/window/starting_screen", PropertyInfo(Variant::REAL, "display/window/starting_screen"));
 			sml->set_auto_accept_quit(GLOBAL_DEF("application/config/auto_accept_quit", true));
 			sml->set_quit_on_go_back(GLOBAL_DEF("application/config/quit_on_go_back", true));
 			GLOBAL_DEF("gui/common/snap_controls_to_pixels", true);
@@ -2258,14 +2273,16 @@ bool Main::iteration() {
 
 	uint64_t ticks_elapsed = ticks - last_ticks;
 
-	int physics_fps = Engine::get_singleton()->get_iterations_per_second();
-	float frame_slice = 1.0 / physics_fps;
+	float frame_slice = 1.0 / Engine::get_singleton()->get_iterations_per_second();
+	float max_frame_slice = 1.0 / Engine::get_singleton()->get_min_iterations_per_second();
 
 	float time_scale = Engine::get_singleton()->get_time_scale();
 
-	MainFrameTime advance = main_timer_sync.advance(frame_slice, physics_fps);
+	MainFrameTime advance = main_timer_sync.advance(frame_slice, max_frame_slice, (float)physics_process_max / 1000000.0);
 	double step = advance.idle_step;
 	double scaled_step = step * time_scale;
+
+	Engine::get_singleton()->set_physics_step(advance.physics_step);
 
 	Engine::get_singleton()->_frame_step = step;
 	Engine::get_singleton()->_physics_interpolation_fraction = advance.interpolation_fraction;
@@ -2279,13 +2296,14 @@ bool Main::iteration() {
 
 	static const int max_physics_steps = 8;
 	if (fixed_fps == -1 && advance.physics_steps > max_physics_steps) {
-		step -= (advance.physics_steps - max_physics_steps) * frame_slice;
+		step -= (advance.physics_steps - max_physics_steps) * advance.physics_step;
 		advance.physics_steps = max_physics_steps;
 	}
 
 	bool exit = false;
 
 	for (int iters = 0; iters < advance.physics_steps; ++iters) {
+		ProfileMarker phys_mark("Physics Step");
 		if (Input::get_singleton()->is_using_input_buffering() && agile_input_event_flushing) {
 			Input::get_singleton()->flush_buffered_events();
 		}
@@ -2299,25 +2317,34 @@ bool Main::iteration() {
 		Physics2DServer::get_singleton()->sync();
 		Physics2DServer::get_singleton()->flush_queries();
 
-		if (OS::get_singleton()->get_main_loop()->iteration(frame_slice * time_scale)) {
+		if (OS::get_singleton()->get_main_loop()->iteration(advance.physics_step * time_scale)) {
 			exit = true;
 			Engine::get_singleton()->_in_physics = false;
 			break;
 		}
 
-		NavigationServer::get_singleton_mut()->process(frame_slice * time_scale);
+		NavigationServer::get_singleton_mut()->process(advance.physics_step * time_scale);
 		message_queue->flush();
 
-		PhysicsServer::get_singleton()->step(frame_slice * time_scale);
+		PhysicsServer::get_singleton()->step(advance.physics_step * time_scale);
+
+#ifdef NP_PROFILER
+#ifdef BT_ENABLE_PROFILE
+		if (profile_logger && (CProfileManager::Get_Time_Since_Reset() > 0.02)) {
+			profile_logger->logf("Bullet:\n");
+			CProfileManager::dumpAll(profile_logger);
+		}
+#endif
+#endif
 
 		Physics2DServer::get_singleton()->end_sync();
-		Physics2DServer::get_singleton()->step(frame_slice * time_scale);
+		Physics2DServer::get_singleton()->step(advance.physics_step * time_scale);
 
 		message_queue->flush();
 
 		OS::get_singleton()->get_main_loop()->iteration_end();
 
-		physics_process_ticks = MAX(physics_process_ticks, OS::get_singleton()->get_ticks_usec() - physics_begin); // keep the largest one for reference
+		physics_process_ticks += OS::get_singleton()->get_ticks_usec() - physics_begin; // Total physics time
 		physics_process_max = MAX(OS::get_singleton()->get_ticks_usec() - physics_begin, physics_process_max);
 		Engine::get_singleton()->_physics_frames++;
 
@@ -2329,14 +2356,17 @@ bool Main::iteration() {
 	}
 
 	uint64_t idle_begin = OS::get_singleton()->get_ticks_usec();
+	{
+		ProfileMarker other_things("Idle Frame");
 
-	if (OS::get_singleton()->get_main_loop()->idle(step * time_scale)) {
-		exit = true;
+		if (OS::get_singleton()->get_main_loop()->idle(step * time_scale)) {
+			exit = true;
+		}
+		visual_server_callbacks->flush();
+		message_queue->flush();
+
+		VisualServer::get_singleton()->sync(); //sync if still drawing from previous frames.
 	}
-	visual_server_callbacks->flush();
-	message_queue->flush();
-
-	VisualServer::get_singleton()->sync(); //sync if still drawing from previous frames.
 
 	if (OS::get_singleton()->can_draw() && VisualServer::get_singleton()->is_render_loop_enabled()) {
 		if ((!force_redraw_requested) && OS::get_singleton()->is_in_low_processor_usage_mode()) {
@@ -2380,7 +2410,7 @@ bool Main::iteration() {
 
 	if (script_debugger) {
 		if (script_debugger->is_profiling()) {
-			script_debugger->profiling_set_frame_times(USEC_TO_SEC(frame_time), USEC_TO_SEC(idle_process_ticks), USEC_TO_SEC(physics_process_ticks), frame_slice);
+			script_debugger->profiling_set_frame_times(USEC_TO_SEC(frame_time), USEC_TO_SEC(idle_process_ticks), USEC_TO_SEC(physics_process_ticks), advance.physics_step);
 		}
 		script_debugger->idle_poll();
 	}
@@ -2437,6 +2467,12 @@ bool Main::iteration() {
 		}
 	}
 #endif
+
+	if (frames % 2048 == 0 || frame_time > 30000) {
+		profiler_manager->log_and_wipe(frame_time, profile_logger);
+	} else {
+		profiler_manager->log_and_wipe(frame_time, nullptr);
+	}
 
 	return exit || auto_quit;
 }

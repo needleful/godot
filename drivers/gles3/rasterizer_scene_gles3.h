@@ -129,6 +129,7 @@ public:
 			float camera_inverse_matrix[16];
 			float camera_matrix[16];
 			float ambient_light_color[4];
+			float indirect_light_color[4];
 			float bg_color[4];
 			float fog_color_enabled[4];
 			float fog_sun_color_amount[4];
@@ -163,11 +164,12 @@ public:
 			float fog_height_min;
 			float fog_height_max;
 			float fog_height_curve;
+			uint32_t emission_enabled;
 
 			uint32_t view_index;
 
 			// make sure this struct is padded to be a multiple of 16 bytes for webgl
-			float pad[3];
+			float pad[2];
 
 		} ubo_data;
 		static_assert(sizeof(SceneDataUBO) % 16 == 0, "SceneDataUBO size must be a multiple of 16 bytes");
@@ -359,6 +361,7 @@ public:
 		float box_ofs[4];
 		float params[4]; // intensity, 0, 0, boxproject
 		float ambient[4]; //color, probe contrib
+		float dark_ambient[4]; // color, uh
 		float atlas_clamp[4];
 		float local_matrix[16]; //up to here for spot and omni, rest is for directional
 		//notes: for ambientblend, use distance to edge to blend between already existing global environment
@@ -390,6 +393,7 @@ public:
 		int camera_feed_id;
 
 		Color ambient_color;
+		Color indirect_color;
 		float ambient_energy;
 		float ambient_sky_contribution;
 
@@ -469,6 +473,7 @@ public:
 		float fog_height_min;
 		float fog_height_max;
 		float fog_height_curve;
+		bool emission_enabled;
 
 		Environment() :
 				bg_mode(VS::ENV_BG_CLEAR_COLOR),
@@ -542,6 +547,7 @@ public:
 				fog_height_enabled(false),
 				fog_height_min(10),
 				fog_height_max(0),
+				emission_enabled(true),
 				fog_height_curve(1) {
 		}
 	};
@@ -558,6 +564,7 @@ public:
 	void environment_set_bg_energy(RID p_env, float p_energy);
 	void environment_set_canvas_max_layer(RID p_env, int p_max_layer);
 	void environment_set_ambient_light(RID p_env, const Color &p_color, float p_energy = 1.0, float p_sky_contribution = 0.0);
+	void environment_set_indirect_light(RID p_env, const Color &p_color);
 	void environment_set_camera_feed_id(RID p_env, int p_camera_feed_id);
 
 	void environment_set_dof_blur_near(RID p_env, bool p_enable, float p_distance, float p_transition, float p_amount, VS::EnvironmentDOFBlurQuality p_quality);
@@ -576,6 +583,8 @@ public:
 	void environment_set_fog(RID p_env, bool p_enable, const Color &p_color, const Color &p_sun_color, float p_sun_amount);
 	void environment_set_fog_depth(RID p_env, bool p_enable, float p_depth_begin, float p_depth_end, float p_depth_curve, bool p_transmit, float p_transmit_curve);
 	void environment_set_fog_height(RID p_env, bool p_enable, float p_min_height, float p_max_height, float p_height_curve);
+
+	void environment_set_emission_enabled(RID p_env, bool p_enable);
 
 	bool is_environment(RID p_env);
 
@@ -838,8 +847,7 @@ public:
 	void _copy_screen(bool p_invalidate_color = false, bool p_invalidate_depth = false);
 	void _copy_texture_to_front_buffer(GLuint p_texture); //used for debug
 
-	void _fill_render_list(RasterizerInstance **p_cull_result, int p_cull_count, bool p_depth_pass, bool p_shadow_pass);
-
+	void _fill_render_list(RasterizerInstance **p_cull_result, int p_cull_count, bool p_depth_pass, int p_shadow_pass);
 	void _blur_effect_buffer();
 	void _render_mrts(Environment *env, const CameraMatrix &p_cam_projection);
 	void _post_process(Environment *env, const CameraMatrix &p_cam_projection);

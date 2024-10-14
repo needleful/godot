@@ -1362,7 +1362,6 @@ Error OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int
 	}
 
 	video_mode = p_desired;
-	//printf("**************** desired %s, mode %s\n", p_desired.fullscreen?"true":"false", video_mode.fullscreen?"true":"false");
 	RECT WindowRect;
 
 	WindowRect.left = 0;
@@ -1408,16 +1407,6 @@ Error OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int
 
 	pre_fs_valid = true;
 	if (video_mode.fullscreen) {
-		/* this returns DPI unaware size, commenting
-		DEVMODE current;
-		memset(&current, 0, sizeof(current));
-		EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &current);
-
-		WindowRect.right = current.dmPelsWidth;
-		WindowRect.bottom = current.dmPelsHeight;
-
-		*/
-
 		// Get the primary monitor without providing hwnd
 		// Solution from https://devblogs.microsoft.com/oldnewthing/20070809-00/?p=25643
 		const POINT ptZero = { 0, 0 };
@@ -1430,19 +1419,6 @@ Error OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int
 		WindowRect.right = data.size.width;
 		WindowRect.bottom = data.size.height;
 
-		/*  DEVMODE dmScreenSettings;
-		memset(&dmScreenSettings,0,sizeof(dmScreenSettings));
-		dmScreenSettings.dmSize=sizeof(dmScreenSettings);
-		dmScreenSettings.dmPelsWidth	= video_mode.width;
-		dmScreenSettings.dmPelsHeight	= video_mode.height;
-		dmScreenSettings.dmBitsPerPel	= current.dmBitsPerPel;
-		dmScreenSettings.dmFields=DM_BITSPERPEL|DM_PELSWIDTH|DM_PELSHEIGHT;
-
-		LONG err = ChangeDisplaySettings(&dmScreenSettings,CDS_FULLSCREEN);
-		if (err!=DISP_CHANGE_SUCCESSFUL) {
-
-			video_mode.fullscreen=false;
-		}*/
 		pre_fs_valid = false;
 
 		// If the user has mouse trails enabled in windows, then sometimes the cursor disappears in fullscreen mode.
@@ -1968,6 +1944,7 @@ void OS_Windows::set_current_screen(int p_screen) {
 		Vector2 ofs = get_window_position() - get_screen_position(get_current_screen());
 		set_window_position(ofs + get_screen_position(p_screen));
 	}
+	pre_fs_valid = false;
 }
 
 static BOOL CALLBACK _MonitorEnumProcPos(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMonitor, LPARAM dwData) {
@@ -2195,13 +2172,16 @@ void OS_Windows::set_window_fullscreen(bool p_enabled) {
 
 		video_mode.fullscreen = false;
 
+		int cs = get_current_screen();
+		Point2 start = get_screen_position(cs);
+
 		if (pre_fs_valid) {
 			rect = pre_fs_rect;
 		} else {
-			rect.left = 0;
-			rect.right = video_mode.width;
-			rect.top = 0;
-			rect.bottom = video_mode.height;
+			rect.left = start.x;
+			rect.right = start.x + video_mode.width;
+			rect.top = start.y;
+			rect.bottom = start.y + video_mode.height;
 		}
 
 		_update_window_style(false, was_maximized);
@@ -2334,19 +2314,29 @@ bool OS_Windows::get_borderless_window() {
 }
 
 void OS_Windows::_update_window_style(bool p_repaint, bool p_maximized) {
+	DWORD style = WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
+	DWORD ex_style = WS_EX_WINDOWEDGE | WS_EX_ACCEPTFILES | WS_EX_APPWINDOW;
+
 	if (video_mode.fullscreen || video_mode.borderless_window) {
-		SetWindowLongPtr(hWnd, GWL_STYLE, WS_SYSMENU | WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE);
+		style |= WS_POPUP;
 	} else {
 		if (video_mode.resizable) {
+			style |= WS_OVERLAPPEDWINDOW;
 			if (p_maximized) {
-				SetWindowLongPtr(hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_MAXIMIZE);
-			} else {
-				SetWindowLongPtr(hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_VISIBLE);
+				style |= WS_OVERLAPPEDWINDOW | WS_MAXIMIZE;
 			}
 		} else {
-			SetWindowLongPtr(hWnd, GWL_STYLE, WS_CAPTION | WS_MINIMIZEBOX | WS_POPUPWINDOW | WS_VISIBLE);
+			style |= WS_CAPTION | WS_MINIMIZEBOX | WS_OVERLAPPED;
 		}
 	}
+	if (video_mode.fullscreen && video_mode.borderless_window) {
+		// I think this breaks the exclusive fullscreen stuff?
+		// Ironically this means it's not actually borderless
+		style |= WS_BORDER;
+	}
+
+	SetWindowLongPtr(hWnd, GWL_STYLE, style);
+	SetWindowLongPtr(hWnd, GWL_EXSTYLE, ex_style);
 
 	if (icon.is_valid()) {
 		set_icon(icon);

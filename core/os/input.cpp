@@ -33,7 +33,7 @@
 #include "core/input_map.h"
 #include "core/os/os.h"
 #include "core/project_settings.h"
-#include "main/default_controller_mappings.h"
+#include "main/default_controller_mappings.gen.h"
 #include "scene/resources/texture.h"
 #include "servers/visual_server.h"
 
@@ -901,8 +901,8 @@ Input::Input() {
 	// Parse default mappings.
 	{
 		int i = 0;
-		while (DefaultControllerMappings::mappings[i]) {
-			parse_mapping(DefaultControllerMappings::mappings[i++]);
+		while (default_controller_mappings[i]) {
+			parse_mapping(default_controller_mappings[i++]);
 		}
 	}
 

@@ -62,8 +62,11 @@
 void SceneTreeTimer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_time_left", "time"), &SceneTreeTimer::set_time_left);
 	ClassDB::bind_method(D_METHOD("get_time_left"), &SceneTreeTimer::get_time_left);
+	ClassDB::bind_method(D_METHOD("set_ignore_time_scale", "ignore"), &SceneTreeTimer::set_ignore_time_scale);
+	ClassDB::bind_method(D_METHOD("is_ignore_time_scale"), &SceneTreeTimer::is_ignore_time_scale);
 
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "time_left"), "set_time_left", "get_time_left");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "ignore_time_scale"), "set_ignore_time_scale", "is_ignore_time_scale");
 
 	ADD_SIGNAL(MethodInfo("timeout"));
 }
@@ -741,7 +744,18 @@ void SceneTree::process_tweens(float p_delta, bool p_physics) {
 			continue;
 		}
 
-		if (!E->get()->step(p_delta)) {
+		float delta;
+		if (E->get()->is_ignore_time_scale()) {
+			if (p_physics) {
+				delta = Engine::get_singleton()->get_physics_step();
+			} else {
+				delta = Engine::get_singleton()->get_idle_frame_step();
+			}
+		} else {
+			delta = p_delta;
+		}
+
+		if (!E->get()->step(delta)) {
 			E->get()->clear();
 			tweens.erase(E);
 		}
@@ -1366,6 +1380,22 @@ void SceneTree::set_screen_stretch(StretchMode p_mode, StretchAspect p_aspect, c
 	stretch_min = p_minsize;
 	stretch_scale = p_scale;
 	_update_root_rect();
+}
+
+void SceneTree::set_starting_screen(int p_screen) {
+	if (starting_screen == p_screen) {
+		return;
+	}
+
+	starting_screen = p_screen;
+	if (starting_screen >= 0) {
+		OS::get_singleton()->set_current_screen(starting_screen);
+		_update_root_rect();
+	}
+}
+
+int SceneTree::get_starting_screen() const {
+	return starting_screen;
 }
 
 void SceneTree::set_edited_scene_root(Node *p_node) {
@@ -1996,6 +2026,9 @@ void SceneTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("quit", "exit_code"), &SceneTree::quit, DEFVAL(-1));
 
 	ClassDB::bind_method(D_METHOD("set_screen_stretch", "mode", "aspect", "minsize", "scale"), &SceneTree::set_screen_stretch, DEFVAL(1));
+
+	ClassDB::bind_method(D_METHOD("set_starting_screen", "screen"), &SceneTree::set_starting_screen, DEFVAL(-1));
+	ClassDB::bind_method(D_METHOD("get_starting_screen"), &SceneTree::get_starting_screen);
 
 	ClassDB::bind_method(D_METHOD("set_physics_interpolation_enabled", "enabled"), &SceneTree::set_physics_interpolation_enabled);
 	ClassDB::bind_method(D_METHOD("is_physics_interpolation_enabled"), &SceneTree::is_physics_interpolation_enabled);

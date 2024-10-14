@@ -32,7 +32,6 @@ if env["builtin_recast"]:
     env_thirdparty = env_navigation.Clone()
     env_thirdparty.disable_warnings()
     env_thirdparty.add_source_files(thirdparty_obj, thirdparty_sources)
-    env.modules_sources += thirdparty_obj
 
 # RVO2
 if env["builtin_rvo2"]:
@@ -48,8 +47,6 @@ if env["builtin_rvo2"]:
     env_thirdparty = env_navigation.Clone()
     env_thirdparty.disable_warnings()
     env_thirdparty.add_source_files(thirdparty_obj, thirdparty_sources)
-    env.modules_sources += thirdparty_obj
-
 
 # Godot source files
 
@@ -57,7 +54,7 @@ module_obj = []
 
 env_navigation.add_source_files(module_obj, "*.cpp")
 
-env.modules_sources += module_obj
+env.modules_sources += module_obj + thirdparty_obj
 
 # Needed to force rebuilding the module files when the thirdparty library is updated.
 env.Depends(module_obj, thirdparty_obj)
