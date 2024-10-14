@@ -242,7 +242,8 @@ float AnimationNodeBlendSpace1D::process(float p_time, bool p_seek) {
 	// find the closest two points to blend between
 	for (int i = 0; i < blend_points_used; i++) {
 		float pos = blend_points[i].position;
-
+		// Stupid hack
+		blend_points[i].node->state = state;
 		if (pos <= blend_pos) {
 			if (point_lower == -1) {
 				point_lower = i;
@@ -263,21 +264,15 @@ float AnimationNodeBlendSpace1D::process(float p_time, bool p_seek) {
 	}
 
 	// fill in weights
+	float blended_length;
 
 	if (point_lower == -1 && point_higher != -1) {
-		// we are on the left side, no other point to the left
-		// we just play the next point.
-
 		weights[point_higher] = 1.0;
+		blended_length = blend_points[point_higher].node->get_blended_length();
 	} else if (point_higher == -1) {
-		// we are on the right side, no other point to the right
-		// we just play the previous point
-
 		weights[point_lower] = 1.0;
+		blended_length = blend_points[point_lower].node->get_blended_length();
 	} else {
-		// we are between two points.
-		// figure out weights, then blend the animations
-
 		float distance_between_points = pos_higher - pos_lower;
 
 		float current_pos_inbetween = blend_pos - pos_lower;
@@ -286,6 +281,9 @@ float AnimationNodeBlendSpace1D::process(float p_time, bool p_seek) {
 
 		float blend_lower = 1.0 - blend_percentage;
 		float blend_higher = blend_percentage;
+
+		blended_length =
+				blend_lower * blend_points[point_lower].node->get_blended_length() + blend_higher * blend_points[point_higher].node->get_blended_length();
 
 		weights[point_lower] = blend_lower;
 		weights[point_higher] = blend_higher;
@@ -296,7 +294,9 @@ float AnimationNodeBlendSpace1D::process(float p_time, bool p_seek) {
 	float max_time_remaining = 0.0;
 
 	for (int i = 0; i < blend_points_used; i++) {
-		float remaining = blend_node(blend_points[i].name, blend_points[i].node, p_time, p_seek, weights[i], FILTER_IGNORE, false);
+		float len = blend_points[i].node->get_blended_length();
+		float relative_speed = blended_length == 0 || len == 0 ? 1 : len / blended_length;
+		float remaining = blend_node(blend_points[i].name, blend_points[i].node, p_time * relative_speed, p_seek, weights[i], FILTER_IGNORE, false);
 
 		max_time_remaining = MAX(max_time_remaining, remaining);
 	}

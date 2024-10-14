@@ -33,12 +33,13 @@
 #include "core/os/os.h"
 #include "core/project_settings.h"
 
+#include "drivers/gles3/rasterizer_gles3.h"
 #include "drivers/gles_common/rasterizer_array.h"
 #include "drivers/gles_common/rasterizer_asserts.h"
 #include "drivers/gles_common/rasterizer_storage_common.h"
 
 #include "rasterizer_scene_gles3.h"
-#include "servers/visual/visual_server_raster.h"
+#include "servers/visual_server.h"
 
 static const GLenum gl_primitive[] = {
 	GL_POINTS,
@@ -242,7 +243,7 @@ RasterizerStorageGLES3::Texture *RasterizerCanvasGLES3::_bind_canvas_texture(con
 
 		} else {
 			if (texture->redraw_if_visible) { //check before proxy, because this is usually used with proxies
-				VisualServerRaster::redraw_request(false);
+				VisualServer::redraw_request(false);
 			}
 
 			texture = texture->get_ptr();
@@ -281,7 +282,7 @@ RasterizerStorageGLES3::Texture *RasterizerCanvasGLES3::_bind_canvas_texture(con
 
 		} else {
 			if (normal_map->redraw_if_visible) { //check before proxy, because this is usually used with proxies
-				VisualServerRaster::redraw_request(false);
+				VisualServer::redraw_request(false);
 			}
 
 			normal_map = normal_map->get_ptr();
@@ -1236,7 +1237,7 @@ void RasterizerCanvasGLES3::_legacy_canvas_render_item(Item *p_ci, RenderItemSta
 
 			if (shader_ptr != r_ris.shader_cache || r_ris.rebind_shader) {
 				if (shader_ptr->canvas_item.uses_time) {
-					VisualServerRaster::redraw_request(false);
+					VisualServer::redraw_request(false);
 				}
 
 				state.canvas_shader.set_custom_shader(shader_ptr->custom_code_id);
@@ -1281,7 +1282,7 @@ void RasterizerCanvasGLES3::_legacy_canvas_render_item(Item *p_ci, RenderItemSta
 				}
 
 				if (t->redraw_if_visible) { //check before proxy, because this is usually used with proxies
-					VisualServerRaster::redraw_request();
+					VisualServer::redraw_request();
 				}
 
 				t = t->get_ptr();
@@ -2041,7 +2042,7 @@ void RasterizerCanvasGLES3::render_batches(Item *p_current_clip, bool &r_reclip,
 
 							glVertexAttrib4f(VS::ARRAY_COLOR, 1, 1, 1, 1); //not used, so keep white
 
-							VisualServerRaster::redraw_request(false);
+							VisualServer::redraw_request(false);
 
 							storage->particles_request_process(particles_cmd->particles);
 							//enable instancing
@@ -2317,7 +2318,7 @@ void RasterizerCanvasGLES3::render_joined_item(const BItemJoined &p_bij, RenderI
 
 			if (shader_ptr != r_ris.shader_cache || r_ris.rebind_shader) {
 				if (shader_ptr->canvas_item.uses_time) {
-					VisualServerRaster::redraw_request(false);
+					VisualServer::redraw_request(false);
 				}
 
 				state.canvas_shader.set_custom_shader(shader_ptr->custom_code_id);
@@ -2362,7 +2363,7 @@ void RasterizerCanvasGLES3::render_joined_item(const BItemJoined &p_bij, RenderI
 				}
 
 				if (t->redraw_if_visible) { //check before proxy, because this is usually used with proxies
-					VisualServerRaster::redraw_request(false);
+					VisualServer::redraw_request(false);
 				}
 
 				t = t->get_ptr();

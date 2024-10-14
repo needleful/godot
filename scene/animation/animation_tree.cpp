@@ -141,6 +141,26 @@ void AnimationNode::make_invalid(const String &p_reason) {
 	state->invalid_reasons += String::utf8("• ") + p_reason;
 }
 
+float AnimationNode::get_blended_length() {
+	if (blends.size() == 0) {
+		return 0;
+	}
+	float total_weight = 0, total_length = 0;
+	int blend_index = 0;
+	List<ChildNode> children;
+	get_child_nodes(&children);
+	for (auto e = children.front(); e; e = e->next()) {
+		total_length += e->get().node->get_blended_length();
+		total_weight += blends[blend_index++];
+	}
+	if (total_weight > 0) {
+		return total_length / total_weight;
+	} else {
+		// Presumably no child nodes.
+		return 1;
+	}
+}
+
 float AnimationNode::blend_input(int p_input, float p_time, bool p_seek, float p_blend, FilterAction p_filter, bool p_optimize) {
 	ERR_FAIL_INDEX_V(p_input, inputs.size(), 0);
 	ERR_FAIL_COND_V(!state, 0);
@@ -352,6 +372,14 @@ bool AnimationNode::is_filter_enabled() const {
 	return filter_enabled;
 }
 
+void AnimationNode::set_relative_time(bool p_relative) {
+	relative_time = p_relative;
+}
+
+bool AnimationNode::is_relative_time() const {
+	return relative_time;
+}
+
 bool AnimationNode::is_path_filtered(const NodePath &p_path) const {
 	return filter.has(p_path);
 }
@@ -407,6 +435,9 @@ void AnimationNode::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_filter_enabled", "enable"), &AnimationNode::set_filter_enabled);
 	ClassDB::bind_method(D_METHOD("is_filter_enabled"), &AnimationNode::is_filter_enabled);
 
+	ClassDB::bind_method(D_METHOD("set_relative_time", "relative"), &AnimationNode::set_relative_time);
+	ClassDB::bind_method(D_METHOD("is_relative_time"), &AnimationNode::is_relative_time);
+
 	ClassDB::bind_method(D_METHOD("_set_filters", "filters"), &AnimationNode::_set_filters);
 	ClassDB::bind_method(D_METHOD("_get_filters"), &AnimationNode::_get_filters);
 
@@ -419,6 +450,8 @@ void AnimationNode::_bind_methods() {
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "filter_enabled", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR), "set_filter_enabled", "is_filter_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "filters", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL), "_set_filters", "_get_filters");
+
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "relative_time", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR), "set_relative_time", "is_relative_time");
 
 	BIND_VMETHOD(MethodInfo(Variant::DICTIONARY, "get_child_nodes"));
 	BIND_VMETHOD(MethodInfo(Variant::ARRAY, "get_parameter_list"));
@@ -446,6 +479,7 @@ AnimationNode::AnimationNode() {
 	state = nullptr;
 	parent = nullptr;
 	filter_enabled = false;
+	relative_time = false;
 }
 
 ////////////////////

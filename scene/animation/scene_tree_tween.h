@@ -88,6 +88,7 @@ private:
 	bool valid = false;
 	bool default_parallel = false;
 	bool parallel_enabled = false;
+	bool ignore_time_scale = true;
 #ifdef DEBUG_ENABLED
 	bool is_infinite = false;
 #endif
@@ -127,12 +128,15 @@ public:
 	Ref<SceneTreeTween> set_speed_scale(float p_speed);
 	Ref<SceneTreeTween> set_trans(Tween::TransitionType p_trans);
 	Ref<SceneTreeTween> set_ease(Tween::EaseType p_ease);
+	Ref<SceneTreeTween> set_ignore_time_scale(bool p_ignore);
 
 	Ref<SceneTreeTween> parallel();
 	Ref<SceneTreeTween> chain();
 
 	Variant interpolate_variant(Variant p_initial_val, Variant p_delta_val, float p_time, float p_duration, Tween::TransitionType p_trans, Tween::EaseType p_ease) const;
 	Variant calculate_delta_value(Variant p_intial_val, Variant p_final_val);
+
+	bool is_ignore_time_scale() const;
 
 	bool step(float p_delta);
 	bool can_process(bool p_tree_paused) const;

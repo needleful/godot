@@ -135,7 +135,7 @@ void Particles::set_visibility_aabb(const AABB &p_aabb) {
 }
 
 void Particles::set_use_local_coordinates(bool p_enable) {
-	if (data.local_coords = p_enable)
+	if (data.local_coords != p_enable)
 		_mark_dirty();
 	data.local_coords = p_enable;
 }

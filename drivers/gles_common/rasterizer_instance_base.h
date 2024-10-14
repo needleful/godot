@@ -2,6 +2,7 @@
 #ifndef RASTERIZER_INSTANCE_BASE
 #define RASTERIZER_INSTANCE_BASE
 
+#include "core/list.h"
 #include "core/math/bvh.h"
 #include "core/math/camera_matrix.h"
 #include "core/math/geometry.h"
@@ -11,6 +12,7 @@
 #include "core/os/thread.h"
 #include "core/safe_refcount.h"
 #include "core/self_list.h"
+#include "core/set.h"
 #include "servers/arvr/arvr_interface.h"
 #include "servers/visual/portals/portal_renderer.h"
 #include "servers/visual_server.h"

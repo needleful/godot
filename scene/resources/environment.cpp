@@ -815,6 +815,14 @@ float Environment::get_fog_height_curve() const {
 	return fog_height_curve;
 }
 
+void Environment::set_emission_enabled(bool p_enabled) {
+	emission_enabled = p_enabled;
+	VS::get_singleton()->environment_set_emission_enabled(environment, p_enabled);
+}
+bool Environment::is_emission_enabled() const {
+	return emission_enabled;
+}
+
 void Environment::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_background", "mode"), &Environment::set_background);
 	ClassDB::bind_method(D_METHOD("set_sky", "sky"), &Environment::set_sky);
@@ -1153,6 +1161,10 @@ void Environment::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "adjustment_contrast", PROPERTY_HINT_RANGE, "0.01,8,0.01"), "set_adjustment_contrast", "get_adjustment_contrast");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "adjustment_saturation", PROPERTY_HINT_RANGE, "0.01,8,0.01"), "set_adjustment_saturation", "get_adjustment_saturation");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "adjustment_color_correction", PROPERTY_HINT_RESOURCE_TYPE, "Texture"), "set_adjustment_color_correction", "get_adjustment_color_correction");
+
+	ClassDB::bind_method(D_METHOD("set_emission_enabled", "enabled"), &Environment::set_emission_enabled);
+	ClassDB::bind_method(D_METHOD("is_emission_enabled"), &Environment::is_emission_enabled);
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "emission_enabled"), "set_emission_enabled", "is_emission_enabled");
 
 	BIND_ENUM_CONSTANT(BG_KEEP);
 	BIND_ENUM_CONSTANT(BG_CLEAR_COLOR);

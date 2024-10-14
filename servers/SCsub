@@ -7,7 +7,6 @@ env.add_source_files(env.servers_sources, "*.cpp")
 
 SConscript("arvr/SCsub")
 SConscript("camera/SCsub")
-SConscript("physics/SCsub")
 SConscript("physics_2d/SCsub")
 SConscript("visual/SCsub")
 SConscript("audio/SCsub")

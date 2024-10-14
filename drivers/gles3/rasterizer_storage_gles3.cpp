@@ -5871,243 +5871,6 @@ float RasterizerStorageGLES3::reflection_probe_get_origin_max_distance(RID p_pro
 	return reflection_probe->max_distance;
 }
 
-RID RasterizerStorageGLES3::gi_probe_create() {
-	GIProbe *gip = memnew(GIProbe);
-
-	gip->bounds = AABB(Vector3(), Vector3(1, 1, 1));
-	gip->dynamic_range = 1.0;
-	gip->energy = 1.0;
-	gip->propagation = 1.0;
-	gip->bias = 0.4;
-	gip->normal_bias = 0.4;
-	gip->interior = false;
-	gip->compress = false;
-	gip->version = 1;
-	gip->cell_size = 1.0;
-
-	return gi_probe_owner.make_rid(gip);
-}
-
-void RasterizerStorageGLES3::gi_probe_set_bounds(RID p_probe, const AABB &p_bounds) {
-	GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND(!gip);
-
-	gip->bounds = p_bounds;
-	gip->version++;
-	gip->instance_change_notify(true, false);
-}
-AABB RasterizerStorageGLES3::gi_probe_get_bounds(RID p_probe) const {
-	const GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND_V(!gip, AABB());
-
-	return gip->bounds;
-}
-
-void RasterizerStorageGLES3::gi_probe_set_cell_size(RID p_probe, float p_size) {
-	GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND(!gip);
-
-	gip->cell_size = p_size;
-	gip->version++;
-	gip->instance_change_notify(true, false);
-}
-
-float RasterizerStorageGLES3::gi_probe_get_cell_size(RID p_probe) const {
-	const GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND_V(!gip, 0);
-
-	return gip->cell_size;
-}
-
-void RasterizerStorageGLES3::gi_probe_set_to_cell_xform(RID p_probe, const Transform &p_xform) {
-	GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND(!gip);
-
-	gip->to_cell = p_xform;
-}
-
-Transform RasterizerStorageGLES3::gi_probe_get_to_cell_xform(RID p_probe) const {
-	const GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND_V(!gip, Transform());
-
-	return gip->to_cell;
-}
-
-void RasterizerStorageGLES3::gi_probe_set_dynamic_data(RID p_probe, const PoolVector<int> &p_data) {
-	GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND(!gip);
-
-	gip->dynamic_data = p_data;
-	gip->version++;
-	gip->instance_change_notify(true, false);
-}
-PoolVector<int> RasterizerStorageGLES3::gi_probe_get_dynamic_data(RID p_probe) const {
-	const GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND_V(!gip, PoolVector<int>());
-
-	return gip->dynamic_data;
-}
-
-void RasterizerStorageGLES3::gi_probe_set_dynamic_range(RID p_probe, int p_range) {
-	GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND(!gip);
-
-	gip->dynamic_range = p_range;
-}
-int RasterizerStorageGLES3::gi_probe_get_dynamic_range(RID p_probe) const {
-	const GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND_V(!gip, 0);
-
-	return gip->dynamic_range;
-}
-
-void RasterizerStorageGLES3::gi_probe_set_energy(RID p_probe, float p_range) {
-	GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND(!gip);
-
-	gip->energy = p_range;
-}
-
-void RasterizerStorageGLES3::gi_probe_set_bias(RID p_probe, float p_range) {
-	GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND(!gip);
-
-	gip->bias = p_range;
-}
-
-void RasterizerStorageGLES3::gi_probe_set_normal_bias(RID p_probe, float p_range) {
-	GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND(!gip);
-
-	gip->normal_bias = p_range;
-}
-
-void RasterizerStorageGLES3::gi_probe_set_propagation(RID p_probe, float p_range) {
-	GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND(!gip);
-
-	gip->propagation = p_range;
-}
-
-void RasterizerStorageGLES3::gi_probe_set_interior(RID p_probe, bool p_enable) {
-	GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND(!gip);
-
-	gip->interior = p_enable;
-}
-
-bool RasterizerStorageGLES3::gi_probe_is_interior(RID p_probe) const {
-	const GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND_V(!gip, false);
-
-	return gip->interior;
-}
-
-void RasterizerStorageGLES3::gi_probe_set_compress(RID p_probe, bool p_enable) {
-	if (p_enable) {
-		WARN_DEPRECATED_MSG("GIProbe's Compress property has been deprecated due to known bugs and will be removed in Godot 4.0.");
-	}
-
-	GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND(!gip);
-
-	gip->compress = p_enable;
-}
-
-bool RasterizerStorageGLES3::gi_probe_is_compressed(RID p_probe) const {
-	const GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND_V(!gip, false);
-
-	return gip->compress;
-}
-float RasterizerStorageGLES3::gi_probe_get_energy(RID p_probe) const {
-	const GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND_V(!gip, 0);
-
-	return gip->energy;
-}
-
-float RasterizerStorageGLES3::gi_probe_get_bias(RID p_probe) const {
-	const GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND_V(!gip, 0);
-
-	return gip->bias;
-}
-
-float RasterizerStorageGLES3::gi_probe_get_normal_bias(RID p_probe) const {
-	const GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND_V(!gip, 0);
-
-	return gip->normal_bias;
-}
-
-float RasterizerStorageGLES3::gi_probe_get_propagation(RID p_probe) const {
-	const GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND_V(!gip, 0);
-
-	return gip->propagation;
-}
-
-uint32_t RasterizerStorageGLES3::gi_probe_get_version(RID p_probe) {
-	const GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND_V(!gip, 0);
-
-	return gip->version;
-}
-
-RID RasterizerStorageGLES3::gi_probe_dynamic_data_create(int p_width, int p_height, int p_depth, GIProbeCompression p_compression) {
-	GIProbeData *gipd = memnew(GIProbeData);
-
-	gipd->width = p_width;
-	gipd->height = p_height;
-	gipd->depth = p_depth;
-	gipd->compression = GI_PROBE_UNCOMPRESSED;
-
-	glActiveTexture(GL_TEXTURE0);
-	glGenTextures(1, &gipd->tex_id);
-	glBindTexture(GL_TEXTURE_3D, gipd->tex_id);
-
-	int level = 0;
-	int min_size = 1;
-
-	if (gipd->compression == GI_PROBE_S3TC) {
-		min_size = 4;
-	}
-
-	while (true) {
-		glTexImage3D(GL_TEXTURE_3D, level, GL_RGBA8, p_width, p_height, p_depth, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-
-		if (p_width <= min_size || p_height <= min_size || p_depth <= min_size) {
-			break;
-		}
-		p_width >>= 1;
-		p_height >>= 1;
-		p_depth >>= 1;
-		level++;
-	}
-
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_BASE_LEVEL, 0);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAX_LEVEL, level);
-
-	gipd->levels = level + 1;
-
-	return gi_probe_data_owner.make_rid(gipd);
-}
-
-void RasterizerStorageGLES3::gi_probe_dynamic_data_update(RID p_gi_probe_data, int p_depth_slice, int p_slice_count, int p_mipmap, const void *p_data) {
-	GIProbeData *gipd = gi_probe_data_owner.getornull(p_gi_probe_data);
-	ERR_FAIL_COND(!gipd);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_3D, gipd->tex_id);
-	glTexSubImage3D(GL_TEXTURE_3D, p_mipmap, 0, 0, p_depth_slice, gipd->width >> p_mipmap, gipd->height >> p_mipmap, p_slice_count, GL_RGBA, GL_UNSIGNED_BYTE, p_data);
-}
-
 ///////
 
 RID RasterizerStorageGLES3::particles_create() {
@@ -6744,10 +6507,6 @@ void RasterizerStorageGLES3::instance_add_dependency(RID p_base, RasterizerInsta
 			inst = light_owner.getornull(p_base);
 			ERR_FAIL_COND(!inst);
 		} break;
-		case VS::INSTANCE_GI_PROBE: {
-			inst = gi_probe_owner.getornull(p_base);
-			ERR_FAIL_COND(!inst);
-		} break;
 		default: {
 			ERR_FAIL();
 		}
@@ -6782,10 +6541,6 @@ void RasterizerStorageGLES3::instance_remove_dependency(RID p_base, RasterizerIn
 		} break;
 		case VS::INSTANCE_LIGHT: {
 			inst = light_owner.getornull(p_base);
-			ERR_FAIL_COND(!inst);
-		} break;
-		case VS::INSTANCE_GI_PROBE: {
-			inst = gi_probe_owner.getornull(p_base);
 			ERR_FAIL_COND(!inst);
 		} break;
 		default: {
@@ -7670,10 +7425,6 @@ VS::InstanceType RasterizerStorageGLES3::get_base_type(RID p_rid) const {
 		return VS::INSTANCE_REFLECTION_PROBE;
 	}
 
-	if (gi_probe_owner.owns(p_rid)) {
-		return VS::INSTANCE_GI_PROBE;
-	}
-
 	return VS::INSTANCE_NONE;
 }
 
@@ -7844,20 +7595,6 @@ bool RasterizerStorageGLES3::free(RID p_rid) {
 		reflection_probe_owner.free(p_rid);
 		memdelete(reflection_probe);
 
-	} else if (gi_probe_owner.owns(p_rid)) {
-		// delete the texture
-		GIProbe *gi_probe = gi_probe_owner.get(p_rid);
-		gi_probe->instance_remove_deps();
-
-		gi_probe_owner.free(p_rid);
-		memdelete(gi_probe);
-	} else if (gi_probe_data_owner.owns(p_rid)) {
-		// delete the texture
-		GIProbeData *gi_probe_data = gi_probe_data_owner.get(p_rid);
-
-		glDeleteTextures(1, &gi_probe_data->tex_id);
-		gi_probe_data_owner.free(p_rid);
-		memdelete(gi_probe_data);
 	} else if (canvas_occluder_owner.owns(p_rid)) {
 		CanvasOccluder *co = canvas_occluder_owner.get(p_rid);
 		if (co->index_id) {

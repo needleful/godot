@@ -30,11 +30,12 @@
 
 #include "visual_server_scene.h"
 
+#include "../visual_server.h"
 #include "core/math/transform_interpolator.h"
 #include "core/os/os.h"
 #include "core/profiler.h"
+#include "drivers/gles_common/rasterizer_instance_base.h"
 #include "visual_server_globals.h"
-#include "visual_server_raster.h"
 
 #include <new>
 
@@ -523,6 +524,7 @@ void VisualServerScene::instance_set_base(RID p_instance, RID p_base) {
 					reflection_probe_render_list.remove(&reflection_probe.update_list);
 				}
 			} break;
+
 			default: {
 			}
 		}
@@ -1906,6 +1908,7 @@ void VisualServerScene::_update_instance(RasterizerInstance *p_instance) {
 			pairable_mask = p_instance->visible ? VS::INSTANCE_GEOMETRY_MASK : 0;
 			pairable = true;
 		}
+
 		// not inside octree
 		p_instance->spatial_partition_id = p_instance->scenario->sps->create(p_instance, new_aabb, 0, pairable, base_type, pairable_mask);
 
@@ -2220,7 +2223,6 @@ bool VisualServerScene::_light_instance_update_shadow(RasterizerInstance *p_inst
 
 				for (int j = 0; j < cull_count; j++) {
 					float min, max;
-
 					RasterizerInstance *instance = instance_shadow_cull_result[j];
 					if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !instance->data.geometry.can_cast_shadows || !(p_visible_layers & instance->layer_mask) || !(instance->layer_mask & light_cull_mask)) {
 						cull_count--;
@@ -2379,6 +2381,7 @@ bool VisualServerScene::_light_instance_update_shadow(RasterizerInstance *p_inst
 			}
 			VSG::scene_render->light_instance_set_shadow_transform(light.instance, cm, light_transform, radius, 0, 0);
 			VSG::scene_render->render_shadow(light.instance, p_shadow_atlas, 0, (RasterizerInstance **)instance_shadow_cull_result, cull_count);
+
 		} break;
 	}
 
@@ -2611,7 +2614,7 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 			GeometryInstanceData &geom = ins->data.geometry;
 
 			if (ins->redraw_if_visible) {
-				VisualServerRaster::redraw_request(false);
+				VisualServer::redraw_request(false);
 			}
 
 			if (ins->base_type == VS::INSTANCE_PARTICLES) {
@@ -2623,7 +2626,7 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 					if (OS::get_singleton()->is_update_pending(true)) {
 						VSG::storage->particles_request_process(ins->base);
 						//particles visible? request redraw
-						VisualServerRaster::redraw_request(false);
+						VisualServer::redraw_request(false);
 					}
 				}
 			}
@@ -2857,7 +2860,7 @@ bool VisualServerScene::_render_reflection_probe_step(RasterizerInstance *p_inst
 	RasterizerScenario *scenario = p_instance->scenario;
 	ERR_FAIL_COND_V(!scenario, true);
 
-	VisualServerRaster::redraw_request(false); //update, so it updates in editor
+	VisualServer::redraw_request(false); //update, so it updates in editor
 
 	if (p_step == 0) {
 		if (!VSG::scene_render->reflection_probe_instance_begin_render(reflection_probe.instance, scenario->reflection_atlas)) {

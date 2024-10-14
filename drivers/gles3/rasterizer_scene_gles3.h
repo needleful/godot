@@ -164,11 +164,12 @@ public:
 			float fog_height_min;
 			float fog_height_max;
 			float fog_height_curve;
+			uint32_t emission_enabled;
 
 			uint32_t view_index;
 
 			// make sure this struct is padded to be a multiple of 16 bytes for webgl
-			float pad[3];
+			float pad[2];
 
 		} ubo_data;
 		static_assert(sizeof(SceneDataUBO) % 16 == 0, "SceneDataUBO size must be a multiple of 16 bytes");
@@ -472,6 +473,7 @@ public:
 		float fog_height_min;
 		float fog_height_max;
 		float fog_height_curve;
+		bool emission_enabled;
 
 		Environment() :
 				bg_mode(VS::ENV_BG_CLEAR_COLOR),
@@ -545,6 +547,7 @@ public:
 				fog_height_enabled(false),
 				fog_height_min(10),
 				fog_height_max(0),
+				emission_enabled(true),
 				fog_height_curve(1) {
 		}
 	};
@@ -580,6 +583,8 @@ public:
 	void environment_set_fog(RID p_env, bool p_enable, const Color &p_color, const Color &p_sun_color, float p_sun_amount);
 	void environment_set_fog_depth(RID p_env, bool p_enable, float p_depth_begin, float p_depth_end, float p_depth_curve, bool p_transmit, float p_transmit_curve);
 	void environment_set_fog_height(RID p_env, bool p_enable, float p_min_height, float p_max_height, float p_height_curve);
+
+	void environment_set_emission_enabled(RID p_env, bool p_enable);
 
 	bool is_environment(RID p_env);
 
@@ -674,7 +679,6 @@ public:
 //64 bits unsupported in MSVC
 #define SORT_KEY_UNSHADED_FLAG (uint64_t(1) << 50)
 #define SORT_KEY_NO_DIRECTIONAL_FLAG (uint64_t(1) << 49)
-#define SORT_KEY_GI_PROBES_FLAG (uint64_t(1) << 45)
 #define SORT_KEY_VERTEX_LIT_FLAG (uint64_t(1) << 44)
 			SORT_KEY_SHADING_SHIFT = 44,
 			SORT_KEY_SHADING_MASK = 127,
@@ -844,7 +848,6 @@ public:
 	void _copy_texture_to_front_buffer(GLuint p_texture); //used for debug
 
 	void _fill_render_list(RasterizerInstance **p_cull_result, int p_cull_count, bool p_depth_pass, int p_shadow_pass);
-
 	void _blur_effect_buffer();
 	void _render_mrts(Environment *env, const CameraMatrix &p_cam_projection);
 	void _post_process(Environment *env, const CameraMatrix &p_cam_projection);

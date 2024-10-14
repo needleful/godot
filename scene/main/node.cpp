@@ -893,11 +893,11 @@ void Node::reset_physics_interpolation() {
 
 float Node::get_physics_process_delta_time() const {
 	if (data.tree) {
-		float t = data.tree->get_physics_process_time();
-		if (!data.time_scale_response) {
-			t /= _Engine::get_singleton()->get_time_scale();
+		if (data.time_scale_response) {
+			return data.tree->get_physics_process_time();
+		} else {
+			return Engine::get_singleton()->get_physics_step();
 		}
-		return t;
 	} else {
 		return 0;
 	}
@@ -905,11 +905,11 @@ float Node::get_physics_process_delta_time() const {
 
 float Node::get_process_delta_time() const {
 	if (data.tree) {
-		float t = data.tree->get_idle_process_time();
-		if (!data.time_scale_response) {
-			t /= _Engine::get_singleton()->get_time_scale();
+		if (data.time_scale_response) {
+			return data.tree->get_idle_process_time();
+		} else {
+			return Engine::get_singleton()->get_frame_step();
 		}
-		return t;
 	} else {
 		return 0;
 	}

@@ -62,12 +62,6 @@ void glTexStorage2DCustom(GLenum target, GLsizei levels, GLenum internalformat, 
 
 class RasterizerStorageGLES3 {
 public:
-	enum GIProbeCompression {
-		GI_PROBE_UNCOMPRESSED,
-		GI_PROBE_S3TC,
-		GI_PROBE_ETC2
-	};
-
 	enum RenderTargetFlags {
 		RENDER_TARGET_VFLIP,
 		RENDER_TARGET_TRANSPARENT,
@@ -1131,82 +1125,6 @@ public:
 	float reflection_probe_get_origin_max_distance(RID p_probe) const;
 	bool reflection_probe_renders_shadows(RID p_probe) const;
 
-	/* GI PROBE API */
-
-	struct GIProbe : public Instantiable {
-		AABB bounds;
-		Transform to_cell;
-		float cell_size;
-
-		int dynamic_range;
-		float energy;
-		float bias;
-		float normal_bias;
-		float propagation;
-		bool interior;
-		bool compress;
-
-		uint32_t version;
-
-		PoolVector<int> dynamic_data;
-	};
-
-	mutable RID_Owner<GIProbe> gi_probe_owner;
-
-	RID gi_probe_create();
-
-	void gi_probe_set_bounds(RID p_probe, const AABB &p_bounds);
-	AABB gi_probe_get_bounds(RID p_probe) const;
-
-	void gi_probe_set_cell_size(RID p_probe, float p_size);
-	float gi_probe_get_cell_size(RID p_probe) const;
-
-	void gi_probe_set_to_cell_xform(RID p_probe, const Transform &p_xform);
-	Transform gi_probe_get_to_cell_xform(RID p_probe) const;
-
-	void gi_probe_set_dynamic_data(RID p_probe, const PoolVector<int> &p_data);
-	PoolVector<int> gi_probe_get_dynamic_data(RID p_probe) const;
-
-	void gi_probe_set_dynamic_range(RID p_probe, int p_range);
-	int gi_probe_get_dynamic_range(RID p_probe) const;
-
-	void gi_probe_set_energy(RID p_probe, float p_range);
-	float gi_probe_get_energy(RID p_probe) const;
-
-	void gi_probe_set_bias(RID p_probe, float p_range);
-	float gi_probe_get_bias(RID p_probe) const;
-
-	void gi_probe_set_normal_bias(RID p_probe, float p_range);
-	float gi_probe_get_normal_bias(RID p_probe) const;
-
-	void gi_probe_set_propagation(RID p_probe, float p_range);
-	float gi_probe_get_propagation(RID p_probe) const;
-
-	void gi_probe_set_interior(RID p_probe, bool p_enable);
-	bool gi_probe_is_interior(RID p_probe) const;
-
-	void gi_probe_set_compress(RID p_probe, bool p_enable);
-	bool gi_probe_is_compressed(RID p_probe) const;
-
-	uint32_t gi_probe_get_version(RID p_probe);
-
-	struct GIProbeData : public RID_Data {
-		int width;
-		int height;
-		int depth;
-		int levels;
-		GLuint tex_id;
-		GIProbeCompression compression;
-
-		GIProbeData() {
-		}
-	};
-
-	mutable RID_Owner<GIProbeData> gi_probe_data_owner;
-
-	RID gi_probe_dynamic_data_create(int p_width, int p_height, int p_depth, GIProbeCompression p_compression);
-	void gi_probe_dynamic_data_update(RID p_gi_probe_data, int p_depth_slice, int p_slice_count, int p_mipmap, const void *p_data);
-
 	/* PARTICLES */
 
 	struct Particles : public GeometryOwner {
@@ -1214,7 +1132,6 @@ public:
 		RID draw_passes[ParticlesData::MAX_DRAW_PASSES];
 		AABB custom_aabb;
 		RID process_material;
-		ParticlesData::DrawOrder draw_order;
 		Transform emission_transform;
 		float inactive_time;
 		float lifetime;
@@ -1239,6 +1156,7 @@ public:
 		uint32_t cycle_number;
 
 		bool particle_valid_histories[2];
+		ParticlesData::DrawOrder draw_order : 2;
 		bool histories_enabled : 1;
 		bool clear : 1;
 		bool fractional_delta : 1;
@@ -1249,29 +1167,32 @@ public:
 		bool use_local_coords : 1;
 
 		Particles() :
-				inactive(true),
+				particle_element(this),
+				custom_aabb(AABB(Vector3(-4, -4, -4), Vector3(8, 8, 8))),
+
 				inactive_time(0.0),
-				emitting(false),
-				one_shot(false),
-				amount(0),
 				lifetime(1.0),
 				pre_process_time(0.0),
 				explosiveness(0.0),
 				randomness(0.0),
-				restart_request(false),
-				custom_aabb(AABB(Vector3(-4, -4, -4), Vector3(8, 8, 8))),
-				use_local_coords(true),
-				draw_order(ParticlesData::DRAW_ORDER_INDEX),
-				histories_enabled(false),
-				particle_element(this),
+				speed_scale(1.0),
+				frame_remainder(0),
+				fixed_fps(0),
+				amount(0),
+
 				prev_ticks(0),
 				random_seed(0),
 				cycle_number(0),
-				speed_scale(1.0),
-				fixed_fps(0),
+
+				draw_order(ParticlesData::DRAW_ORDER_INDEX),
+				histories_enabled(false),
+				clear(true),
 				fractional_delta(false),
-				frame_remainder(0),
-				clear(true) {
+				restart_request(false),
+				inactive(true),
+				emitting(false),
+				one_shot(false),
+				use_local_coords(true) {
 			for (int i = 0; i < ParticlesData::MAX_DRAW_PASSES; i++) {
 				draw_passes[i] = RID();
 			}

@@ -123,7 +123,7 @@ public:
 		// in _moving_lists .. not the same as pool ID (handle)
 		uint32_t list_id;
 
-		// a void pointer, but this is ultimately a pointer to a VisualServerScene::Instance
+		// a void pointer, but this is ultimately a pointer to a RasterizerInstance
 		// (can't have direct pointer because it is a nested class...)
 		VSInstance *instance;
 

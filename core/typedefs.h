@@ -100,14 +100,8 @@
 #define _ALLOW_DISCARD_ (void)
 #endif
 
-// GCC (prior to c++ 17) Does not seem to support no discard with classes, only functions.
-// So we will use a specific macro for classes.
 #ifndef _NO_DISCARD_CLASS_
-#if (defined(__clang__) || defined(_MSC_VER))
 #define _NO_DISCARD_CLASS_ _NO_DISCARD_
-#else
-#define _NO_DISCARD_CLASS_
-#endif
 #endif
 
 //custom, gcc-safe offsetof, because gcc complains a lot.

@@ -23,8 +23,6 @@ ARRAY_WEIGHTS=7,
 ARRAY_INDEX=8,
 */
 
-// hack to use uv if no uv present so it works with lightmap
-
 /* INPUT ATTRIBS */
 
 layout(location = 0) in highp vec4 vertex_attrib;
@@ -52,10 +50,6 @@ layout(location = 4) in vec2 uv_attrib;
 
 #if defined(ENABLE_UV2_INTERP)
 layout(location = 5) in vec2 uv2_attrib;
-#else
-#ifdef USE_LIGHTMAP //ubershader-skip
-layout(location = 5) in vec2 uv2_attrib;
-#endif //ubershader-skip
 #endif
 
 #ifdef USE_SKELETON //ubershader-skip
@@ -122,15 +116,12 @@ layout(std140) uniform SceneData { // ubo:0
 	highp float fog_height_min;
 	highp float fog_height_max;
 	highp float fog_height_curve;
+	bool emission_enabled;
 
 	int view_index;
 };
 
 uniform highp mat4 world_transform;
-
-#ifdef USE_LIGHTMAP //ubershader-skip
-uniform highp vec4 lightmap_uv_rect;
-#endif //ubershader-skip
 
 #ifdef USE_LIGHT_DIRECTIONAL //ubershader-skip
 
@@ -315,10 +306,6 @@ out vec2 uv_interp;
 
 #if defined(ENABLE_UV2_INTERP)
 out vec2 uv2_interp;
-#else
-#ifdef USE_LIGHTMAP //ubershader-skip
-out vec2 uv2_interp;
-#endif //ubershader-skip
 #endif
 
 #if defined(ENABLE_TANGENT_INTERP) || defined(ENABLE_NORMALMAP) || defined(LIGHT_USE_ANISOTROPY)
@@ -419,13 +406,9 @@ void main() {
 	uv_interp = uv_attrib;
 #endif
 
-#ifdef USE_LIGHTMAP //ubershader-runtime
-	uv2_interp = lightmap_uv_rect.zw * uv2_attrib + lightmap_uv_rect.xy;
-#else //ubershader-runtime
 #if defined(ENABLE_UV2_INTERP)
 	uv2_interp = uv2_attrib;
 #endif
-#endif //ubershader-runtime
 
 #if defined(OVERRIDE_POSITION)
 	highp vec4 position;
@@ -654,9 +637,6 @@ VERTEX_SHADER_CODE
 
 #if defined(IS_UBERSHADER)
 uniform highp int ubershader_flags;
-// These are more performant and make the ubershaderification simpler
-#define VCT_QUALITY_HIGH
-#define USE_LIGHTMAP_FILTER_BICUBIC
 #endif
 
 /* texture unit usage, N is max_texture_unity-N
@@ -670,8 +650,6 @@ uniform highp int ubershader_flags;
 7-irradiance
 8-screen
 9-depth
-10-probe1, lightmap
-11-probe2, lightmap_array
 
 */
 
@@ -693,10 +671,6 @@ in vec2 uv_interp;
 
 #if defined(ENABLE_UV2_INTERP)
 in vec2 uv2_interp;
-#else
-#ifdef USE_LIGHTMAP //ubershader-skip
-in vec2 uv2_interp;
-#endif //ubershader-skip
 #endif
 
 #if defined(ENABLE_TANGENT_INTERP) || defined(ENABLE_NORMALMAP) || defined(LIGHT_USE_ANISOTROPY)
@@ -826,6 +800,7 @@ layout(std140) uniform SceneData {
 	highp float fog_height_min;
 	highp float fog_height_max;
 	highp float fog_height_curve;
+	bool emission_enabled;
 
 	int view_index;
 };
@@ -1606,10 +1581,6 @@ void main() {
 
 #if defined(ENABLE_UV2_INTERP)
 	vec2 uv2 = uv2_interp;
-#else
-#ifdef USE_LIGHTMAP //ubershader-skip
-	vec2 uv2 = uv2_interp;
-#endif //ubershader-skip
 #endif
 
 #if defined(ENABLE_COLOR_INTERP)
@@ -1669,6 +1640,7 @@ void main() {
 
 #endif //ubershader-runtime
 
+	float emission_factor = float(emission_enabled);
 	ambient_light *= ambient_energy;
 
 	{
@@ -1760,7 +1732,6 @@ FRAGMENT_SHADER_CODE
 	if (ambient_accum.a > 0.0) {
 		ambient_light = ambient_accum.rgb / ambient_accum.a;
 	}
-
 #endif //ubershader-runtime
 
 	{
@@ -2034,7 +2005,7 @@ FRAGMENT_SHADER_CODE
 #else //ubershader-runtime
 
 	//approximate ambient scale for SSAO, since we will lack full ambient
-	float max_emission = max(emission.r, max(emission.g, emission.b));
+	float max_emission = emission_factor * max(emission.r, max(emission.g, emission.b));
 	float max_ambient = max(ambient_light.r, max(ambient_light.g, ambient_light.b));
 	float max_diffuse = max(diffuse_light.r, max(diffuse_light.g, diffuse_light.b));
 	float total_ambient = max_ambient + max_diffuse;
@@ -2050,7 +2021,7 @@ FRAGMENT_SHADER_CODE
 	specular_buffer = vec4(specular_light, metallic);
 
 #ifdef USE_FORWARD_LIGHTING //ubershader-runtime
-	diffuse_buffer.rgb += emission;
+	diffuse_buffer.rgb += emission_factor * emission;
 #endif //ubershader-runtime
 #endif //SHADELESS //ubershader-runtime
 
@@ -2067,7 +2038,7 @@ FRAGMENT_SHADER_CODE
 #else //ubershader-runtime
 	frag_color = vec4(ambient_light + diffuse_light + specular_light, alpha);
 #ifdef USE_FORWARD_LIGHTING //ubershader-runtime
-	frag_color.rgb += emission;
+	frag_color.rgb += emission_factor * emission;
 #endif //ubershader-runtime
 #endif //SHADELESS //ubershader-runtime
 

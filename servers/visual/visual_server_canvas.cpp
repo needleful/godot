@@ -29,8 +29,8 @@
 /*************************************************************************/
 
 #include "visual_server_canvas.h"
+#include "../visual_server.h"
 #include "visual_server_globals.h"
-#include "visual_server_raster.h"
 #include "visual_server_viewport.h"
 
 static const int z_range = VS::CANVAS_ITEM_Z_MAX - VS::CANVAS_ITEM_Z_MIN + 1;
@@ -172,7 +172,7 @@ void VisualServerCanvas::_render_canvas_item(Item *p_canvas_item, const Transfor
 	}
 
 	if (ci->update_when_visible) {
-		VisualServerRaster::redraw_request(false);
+		VisualServer::redraw_request(false);
 	}
 
 	if ((!ci->commands.empty() && p_clip_rect.intersects(global_rect, true)) || ci->vp_render || ci->copy_back_buffer) {

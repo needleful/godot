@@ -90,7 +90,7 @@ public:
 	AnimationNode *parent;
 
 	HashMap<NodePath, bool> filter;
-	bool filter_enabled;
+	bool filter_enabled, relative_time;
 
 	Array _get_filters() const;
 	void _set_filters(const Array &p_filters);
@@ -108,6 +108,7 @@ protected:
 	void _validate_property(PropertyInfo &property) const;
 
 public:
+	virtual float get_blended_length();
 	virtual void get_parameter_list(List<PropertyInfo> *r_list) const;
 	virtual Variant get_parameter_default_value(const StringName &p_parameter) const;
 
@@ -136,6 +137,9 @@ public:
 
 	void set_filter_enabled(bool p_enable);
 	bool is_filter_enabled() const;
+
+	void set_relative_time(bool p_relative);
+	bool is_relative_time() const;
 
 	virtual bool has_filter() const;
 

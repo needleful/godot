@@ -1225,6 +1225,7 @@ ShaderCompilerGLES3::ShaderCompilerGLES3() {
 	actions[VS::SHADER_SPATIAL].renames["CAMERA_DIRECTION_WORLD"] = "camera_inverse_matrix[3].xyz";
 	actions[VS::SHADER_SPATIAL].renames["NODE_POSITION_VIEW"] = "(world_transform * camera_inverse_matrix)[3].xyz";
 	actions[VS::SHADER_SPATIAL].renames["FRONT_FACING"] = "gl_FrontFacing";
+	actions[VS::SHADER_SPATIAL].renames["EMISSION_FACTOR"] = "emission_factor";
 
 	//for light
 	actions[VS::SHADER_SPATIAL].renames["VIEW"] = "view";

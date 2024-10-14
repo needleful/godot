@@ -36,7 +36,7 @@
 #include "core/project_settings.h"
 #include "rasterizer_canvas_gles3.h"
 #include "servers/camera/camera_feed.h"
-#include "servers/visual/visual_server_raster.h"
+#include "servers/visual_server.h"
 
 #ifndef GLES_OVER_GL
 #define glClearDepth glClearDepthf
@@ -986,6 +986,13 @@ void RasterizerSceneGLES3::environment_set_fog_height(RID p_env, bool p_enable, 
 	env->fog_height_curve = p_height_curve;
 }
 
+void RasterizerSceneGLES3::environment_set_emission_enabled(RID p_env, bool p_enabled) {
+	Environment *env = environment_owner.getornull(p_env);
+	ERR_FAIL_COND(!env);
+
+	env->emission_enabled = p_enabled;
+}
+
 bool RasterizerSceneGLES3::is_environment(RID p_env) {
 	return environment_owner.owns(p_env);
 }
@@ -1141,7 +1148,7 @@ bool RasterizerSceneGLES3::_setup_material(RasterizerStorageGLES3::Material *p_m
 
 		if (t) {
 			if (t->redraw_if_visible) { //must check before proxy because this is often used with proxies
-				VisualServerRaster::redraw_request(false);
+				VisualServer::redraw_request(false);
 			}
 
 			t = t->get_ptr(); //resolve for proxies
@@ -1556,7 +1563,7 @@ void RasterizerSceneGLES3::_render_geometry(RenderList::Element *e) {
 					RasterizerStorageGLES3::Texture *t = storage->texture_owner.get(c.texture);
 
 					if (t->redraw_if_visible) {
-						VisualServerRaster::redraw_request(false);
+						VisualServer::redraw_request(false);
 					}
 					t = t->get_ptr(); //resolve for proxies
 
@@ -2045,8 +2052,6 @@ void RasterizerSceneGLES3::_render_list(RenderList::Element **p_elements, int p_
 					state.scene_shader.set_conditional(SceneShaderGLES3::SHADOW_MODE_PCF_13, false);
 					state.scene_shader.set_conditional(SceneShaderGLES3::USE_RADIANCE_MAP, false);
 					state.scene_shader.set_conditional(SceneShaderGLES3::USE_CONTACT_SHADOWS, false);
-
-					//state.scene_shader.set_conditional(SceneShaderGLES3::SHADELESS,true);
 				} else {
 					state.scene_shader.set_conditional(SceneShaderGLES3::SHADELESS, false);
 
@@ -2396,11 +2401,6 @@ void RasterizerSceneGLES3::_add_geometry_with_material(RasterizerStorageGLES3::G
 		}
 	}
 
-	/*
-	if (e->geometry->type==RasterizerStorageGLES3::Geometry::GEOMETRY_MULTISURFACE)
-		e->sort_flags|=RenderList::SORT_FLAG_INSTANCING;
-	*/
-
 	if (mirror) {
 		e->sort_key |= RenderList::SORT_KEY_MIRROR_FLAG;
 	}
@@ -2424,7 +2424,7 @@ void RasterizerSceneGLES3::_add_geometry_with_material(RasterizerStorageGLES3::G
 	}
 
 	if (p_material->shader->spatial.uses_time) {
-		VisualServerRaster::redraw_request(false);
+		VisualServer::redraw_request(false);
 	}
 }
 
@@ -2622,6 +2622,7 @@ void RasterizerSceneGLES3::_setup_environment(Environment *env, const CameraMatr
 		state.ubo_data.fog_height_min = env->fog_height_min;
 		state.ubo_data.fog_height_max = env->fog_height_max;
 		state.ubo_data.fog_height_curve = env->fog_height_curve;
+		state.ubo_data.emission_enabled = env->emission_enabled;
 
 	} else {
 		state.ubo_data.bg_energy = 1.0;
@@ -2641,6 +2642,7 @@ void RasterizerSceneGLES3::_setup_environment(Environment *env, const CameraMatr
 		state.env_radiance_data.ambient_contribution = 0;
 		state.ubo_data.ambient_occlusion_affect_light = 0;
 
+		state.ubo_data.emission_enabled = 1;
 		state.ubo_data.fog_color_enabled[3] = 0.0;
 	}
 
@@ -3882,7 +3884,7 @@ void RasterizerSceneGLES3::_post_process(Environment *env, const CameraMatrix &p
 
 		glViewport(0, 0, storage->frame.current_rt->width, storage->frame.current_rt->height);
 
-		VisualServerRaster::redraw_request(); //if using auto exposure, redraw must happen
+		VisualServer::redraw_request(); //if using auto exposure, redraw must happen
 	}
 
 	int max_glow_level = -1;
@@ -4110,7 +4112,7 @@ bool RasterizerSceneGLES3::_element_needs_directional_add(RenderList::Element *e
 		}
 		return true;
 	}
-	return false; // no visible unbaked light
+	return false; // no visible light
 }
 
 void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const CameraMatrix &p_cam_projection, const int p_eye, bool p_cam_ortogonal, RasterizerInstance **p_cull_result, int p_cull_count, RID *p_light_cull_result, int p_light_cull_count, RID *p_reflection_probe_cull_result, int p_reflection_probe_cull_count, RID p_environment, RID p_shadow_atlas, RID p_reflection_atlas, RID p_reflection_probe, int p_reflection_probe_pass) {

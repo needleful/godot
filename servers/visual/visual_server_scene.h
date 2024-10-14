@@ -64,7 +64,6 @@ public:
 	void pre_draw(bool p_will_draw);
 
 	/* CAMERA API */
-
 	struct Camera : public RID_Data {
 		enum Type {
 			PERSPECTIVE,
@@ -111,34 +110,35 @@ public:
 
 	mutable RID_Owner<Camera> camera_owner;
 
-	virtual RID camera_create();
-	virtual void camera_set_perspective(RID p_camera, float p_fovy_degrees, float p_z_near, float p_z_far);
-	virtual void camera_set_orthogonal(RID p_camera, float p_size, float p_z_near, float p_z_far);
-	virtual void camera_set_frustum(RID p_camera, float p_size, Vector2 p_offset, float p_z_near, float p_z_far);
-	virtual void camera_set_transform(RID p_camera, const Transform &p_transform);
-	virtual void camera_set_interpolated(RID p_camera, bool p_interpolated);
-	virtual void camera_reset_physics_interpolation(RID p_camera);
-	virtual void camera_set_cull_mask(RID p_camera, uint32_t p_layers);
-	virtual void camera_set_environment(RID p_camera, RID p_env);
-	virtual void camera_set_use_vertical_aspect(RID p_camera, bool p_enable);
+	RID camera_create();
+	void camera_set_perspective(RID p_camera, float p_fovy_degrees, float p_z_near, float p_z_far);
+	void camera_set_orthogonal(RID p_camera, float p_size, float p_z_near, float p_z_far);
+	void camera_set_frustum(RID p_camera, float p_size, Vector2 p_offset, float p_z_near, float p_z_far);
+	void camera_set_transform(RID p_camera, const Transform &p_transform);
+	void camera_set_interpolated(RID p_camera, bool p_interpolated);
+	void camera_reset_physics_interpolation(RID p_camera);
+	void camera_set_cull_mask(RID p_camera, uint32_t p_layers);
+	void camera_set_environment(RID p_camera, RID p_env);
+	void camera_set_use_vertical_aspect(RID p_camera, bool p_enable);
 
 	mutable RID_Owner<RasterizerScenario> scenario_owner;
 
 	static void *_instance_pair(void *p_self, SpatialPartitionID, RasterizerInstance *p_A, int, SpatialPartitionID, RasterizerInstance *p_B, int);
 	static void _instance_unpair(void *p_self, SpatialPartitionID, RasterizerInstance *p_A, int, SpatialPartitionID, RasterizerInstance *p_B, int, void *);
 
-	virtual RID scenario_create();
+	RID scenario_create();
 
-	virtual void scenario_set_debug(RID p_scenario, VS::ScenarioDebugMode p_debug_mode);
-	virtual void scenario_set_environment(RID p_scenario, RID p_environment);
-	virtual void scenario_set_fallback_environment(RID p_scenario, RID p_environment);
-	virtual void scenario_set_reflection_atlas_size(RID p_scenario, int p_size, int p_subdiv);
+	void scenario_set_debug(RID p_scenario, VS::ScenarioDebugMode p_debug_mode);
+	void scenario_set_environment(RID p_scenario, RID p_environment);
+	void scenario_set_fallback_environment(RID p_scenario, RID p_environment);
+	void scenario_set_reflection_atlas_size(RID p_scenario, int p_size, int p_subdiv);
 
 	/* INSTANCING API */
+
 	SelfList<RasterizerInstance>::List _instance_update_list;
 
 	// fixed timestep interpolation
-	virtual void set_physics_interpolation_enabled(bool p_enabled);
+	void set_physics_interpolation_enabled(bool p_enabled);
 
 	struct InterpolationData {
 		void notify_free_camera(RID p_rid, Camera &r_camera);
@@ -172,29 +172,28 @@ public:
 
 	RID_Owner<RasterizerInstance> instance_owner;
 
-	virtual RID instance_create();
+	RID instance_create();
 
-	virtual void instance_set_base(RID p_instance, RID p_base);
-	virtual void instance_set_scenario(RID p_instance, RID p_scenario);
-	virtual void instance_set_layer_mask(RID p_instance, uint32_t p_mask);
-	virtual void instance_set_pivot_data(RID p_instance, float p_sorting_offset, bool p_use_aabb_center);
-	virtual void instance_set_transform(RID p_instance, const Transform &p_transform);
-	virtual void instance_set_interpolated(RID p_instance, bool p_interpolated);
-	virtual void instance_reset_physics_interpolation(RID p_instance);
-	virtual void instance_attach_object_instance_id(RID p_instance, ObjectID p_id);
-	virtual void instance_set_blend_shape_weight(RID p_instance, int p_shape, float p_weight);
-	virtual void instance_set_surface_material(RID p_instance, int p_surface, RID p_material);
-	virtual void instance_set_visible(RID p_instance, bool p_visible);
+	void instance_set_base(RID p_instance, RID p_base);
+	void instance_set_scenario(RID p_instance, RID p_scenario);
+	void instance_set_layer_mask(RID p_instance, uint32_t p_mask);
+	void instance_set_pivot_data(RID p_instance, float p_sorting_offset, bool p_use_aabb_center);
+	void instance_set_transform(RID p_instance, const Transform &p_transform);
+	void instance_set_interpolated(RID p_instance, bool p_interpolated);
+	void instance_reset_physics_interpolation(RID p_instance);
+	void instance_attach_object_instance_id(RID p_instance, ObjectID p_id);
+	void instance_set_blend_shape_weight(RID p_instance, int p_shape, float p_weight);
+	void instance_set_surface_material(RID p_instance, int p_surface, RID p_material);
+	void instance_set_visible(RID p_instance, bool p_visible);
+	void instance_set_custom_aabb(RID p_instance, AABB p_aabb);
 
-	virtual void instance_set_custom_aabb(RID p_instance, AABB p_aabb);
+	void instance_attach_skeleton(RID p_instance, RID p_skeleton);
+	void instance_set_exterior(RID p_instance, bool p_enabled);
 
-	virtual void instance_attach_skeleton(RID p_instance, RID p_skeleton);
-	virtual void instance_set_exterior(RID p_instance, bool p_enabled);
-
-	virtual void instance_set_extra_visibility_margin(RID p_instance, real_t p_margin);
+	void instance_set_extra_visibility_margin(RID p_instance, real_t p_margin);
 
 	// Portals
-	virtual void instance_set_portal_mode(RID p_instance, VisualServer::InstancePortalMode p_mode);
+	void instance_set_portal_mode(RID p_instance, VisualServer::InstancePortalMode p_mode);
 	bool _instance_get_transformed_aabb(RID p_instance, AABB &r_aabb);
 	bool _instance_get_transformed_aabb_for_occlusion(VSInstance *p_instance, AABB &r_aabb) const {
 		r_aabb = ((RasterizerInstance *)p_instance)->transformed_aabb;
@@ -235,9 +234,9 @@ public:
 	};
 	RID_Owner<Ghost> ghost_owner;
 
-	virtual RID ghost_create();
-	virtual void ghost_set_scenario(RID p_ghost, RID p_scenario, ObjectID p_id, const AABB &p_aabb);
-	virtual void ghost_update(RID p_ghost, const AABB &p_aabb);
+	RID ghost_create();
+	void ghost_set_scenario(RID p_ghost, RID p_scenario, ObjectID p_id, const AABB &p_aabb);
+	void ghost_update(RID p_ghost, const AABB &p_aabb);
 
 private:
 	void _ghost_create_occlusion_rep(Ghost *p_ghost);
@@ -260,11 +259,11 @@ public:
 	};
 	RID_Owner<Portal> portal_owner;
 
-	virtual RID portal_create();
-	virtual void portal_set_scenario(RID p_portal, RID p_scenario);
-	virtual void portal_set_geometry(RID p_portal, const Vector<Vector3> &p_points, real_t p_margin);
-	virtual void portal_link(RID p_portal, RID p_room_from, RID p_room_to, bool p_two_way);
-	virtual void portal_set_active(RID p_portal, bool p_active);
+	RID portal_create();
+	void portal_set_scenario(RID p_portal, RID p_scenario);
+	void portal_set_geometry(RID p_portal, const Vector<Vector3> &p_points, real_t p_margin);
+	void portal_link(RID p_portal, RID p_room_from, RID p_room_to, bool p_two_way);
+	void portal_set_active(RID p_portal, bool p_active);
 
 	/* ROOMGROUPS API */
 
@@ -282,10 +281,10 @@ public:
 	};
 	RID_Owner<RoomGroup> roomgroup_owner;
 
-	virtual RID roomgroup_create();
-	virtual void roomgroup_prepare(RID p_roomgroup, ObjectID p_roomgroup_object_id);
-	virtual void roomgroup_set_scenario(RID p_roomgroup, RID p_scenario);
-	virtual void roomgroup_add_room(RID p_roomgroup, RID p_room);
+	RID roomgroup_create();
+	void roomgroup_prepare(RID p_roomgroup, ObjectID p_roomgroup_object_id);
+	void roomgroup_set_scenario(RID p_roomgroup, RID p_scenario);
+	void roomgroup_add_room(RID p_roomgroup, RID p_room);
 
 	/* OCCLUDERS API */
 
@@ -314,20 +313,20 @@ public:
 	};
 	RID_Owner<OccluderResource> occluder_resource_owner;
 
-	virtual RID occluder_instance_create();
-	virtual void occluder_instance_set_scenario(RID p_occluder_instance, RID p_scenario);
-	virtual void occluder_instance_link_resource(RID p_occluder_instance, RID p_occluder_resource);
-	virtual void occluder_instance_set_transform(RID p_occluder_instance, const Transform &p_xform);
-	virtual void occluder_instance_set_active(RID p_occluder_instance, bool p_active);
+	RID occluder_instance_create();
+	void occluder_instance_set_scenario(RID p_occluder_instance, RID p_scenario);
+	void occluder_instance_link_resource(RID p_occluder_instance, RID p_occluder_resource);
+	void occluder_instance_set_transform(RID p_occluder_instance, const Transform &p_xform);
+	void occluder_instance_set_active(RID p_occluder_instance, bool p_active);
 
-	virtual RID occluder_resource_create();
-	virtual void occluder_resource_prepare(RID p_occluder_resource, VisualServer::OccluderType p_type);
-	virtual void occluder_resource_spheres_update(RID p_occluder_resource, const Vector<Plane> &p_spheres);
-	virtual void occluder_resource_mesh_update(RID p_occluder_resource, const Geometry::OccluderMeshData &p_mesh_data);
-	virtual void set_use_occlusion_culling(bool p_enable);
+	RID occluder_resource_create();
+	void occluder_resource_prepare(RID p_occluder_resource, VisualServer::OccluderType p_type);
+	void occluder_resource_spheres_update(RID p_occluder_resource, const Vector<Plane> &p_spheres);
+	void occluder_resource_mesh_update(RID p_occluder_resource, const Geometry::OccluderMeshData &p_mesh_data);
+	void set_use_occlusion_culling(bool p_enable);
 
 	// editor only .. slow
-	virtual Geometry::MeshData occlusion_debug_get_current_polys(RID p_scenario) const;
+	Geometry::MeshData occlusion_debug_get_current_polys(RID p_scenario) const;
 	const PortalResources &get_portal_resources() const {
 		return _portal_resources;
 	}
@@ -351,45 +350,45 @@ public:
 	};
 	RID_Owner<Room> room_owner;
 
-	virtual RID room_create();
-	virtual void room_set_scenario(RID p_room, RID p_scenario);
-	virtual void room_add_instance(RID p_room, RID p_instance, const AABB &p_aabb, const Vector<Vector3> &p_object_pts);
-	virtual void room_add_ghost(RID p_room, ObjectID p_object_id, const AABB &p_aabb);
-	virtual void room_set_bound(RID p_room, ObjectID p_room_object_id, const Vector<Plane> &p_convex, const AABB &p_aabb, const Vector<Vector3> &p_verts);
-	virtual void room_prepare(RID p_room, int32_t p_priority);
-	virtual void rooms_and_portals_clear(RID p_scenario);
-	virtual void rooms_unload(RID p_scenario, String p_reason);
-	virtual void rooms_finalize(RID p_scenario, bool p_generate_pvs, bool p_cull_using_pvs, bool p_use_secondary_pvs, bool p_use_signals, String p_pvs_filename, bool p_use_simple_pvs, bool p_log_pvs_generation);
-	virtual void rooms_override_camera(RID p_scenario, bool p_override, const Vector3 &p_point, const Vector<Plane> *p_convex);
-	virtual void rooms_set_active(RID p_scenario, bool p_active);
-	virtual void rooms_set_params(RID p_scenario, int p_portal_depth_limit, real_t p_roaming_expansion_margin);
-	virtual void rooms_set_debug_feature(RID p_scenario, VisualServer::RoomsDebugFeature p_feature, bool p_active);
-	virtual void rooms_update_gameplay_monitor(RID p_scenario, const Vector<Vector3> &p_camera_positions);
+	RID room_create();
+	void room_set_scenario(RID p_room, RID p_scenario);
+	void room_add_instance(RID p_room, RID p_instance, const AABB &p_aabb, const Vector<Vector3> &p_object_pts);
+	void room_add_ghost(RID p_room, ObjectID p_object_id, const AABB &p_aabb);
+	void room_set_bound(RID p_room, ObjectID p_room_object_id, const Vector<Plane> &p_convex, const AABB &p_aabb, const Vector<Vector3> &p_verts);
+	void room_prepare(RID p_room, int32_t p_priority);
+	void rooms_and_portals_clear(RID p_scenario);
+	void rooms_unload(RID p_scenario, String p_reason);
+	void rooms_finalize(RID p_scenario, bool p_generate_pvs, bool p_cull_using_pvs, bool p_use_secondary_pvs, bool p_use_signals, String p_pvs_filename, bool p_use_simple_pvs, bool p_log_pvs_generation);
+	void rooms_override_camera(RID p_scenario, bool p_override, const Vector3 &p_point, const Vector<Plane> *p_convex);
+	void rooms_set_active(RID p_scenario, bool p_active);
+	void rooms_set_params(RID p_scenario, int p_portal_depth_limit, real_t p_roaming_expansion_margin);
+	void rooms_set_debug_feature(RID p_scenario, VisualServer::RoomsDebugFeature p_feature, bool p_active);
+	void rooms_update_gameplay_monitor(RID p_scenario, const Vector<Vector3> &p_camera_positions);
 
 	// don't use this in a game
-	virtual bool rooms_is_loaded(RID p_scenario) const;
+	bool rooms_is_loaded(RID p_scenario) const;
 
-	virtual void callbacks_register(VisualServerCallbacks *p_callbacks);
+	void callbacks_register(VisualServerCallbacks *p_callbacks);
 	VisualServerCallbacks *get_callbacks() const {
 		return _visual_server_callbacks;
 	}
 
 	// don't use these in a game!
-	virtual Vector<ObjectID> instances_cull_aabb(const AABB &p_aabb, RID p_scenario = RID()) const;
-	virtual Vector<ObjectID> instances_cull_ray(const Vector3 &p_from, const Vector3 &p_to, RID p_scenario = RID()) const;
-	virtual Vector<ObjectID> instances_cull_convex(const Vector<Plane> &p_convex, RID p_scenario = RID()) const;
+	Vector<ObjectID> instances_cull_aabb(const AABB &p_aabb, RID p_scenario = RID()) const;
+	Vector<ObjectID> instances_cull_ray(const Vector3 &p_from, const Vector3 &p_to, RID p_scenario = RID()) const;
+	Vector<ObjectID> instances_cull_convex(const Vector<Plane> &p_convex, RID p_scenario = RID()) const;
 
 	// internal (uses portals when available)
 	int _cull_convex_from_point(RasterizerScenario *p_scenario, const Transform &p_cam_transform, const CameraMatrix &p_cam_projection, const Vector<Plane> &p_convex, RasterizerInstance **p_result_array, int p_result_max, int32_t &r_previous_room_id_hint, uint32_t p_mask = 0xFFFFFFFF);
 	void _rooms_instance_update(RasterizerInstance *p_instance, const AABB &p_aabb);
 
-	virtual void instance_geometry_set_flag(RID p_instance, VS::InstanceFlags p_flags, bool p_enabled);
-	virtual void instance_geometry_set_cast_shadows_setting(RID p_instance, VS::ShadowCastingSetting p_shadow_casting_setting);
-	virtual void instance_geometry_set_material_override(RID p_instance, RID p_material);
-	virtual void instance_geometry_set_material_overlay(RID p_instance, RID p_material);
+	void instance_geometry_set_flag(RID p_instance, VS::InstanceFlags p_flags, bool p_enabled);
+	void instance_geometry_set_cast_shadows_setting(RID p_instance, VS::ShadowCastingSetting p_shadow_casting_setting);
+	void instance_geometry_set_material_override(RID p_instance, RID p_material);
+	void instance_geometry_set_material_overlay(RID p_instance, RID p_material);
 
-	virtual void instance_geometry_set_draw_range(RID p_instance, float p_min, float p_max, float p_min_margin, float p_max_margin);
-	virtual void instance_geometry_set_as_instance_lod(RID p_instance, RID p_as_lod_of_instance);
+	void instance_geometry_set_draw_range(RID p_instance, float p_min, float p_max, float p_min_margin, float p_max_margin);
+	void instance_geometry_set_as_instance_lod(RID p_instance, RID p_as_lod_of_instance);
 
 	_FORCE_INLINE_ void _update_instance(RasterizerInstance *p_instance);
 	_FORCE_INLINE_ void _update_instance_aabb(RasterizerInstance *p_instance);
@@ -421,7 +420,7 @@ private:
 
 public:
 	VisualServerScene();
-	virtual ~VisualServerScene();
+	~VisualServerScene();
 };
 
 #endif // VISUAL_SERVER_SCENE_H
