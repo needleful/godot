@@ -2,12 +2,12 @@ cmake_minimum_required(VERSION 3.28)
 set(CMAKE_CONFIGURATION_TYPES "Editor;Release;ReleaseDebug" CACHE STRING "" FORCE)
 project(Godot)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 if(MSVC)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++20")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17")
 else()
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++20 -Wall -Wextra -Wpedantic")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std:c++17 -Wall -Wextra -Wpedantic")
 endif(MSVC)
 
 add_compile_definitions(
@@ -65,6 +65,8 @@ set(enabled_modules
 	vhacd
 	vorbis
 )
+
+find_package(Python COMPONENTS Interpreter)
 
 add_subdirectory(core)
 add_subdirectory(drivers)
