@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import sys
-
 # -*- coding: ibm850 -*-
 
 template_typed = """
@@ -275,6 +273,12 @@ MethodBind* create_method_bind($ifret R$ $ifnoret void$ (*p_method)($ifconst con
 #endif
 """
 
+import os
+import re
+import sys
+
+def escape_string(string):
+	return string.replace("\"", "\\\"")
 
 def make_version(template, nargs, argmax, const, ret):
     intext = template
@@ -367,21 +371,51 @@ def gen_bindings(target):
 
     text_free_func += "#endif"
 
-    with open(target[0], "w") as f:
+    with open(target[0], "w", encoding="utf-8") as f:
         f.write(text)
 
-    with open(target[1], "w") as f:
+    with open(target[1], "w", encoding="utf-8") as f:
         f.write(text_ext)
 
-    with open(target[2], "w") as f:
+    with open(target[2], "w", encoding="utf-8") as f:
         f.write(text_free_func)
 
 
-def make_certs_header(target):
-    src = source[0]
-    dst = target[0]
+def gen_certs_code():
+	txt = "0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0"
+	if "SCRIPT_AES256_ENCRYPTION_KEY" in os.environ:
+	    key = os.environ["SCRIPT_AES256_ENCRYPTION_KEY"]
+	    ec_valid = True
+	    if len(key) != 64:
+	        ec_valid = False
+	    else:
+	        txt = ""
+	        for i in range(len(key) >> 1):
+	            if i > 0:
+	                txt += ","
+	            txts = "0x" + key[i * 2 : i * 2 + 2]
+	            try:
+	                int(txts, 16)
+	            except Exception:
+	                ec_valid = False
+	            txt += txts
+	    if not ec_valid:
+	        print("Error: Invalid AES256 encryption key, not 64 hexadecimal characters: '" + key + "'.")
+	        print(
+	            "Unset 'SCRIPT_AES256_ENCRYPTION_KEY' in your environment "
+	            "or make sure that it contains exactly 64 hexadecimal characters."
+	        )
+	        Exit(255)
+
+	# NOTE: It is safe to generate this file here, since this is still executed serially
+	with open("script_encryption_key.gen.cpp", "w", encoding="utf-8") as f:
+	    f.write('#include "core/project_settings.h"\nuint8_t script_encryption_key[32]={' + txt + "};\n")
+
+def gen_certs_header(source, target, env):
+    src = source
+    dst = target
     f = open(src, "rb")
-    g = open_utf8(dst, "w")
+    g = open(dst, "w", encoding="utf-8")
     buf = f.read()
     decomp_size = len(buf)
     import zlib
@@ -410,14 +444,14 @@ def make_certs_header(target):
     f.close()
 
 
-def make_authors_header(target):
+def gen_authors_header(source, target):
     sections = ["Project Founders", "Lead Developer", "Project Manager", "Developers"]
     sections_id = ["AUTHORS_FOUNDERS", "AUTHORS_LEAD_DEVELOPERS", "AUTHORS_PROJECT_MANAGERS", "AUTHORS_DEVELOPERS"]
 
-    src = source[0]
-    dst = target[0]
-    f = open_utf8(src, "r")
-    g = open_utf8(dst, "w")
+    src = source
+    dst = target
+    f = open(src, "r", encoding="utf-8")
+    g = open(dst, "w", encoding="utf-8")
 
     g.write("/* THIS FILE IS GENERATED DO NOT EDIT */\n")
     g.write("#ifndef _EDITOR_AUTHORS_H\n")
@@ -454,7 +488,7 @@ def make_authors_header(target):
     f.close()
 
 
-def make_donors_header(target):
+def gen_donors_header(source, target):
     sections = [
         "Platinum sponsors",
         "Gold sponsors",
@@ -476,10 +510,10 @@ def make_donors_header(target):
         "DONORS_BRONZE",
     ]
 
-    src = source[0]
-    dst = target[0]
-    f = open_utf8(src, "r")
-    g = open_utf8(dst, "w")
+    src = source
+    dst = target
+    f = open(src, "r", encoding="utf-8")
+    g = open(dst, "w", encoding="utf-8")
 
     g.write("/* THIS FILE IS GENERATED DO NOT EDIT */\n")
     g.write("#ifndef _EDITOR_DONORS_H\n")
@@ -516,10 +550,10 @@ def make_donors_header(target):
     f.close()
 
 
-def make_license_header(target):
-    src_copyright = source[0]
-    src_license = source[1]
-    dst = target[0]
+def gen_license_header(sources, target):
+    src_copyright = sources[0]
+    src_license = sources[1]
+    dst = target
 
     class LicenseReader:
         def __init__(self, license_file):
@@ -550,7 +584,7 @@ def make_license_header(target):
     projects = OrderedDict()
     license_list = []
 
-    with open_utf8(src_copyright, "r") as copyright_file:
+    with open(src_copyright, "r", encoding="utf-8") as copyright_file:
         reader = LicenseReader(copyright_file)
         part = {}
         while reader.current:
@@ -570,21 +604,20 @@ def make_license_header(target):
                 reader.next_line()
 
     data_list = []
-    for project in itervalues(projects):
+    for project in projects.values():
         for part in project:
             part["file_index"] = len(data_list)
             data_list += part["Files"]
             part["copyright_index"] = len(data_list)
             data_list += part["Copyright"]
 
-    with open_utf8(dst, "w") as f:
-
+    with open(dst, "w", encoding="utf-8") as f:
         f.write("/* THIS FILE IS GENERATED DO NOT EDIT */\n")
         f.write("#ifndef _EDITOR_LICENSE_H\n")
         f.write("#define _EDITOR_LICENSE_H\n")
         f.write("const char *const GODOT_LICENSE_TEXT =")
 
-        with open_utf8(src_license, "r") as license_file:
+        with open(src_license, "r", encoding="utf-8") as license_file:
             for line in license_file:
                 escaped_string = escape_string(line.strip())
                 f.write('\n\t\t"' + escaped_string + '\\n"')
@@ -616,7 +649,7 @@ def make_license_header(target):
         f.write("const ComponentCopyrightPart COPYRIGHT_PROJECT_PARTS[] = {\n")
         part_index = 0
         part_indexes = {}
-        for project_name, project in iteritems(projects):
+        for project_name, project in projects.items():
             part_indexes[project_name] = part_index
             for part in project:
                 f.write(
@@ -640,7 +673,7 @@ def make_license_header(target):
         f.write("const int COPYRIGHT_INFO_COUNT = " + str(len(projects)) + ";\n")
 
         f.write("const ComponentCopyright COPYRIGHT_INFO[] = {\n")
-        for project_name, project in iteritems(projects):
+        for project_name, project in projects.items():
             f.write(
                 '\t{ "'
                 + escape_string(project_name)
@@ -672,6 +705,114 @@ def make_license_header(target):
 
         f.write("#endif\n")
 
+
+def get_version_info(module_version_string="", silent=False):
+    build_name = "custom_build"
+    if os.getenv("BUILD_NAME") != None:
+        build_name = str(os.getenv("BUILD_NAME"))
+        if not silent:
+            print("Using custom build name: '{}'.".format(build_name))
+
+    import version
+
+    version_info = {
+        "short_name": str(version.short_name),
+        "name": str(version.name),
+        "major": int(version.major),
+        "minor": int(version.minor),
+        "patch": int(version.patch),
+        "status": str(version.status),
+        "build": str(build_name),
+        "module_config": str(version.module_config) + module_version_string,
+        "year": int(version.year),
+        "website": str(version.website),
+        "docs_branch": str(version.docs),
+    }
+
+    # For dev snapshots (alpha, beta, RC, etc.) we do not commit status change to Git,
+    # so this define provides a way to override it without having to modify the source.
+    if os.getenv("GODOT_VERSION_STATUS") != None:
+        version_info["status"] = str(os.getenv("GODOT_VERSION_STATUS"))
+        if not silent:
+            print(
+                "Using version status '{}', overriding the original '{}'.".format(version_info.status, version.status)
+            )
+
+    # Parse Git hash if we're in a Git repo.
+    githash = ""
+    gitfolder = ".git"
+
+    if os.path.isfile(".git"):
+        module_folder = open(".git", "r", encoding="utf-8").readline().strip()
+        if module_folder.startswith("gitdir: "):
+            gitfolder = module_folder[8:]
+
+    if os.path.isfile(os.path.join(gitfolder, "HEAD")):
+        head = open(os.path.join(gitfolder, "HEAD"), "r").readline().strip()
+        if head.startswith("ref: "):
+            ref = head[5:]
+            head = os.path.join(gitfolder, ref)
+            packedrefs = os.path.join(gitfolder, "packed-refs")
+            if os.path.isfile(head):
+                githash = open(head, "r", encoding="utf-8").readline().strip()
+            elif os.path.isfile(packedrefs):
+                # Git may pack refs into a single file. This code searches .git/packed-refs file for the current ref's hash.
+                # https://mirrors.edge.kernel.org/pub/software/scm/git/docs/git-pack-refs.html
+                for line in open(packedrefs, "r", encoding="utf-8").read().splitlines():
+                    if line.startswith("#"):
+                        continue
+                    (line_hash, line_ref) = line.split(" ")
+                    if ref == line_ref:
+                        githash = line_hash
+                        break
+        else:
+            githash = head
+
+    version_info["git_hash"] = githash
+
+    return version_info
+
+
+def gen_version_header(module_version_string=""):
+    version_info = get_version_info(module_version_string)
+
+    # NOTE: It is safe to generate these files here, since this is still executed serially.
+
+    f = open("version_generated.gen.h", "w", encoding="utf-8")
+    f.write(
+        """/* THIS FILE IS GENERATED DO NOT EDIT */
+#ifndef VERSION_GENERATED_GEN_H
+#define VERSION_GENERATED_GEN_H
+#define VERSION_SHORT_NAME "{short_name}"
+#define VERSION_NAME "{name}"
+#define VERSION_MAJOR {major}
+#define VERSION_MINOR {minor}
+#define VERSION_PATCH {patch}
+#define VERSION_STATUS "{status}"
+#define VERSION_BUILD "{build}"
+#define VERSION_MODULE_CONFIG "{module_config}"
+#define VERSION_YEAR {year}
+#define VERSION_WEBSITE "{website}"
+#define VERSION_DOCS_BRANCH "{docs_branch}"
+#define VERSION_DOCS_URL "https://docs.godotengine.org/en/" VERSION_DOCS_BRANCH
+#endif // VERSION_GENERATED_GEN_H
+""".format(
+            **version_info
+        )
+    )
+    f.close()
+
+    fhash = open("version_hash.gen.cpp", "w", encoding="utf-8")
+    fhash.write(
+        """/* THIS FILE IS GENERATED DO NOT EDIT */
+#include "core/version.h"
+const char *const VERSION_HASH = "{git_hash}";
+""".format(
+            **version_info
+        )
+    )
+    fhash.close()
+
 if __name__ == "__main__":
     method = sys.argv[1]
     match method:
@@ -680,12 +821,16 @@ if __name__ == "__main__":
     			"method_bind.gen.inc",
     			"method_bind_ext.gen.inc",
     			"method_bind_free_func.gen.inc"])
-    	case "info":
-    		make_license_header("license.gen.h")
-    		make_authors_header("authors.gen.h")
-    		make_donors_header("donors.gen.h")
+    	case "legal":
+    		gen_license_header(["../COPYRIGHT.txt", "../LICENSE.txt"], "license.gen.h")
+    		gen_authors_header("../AUTHORS.md", "authors.gen.h")
+    		gen_donors_header("../DONORS.md", "donors.gen.h")
+    	case "version":
+    		gen_version_header()
     	case "certs":
-    		make_certs_header()
+    		gen_certs_code()
+    		gen_certs_header("../thirdparty/certs/ca-certificates.crt", "io/certs_compressed.gen.h",
+    			{"builtin_certs":False, "system_certs_path":""})
     	case _:
     		sys.stderr.write("Unknown method: %s" % method)
     		sys.exit(1)

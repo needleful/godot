@@ -1,10 +1,10 @@
-short_name = "godot"
-name = "Godot Engine"
+short_name = "np-godot"
+name = "NP-Godot"
 major = 3
 minor = 6
 patch = 0
-status = "beta"
+status = "j"
 module_config = ""
-year = 2022
+year = 2024
 website = "https://godotengine.org"
 docs = "3.5"
