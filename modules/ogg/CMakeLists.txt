@@ -9,6 +9,7 @@ add_library(
 	"${base_dir}/framing.c"
 	register_types.cpp
 )
+add_dependencies(${PROJECT_NAME} modgen)
 
 target_include_directories(${PROJECT_NAME} PRIVATE 
 	${base_dir}

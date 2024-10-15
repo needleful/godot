@@ -30,6 +30,7 @@ add_library(
 	${fp_sources}
 	${tp_sources}
 )
+add_dependencies(${PROJECT_NAME} modgen)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"${recast_dir}/Include"

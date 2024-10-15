@@ -57,7 +57,6 @@
 #include "main/splash.gen.h"
 #include "main/tests/test_main.h"
 #include "modules/register_module_types.h"
-#include "platform/register_platform_apis.h"
 #include "scene/debugger/script_debugger_remote.h"
 #include "scene/main/scene_tree.h"
 #include "scene/main/viewport.h"
@@ -1567,7 +1566,6 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 
 	MAIN_PRINT("Main: Load Modules, Physics, Drivers, Scripts");
 
-	register_platform_apis();
 	register_module_types();
 
 	// Theme needs modules to be initialized so that sub-resources can be loaded.
@@ -2543,7 +2541,6 @@ void Main::cleanup(bool p_force) {
 
 	unregister_driver_types();
 	unregister_module_types();
-	unregister_platform_apis();
 	unregister_scene_types();
 	unregister_server_types();
 

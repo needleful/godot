@@ -19,6 +19,8 @@ add_library(gdscript
 	${sources}
 	$<$<CONFIG:Editor>:${editor_sources}>
 )
+add_dependencies(${PROJECT_NAME} modgen)
+
 if(jsonrpc IN_LIST enabled_modules
 	AND websocket IN_LIST enabled_modules
 )

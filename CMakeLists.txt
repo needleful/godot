@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
-set(CMAKE_CONFIGURATION_TYPES "Editor;Release;ReleaseDebug" CACHE STRING "" FORCE)
 project(Godot)
+
+set(CMAKE_CONFIGURATION_TYPES "Editor;Release;ReleaseDebug" CACHE STRING "" FORCE)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
@@ -65,8 +66,6 @@ set(enabled_modules
 	vhacd
 	vorbis
 )
-
-find_package(Python COMPONENTS Interpreter)
 
 add_subdirectory(core)
 add_subdirectory(drivers)

@@ -70,6 +70,7 @@ add_library(
 	${tp_sources}
 	${brotli_sources}
 )
+add_dependencies(${PROJECT_NAME} modgen)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"${base_dir}/include"

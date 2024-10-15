@@ -199,6 +199,7 @@ add_library(
 	${fp_sources}
 	${tp_sources}
 )
+add_dependencies(${PROJECT_NAME} modgen)
 target_compile_definitions(
 	${PROJECT_NAME}
 	PRIVATE
