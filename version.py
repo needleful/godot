@@ -1,8 +1,8 @@
 short_name = "np-godot"
 name = "NP-Godot"
-major = 3
-minor = 6
-patch = 0
+major = 0
+minor = 3
+patch = 6
 status = "j"
 module_config = ""
 year = 2024
