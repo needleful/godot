@@ -1,5 +1,4 @@
-file(GLOB png_sources
-	"${thirdparty_dir}/libpng/*.c")
+file(GLOB png_sources "${thirdparty_dir}/libpng/*.c")
 target_sources(drivers PRIVATE
 	${png_sources}
 	image_loader_png.cpp

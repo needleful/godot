@@ -22,16 +22,15 @@ add_compile_definitions(
 	$<$<CONFIG:Editor>:TOOLS_ENABLED>
 )
 
+set(thirdparty_dir "${CMAKE_SOURCE_DIR}/thirdparty")
 
 # What are you gonna do about it, punk?
-include_directories(${PROJECT_SOURCE_DIR})
+include_directories(${PROJECT_SOURCE_DIR} ${thirdparty_dir}/libpng)
 if(WIN32)
 	include_directories(platform/windows)
 else()
 	include_directories(platform/x11)
 endif()
-
-set(thirdparty_dir "${CMAKE_SOURCE_DIR}/thirdparty")
 
 set(enabled_modules
 	bmp
@@ -65,6 +64,32 @@ set(enabled_modules
 	upnp
 	vhacd
 	vorbis
+)
+
+set(builtin_libraries
+	bullet
+	certs
+	embree
+	enet
+	freetype
+	libogg
+	libpng
+	libtheora
+	libvorbis
+	libvpx
+	libwebp
+	wslay
+	mbedtls
+	miniupnpc
+	opus
+	pcre2
+	pcre2_with_jit
+	recast
+	rvo2
+	squish
+	xatlas
+	zlib
+	zstd
 )
 
 add_subdirectory(core)

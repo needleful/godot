@@ -9,5 +9,6 @@ add_library(
 	${fp_sources}
 	${tp_sources}
 )
+target_include_directories(${PROJECT_NAME} PRIVATE "${thirdparty_dir}/cvtt/")
 
 add_dependencies(${PROJECT_NAME} modgen)
