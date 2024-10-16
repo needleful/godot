@@ -36,6 +36,16 @@ list(APPEND tp_sources
 	pcre2_xclass.c
 )
 
+set(prce_flags
+	PCRE2_STATIC
+	HAVE_CONFIG_H
+	SUPPORT_UNICODE
+	"PCRE2_CODE_UNIT_WIDTH=0")
+
+if(pcre_with_jit IN_LIST builtin_libraries)
+	list(APPEND pcre_flags SUPPORT_JIT)
+endif()
+
 list(TRANSFORM tp_sources PREPEND ${base_dir})
 
 add_library(
@@ -45,9 +55,6 @@ add_library(
 )
 add_dependencies(${PROJECT_NAME} modgen)
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${base_dir})
-
-target_compile_definitions( ${PROJECT_NAME} PRIVATE
-	SUPPORT_JIT
-	PCRE2_CODE_UNIT_WIDTH=8
-)
+target_include_directories(${PROJECT_NAME} PRIVATE "${base_dir}")
+target_compile_definitions(${PROJECT_NAME} PRIVATE ${pcre_flags})
+target_compile_definitions(thirdparty PRIVATE ${pcre_flags})

@@ -8,7 +8,7 @@ add_custom_command(
 add_custom_target(modgen DEPENDS modules_enabled.gen.h register_module_types.gen.cpp)
 
 add_library(modules)
-add_dependencies(modules modgen)
+add_dependencies(modules modgen thirdparty)
 
 foreach(mod IN LISTS enabled_modules)
 	add_subdirectory(${mod})

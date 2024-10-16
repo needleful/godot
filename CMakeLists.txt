@@ -12,8 +12,6 @@ else()
 endif(MSVC)
 
 add_compile_definitions(
-	OPENGL_ENABLED
-	DISABLE_DEPRECATED
 	$<$<CONFIG:Editor,ReleaseDebug>:
 		CRASH_HANDLER_EXCEPTION
 		DEBUG_ENABLED
@@ -25,7 +23,11 @@ add_compile_definitions(
 set(thirdparty_dir "${CMAKE_SOURCE_DIR}/thirdparty")
 
 # What are you gonna do about it, punk?
-include_directories(${PROJECT_SOURCE_DIR} ${thirdparty_dir}/libpng)
+include_directories(
+	"${PROJECT_SOURCE_DIR}"
+	"${thirdparty_dir}/libpng"
+	"${thirdparty_dir}/glad"
+)
 if(WIN32)
 	include_directories(platform/windows)
 else()

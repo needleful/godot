@@ -1,7 +1,6 @@
 project(opus)
 set(base_dir "${thirdparty_dir}/${PROJECT_NAME}/")
 
-file(GLOB fp_sources *.cpp)
 list(APPEND tp_sources
 	# Sync with opus_sources.mk
 	opus.c
@@ -158,18 +157,18 @@ list(APPEND tp_sources
 list(TRANSFORM tp_sources PREPEND ${base_dir})
 
 add_library(
-	${PROJECT_NAME} 
-	${fp_sources}
+	${PROJECT_NAME}
+	register_types.cpp
 	${tp_sources}
 )
-add_dependencies(${PROJECT_NAME} modgen)
+add_dependencies(${PROJECT_NAME} modgen thirdparty)
 
-target_include_directories( ${PROJECT_NAME} PRIVATE
-	${base_dir}
+target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_CONFIG_H)
+target_include_directories(${PROJECT_NAME} PRIVATE
+	"${base_dir}"
 	"${base_dir}/celt"
 	"${base_dir}/opus"
 	"${base_dir}/silk"
-	"${base_dir}/silk/fixed"
 	"${base_dir}/silk/float"
 	"${thirdparty_dir}/libogg"
 )

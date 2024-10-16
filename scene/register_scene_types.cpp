@@ -179,7 +179,6 @@
 
 #ifndef _3D_DISABLED
 #include "scene/3d/area.h"
-#include "scene/3d/arvr_nodes.h"
 #include "scene/3d/audio_stream_player_3d.h"
 #include "scene/3d/bone_attachment.h"
 #include "scene/3d/camera.h"
@@ -430,10 +429,6 @@ void register_scene_types() {
 	ClassDB::register_class<Camera>();
 	ClassDB::register_class<ClippedCamera>();
 	ClassDB::register_class<Listener>();
-	ClassDB::register_class<ARVRCamera>();
-	ClassDB::register_class<ARVRController>();
-	ClassDB::register_class<ARVRAnchor>();
-	ClassDB::register_class<ARVROrigin>();
 	ClassDB::register_class<InterpolatedCamera>();
 	ClassDB::register_class<MeshInstance>();
 	ClassDB::register_class<ImmediateGeometry>();

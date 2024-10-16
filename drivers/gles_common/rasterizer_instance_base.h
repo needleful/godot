@@ -13,7 +13,6 @@
 #include "core/safe_refcount.h"
 #include "core/self_list.h"
 #include "core/set.h"
-#include "servers/arvr/arvr_interface.h"
 #include "servers/visual/portals/portal_renderer.h"
 #include "servers/visual_server.h"
 

@@ -114,7 +114,6 @@ if(zstd IN_LIST builtin_libraries)
 
 	add_compile_definitions(
 		ZSTD_STATIC_LINKING_ONLY
-		ZSTD_STATIC_LINKING_ONLY
 	)
 	set(zstd_dir ${thirdparty_dir}/zstd)
 	include_directories(${zstd_dir} ${zstd_dir}/common)
