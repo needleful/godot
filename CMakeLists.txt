@@ -27,6 +27,7 @@ include_directories(
 	"${PROJECT_SOURCE_DIR}"
 	"${thirdparty_dir}/libpng"
 	"${thirdparty_dir}/glad"
+	"${thirdparty_dir}/freetype/include"
 )
 if(WIN32)
 	include_directories(platform/windows)
