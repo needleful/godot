@@ -583,7 +583,6 @@ public:
 
 	RID viewport_create();
 
-	void viewport_set_use_arvr(RID p_viewport, bool p_use_arvr);
 	void viewport_set_size(RID p_viewport, int p_width, int p_height);
 	void viewport_set_active(RID p_viewport, bool p_active);
 	void viewport_set_parent_viewport(RID p_viewport, RID p_parent_viewport);
@@ -821,35 +820,6 @@ public:
 
 	void instance_set_extra_visibility_margin(RID p_instance, real_t p_margin);
 
-	/* PORTALS API */
-
-	enum InstancePortalMode {
-		INSTANCE_PORTAL_MODE_STATIC, // not moving within a room
-		INSTANCE_PORTAL_MODE_DYNAMIC, //  moving within room
-		INSTANCE_PORTAL_MODE_ROAMING, // moving between rooms
-		INSTANCE_PORTAL_MODE_GLOBAL, // frustum culled only
-		INSTANCE_PORTAL_MODE_IGNORE, // don't show at all - e.g. manual bounds, hidden portals
-	};
-
-	void instance_set_portal_mode(RID p_instance, InstancePortalMode p_mode);
-
-	RID ghost_create();
-	void ghost_set_scenario(RID p_ghost, RID p_scenario, ObjectID p_id, const AABB &p_aabb);
-	void ghost_update(RID p_ghost, const AABB &p_aabb);
-
-	RID portal_create();
-	void portal_set_scenario(RID p_portal, RID p_scenario);
-	void portal_set_geometry(RID p_portal, const Vector<Vector3> &p_points, real_t p_margin);
-	void portal_link(RID p_portal, RID p_room_from, RID p_room_to, bool p_two_way);
-	void portal_set_active(RID p_portal, bool p_active);
-
-	/* ROOMGROUPS API */
-
-	RID roomgroup_create();
-	void roomgroup_prepare(RID p_roomgroup, ObjectID p_roomgroup_object_id);
-	void roomgroup_set_scenario(RID p_roomgroup, RID p_scenario);
-	void roomgroup_add_room(RID p_roomgroup, RID p_room);
-
 	/* OCCLUDERS API */
 
 	enum OccluderType {
@@ -872,30 +842,6 @@ public:
 
 	void set_use_occlusion_culling(bool p_enable);
 	Geometry::MeshData occlusion_debug_get_current_polys(RID p_scenario) const;
-
-	/* ROOMS API */
-
-	enum RoomsDebugFeature {
-		ROOMS_DEBUG_SPRAWL,
-	};
-
-	RID room_create();
-	void room_set_scenario(RID p_room, RID p_scenario);
-	void room_add_instance(RID p_room, RID p_instance, const AABB &p_aabb, const Vector<Vector3> &p_object_pts);
-	void room_add_ghost(RID p_room, ObjectID p_object_id, const AABB &p_aabb);
-	void room_set_bound(RID p_room, ObjectID p_room_object_id, const Vector<Plane> &p_convex, const AABB &p_aabb, const Vector<Vector3> &p_verts);
-	void room_prepare(RID p_room, int32_t p_priority);
-	void rooms_and_portals_clear(RID p_scenario);
-	void rooms_unload(RID p_scenario, String p_reason);
-	void rooms_finalize(RID p_scenario, bool p_generate_pvs, bool p_cull_using_pvs, bool p_use_secondary_pvs, bool p_use_signals, String p_pvs_filename, bool p_use_simple_pvs, bool p_log_pvs_generation);
-	void rooms_override_camera(RID p_scenario, bool p_override, const Vector3 &p_point, const Vector<Plane> *p_convex);
-	void rooms_set_active(RID p_scenario, bool p_active);
-	void rooms_set_params(RID p_scenario, int p_portal_depth_limit, real_t p_roaming_expansion_margin);
-	void rooms_set_debug_feature(RID p_scenario, RoomsDebugFeature p_feature, bool p_active);
-	void rooms_update_gameplay_monitor(RID p_scenario, const Vector<Vector3> &p_camera_positions);
-
-	// don't use this in a game!
-	bool rooms_is_loaded(RID p_scenario) const;
 
 	// callbacks are used to send messages back from the visual server to scene tree in thread friendly manner
 	void callbacks_register(VisualServerCallbacks *p_callbacks);
@@ -1150,10 +1096,7 @@ private:
 		MAX_INSTANCE_LIGHTS = 4,
 		LIGHT_CACHE_DIRTY = -1,
 		MAX_LIGHTS_CULLED = 256,
-		MAX_ROOM_CULL = 32,
-		MAX_EXTERIOR_PORTALS = 128,
 		MAX_LIGHT_SAMPLERS = 256,
-		INSTANCE_ROOMLESS_MASK = (1 << 20)
 
 	};
 
@@ -1224,7 +1167,6 @@ VARIANT_ENUM_CAST(VisualServer::ViewportRenderInfo);
 VARIANT_ENUM_CAST(VisualServer::ViewportDebugDraw);
 VARIANT_ENUM_CAST(VisualServer::ScenarioDebugMode);
 VARIANT_ENUM_CAST(VisualServer::InstanceType);
-VARIANT_ENUM_CAST(VisualServer::InstancePortalMode);
 VARIANT_ENUM_CAST(VisualServer::NinePatchAxisMode);
 VARIANT_ENUM_CAST(VisualServer::CanvasLightMode);
 VARIANT_ENUM_CAST(VisualServer::CanvasLightShadowFilter);

@@ -4339,7 +4339,6 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 	Color clear_color(0, 0, 0, 0);
 
 	RasterizerStorageGLES3::Sky *sky = nullptr;
-	Ref<CameraFeed> feed;
 
 	if (state.debug_draw == VS::VIEWPORT_DEBUG_DRAW_OVERDRAW) {
 		clear_color = Color(0, 0, 0, 0);

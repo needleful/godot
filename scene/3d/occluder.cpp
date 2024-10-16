@@ -31,7 +31,6 @@
 #include "occluder.h"
 
 #include "core/engine.h"
-#include "servers/visual/portals/portal_occlusion_culler.h"
 
 void Occluder::resource_changed(RES res) {
 	update_gizmo();
@@ -143,12 +142,6 @@ void Occluder::_notification(int p_what) {
 					update_configuration_warning();
 				}
 #endif
-			}
-		} break;
-		case NOTIFICATION_INTERNAL_PROCESS: {
-			if (PortalOcclusionCuller::_redraw_gizmo) {
-				PortalOcclusionCuller::_redraw_gizmo = false;
-				update_gizmo();
 			}
 		} break;
 	}

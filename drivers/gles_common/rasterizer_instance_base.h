@@ -13,7 +13,6 @@
 #include "core/safe_refcount.h"
 #include "core/self_list.h"
 #include "core/set.h"
-#include "servers/visual/portals/portal_renderer.h"
 #include "servers/visual_server.h"
 
 // common interface for all spatial partitioning schemes
@@ -61,7 +60,6 @@ struct RasterizerScenario : RID_Data {
 	RID self;
 
 	SpatialPartitioningScene *sps;
-	PortalRenderer _portal_renderer;
 
 	List<RasterizerInstance *> directional_lights;
 	RID environment;
@@ -193,10 +191,6 @@ struct RasterizerInstance : RID_Data {
 	//scenario stuff
 	SpatialPartitionID spatial_partition_id;
 
-	// rooms & portals
-	OcclusionHandle occlusion_handle; // handle of instance in occlusion system (or 0)
-	VisualServer::InstancePortalMode portal_mode;
-
 	RasterizerScenario *scenario;
 	SelfList<RasterizerInstance> scenario_item;
 
@@ -270,9 +264,6 @@ struct RasterizerInstance : RID_Data {
 
 		object_id = 0;
 		visible = true;
-
-		occlusion_handle = 0;
-		portal_mode = VisualServer::InstancePortalMode::INSTANCE_PORTAL_MODE_STATIC;
 
 		lod_begin = 0;
 		lod_end = 0;

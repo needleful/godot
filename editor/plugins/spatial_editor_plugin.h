@@ -208,7 +208,6 @@ class SpatialEditorViewport : public Control {
 		VIEW_LOCK_ROTATION,
 		VIEW_CINEMATIC_PREVIEW,
 		VIEW_AUTO_ORTHOGONAL,
-		VIEW_PORTAL_CULLING,
 	};
 
 	enum ViewType {
@@ -570,7 +569,6 @@ public:
 		TOOL_UNLOCK_SELECTED,
 		TOOL_GROUP_SELECTED,
 		TOOL_UNGROUP_SELECTED,
-		TOOL_CONVERT_ROOMS,
 		TOOL_MAX
 	};
 
@@ -651,7 +649,6 @@ private:
 		MENU_TOOL_LOCAL_COORDS,
 		MENU_TOOL_USE_SNAP,
 		MENU_TOOL_OVERRIDE_CAMERA,
-		MENU_TOOL_CONVERT_ROOMS,
 		MENU_TRANSFORM_CONFIGURE_SNAP,
 		MENU_TRANSFORM_DIALOG,
 		MENU_VIEW_USE_1_VIEWPORT,
@@ -662,7 +659,6 @@ private:
 		MENU_VIEW_USE_4_VIEWPORTS,
 		MENU_VIEW_ORIGIN,
 		MENU_VIEW_GRID,
-		MENU_VIEW_PORTAL_CULLING,
 		MENU_VIEW_OCCLUSION_CULLING,
 		MENU_VIEW_GIZMOS_3D_ICONS,
 		MENU_VIEW_CAMERA_SETTINGS,
@@ -789,8 +785,6 @@ public:
 
 	void update_grid();
 	void update_transform_gizmo();
-	void update_portal_tools();
-	void show_advanced_portal_tools(bool p_show);
 	void update_all_gizmos(Node *p_node = nullptr);
 	void snap_selected_nodes_to_floor();
 	void select_gizmo_highlight_axis(int p_axis);

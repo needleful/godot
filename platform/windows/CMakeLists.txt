@@ -10,4 +10,5 @@ add_executable(godot
 	power_windows.cpp
 	tts_windows.cpp
 	windows_terminal_logger.cpp
-	godot_res.rc)
+	godot_res.rc
+)

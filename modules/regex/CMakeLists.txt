@@ -36,7 +36,7 @@ list(APPEND tp_sources
 	pcre2_xclass.c
 )
 
-set(prce_flags
+set(pcre_flags
 	PCRE2_STATIC
 	HAVE_CONFIG_H
 	SUPPORT_UNICODE)
@@ -55,4 +55,4 @@ add_library(
 add_dependencies(${PROJECT_NAME} modgen)
 
 target_include_directories(${PROJECT_NAME} PRIVATE "${base_dir}")
-target_compile_definitions(${PROJECT_NAME} PRIVATE ${pcre_flags})
+target_compile_definitions(${PROJECT_NAME} PRIVATE ${pcre_flags} LINK_SIZE=2)

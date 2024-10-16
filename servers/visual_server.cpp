@@ -2038,7 +2038,6 @@ void VisualServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("camera_set_use_vertical_aspect", "camera", "enable"), &VisualServer::camera_set_use_vertical_aspect);
 
 	ClassDB::bind_method(D_METHOD("viewport_create"), &VisualServer::viewport_create);
-	ClassDB::bind_method(D_METHOD("viewport_set_use_arvr", "viewport", "use_arvr"), &VisualServer::viewport_set_use_arvr);
 	ClassDB::bind_method(D_METHOD("viewport_set_size", "viewport", "width", "height"), &VisualServer::viewport_set_size);
 	ClassDB::bind_method(D_METHOD("viewport_set_active", "viewport", "active"), &VisualServer::viewport_set_active);
 	ClassDB::bind_method(D_METHOD("viewport_set_parent_viewport", "viewport", "parent_viewport"), &VisualServer::viewport_set_parent_viewport);
@@ -2555,11 +2554,6 @@ RID VisualServer::instance_create2(RID p_base, RID p_scenario) {
 	RID instance = instance_create();
 	instance_set_base(instance, p_base);
 	instance_set_scenario(instance, p_scenario);
-
-	// instance_create2 is used mainly by editor instances.
-	// These should not be culled by the portal system when it is active, so we set their mode to global,
-	// for frustum culling only.
-	instance_set_portal_mode(instance, VisualServer::INSTANCE_PORTAL_MODE_GLOBAL);
 	return instance;
 }
 
@@ -2688,14 +2682,6 @@ VisualServer::VisualServer() {
 	ProjectSettings::get_singleton()->set_custom_property_info("rendering/batching/lights/max_join_items", PropertyInfo(Variant::INT, "rendering/batching/lights/max_join_items", PROPERTY_HINT_RANGE, "0,512"));
 	ProjectSettings::get_singleton()->set_custom_property_info("rendering/batching/parameters/item_reordering_lookahead", PropertyInfo(Variant::INT, "rendering/batching/parameters/item_reordering_lookahead", PROPERTY_HINT_RANGE, "0,256"));
 	ProjectSettings::get_singleton()->set_custom_property_info("rendering/batching/precision/uv_contract_amount", PropertyInfo(Variant::INT, "rendering/batching/precision/uv_contract_amount", PROPERTY_HINT_RANGE, "0,10000"));
-
-	// Portal rendering settings
-	GLOBAL_DEF("rendering/portals/pvs/use_simple_pvs", false);
-	GLOBAL_DEF("rendering/portals/pvs/pvs_logging", false);
-	GLOBAL_DEF("rendering/portals/gameplay/use_signals", true);
-	GLOBAL_DEF("rendering/portals/optimize/remove_danglers", true);
-	GLOBAL_DEF("rendering/portals/debug/logging", true);
-	GLOBAL_DEF("rendering/portals/advanced/flip_imported_portals", false);
 
 	// Occlusion culling
 	GLOBAL_DEF("rendering/misc/occlusion_culling/max_active_spheres", 8);
@@ -3247,7 +3233,6 @@ BIND2(camera_set_use_vertical_aspect, RID, bool)
 
 BIND0R(RID, viewport_create)
 
-BIND2(viewport_set_use_arvr, RID, bool)
 BIND3(viewport_set_size, RID, int, int)
 
 BIND2(viewport_set_active, RID, bool)
@@ -3367,27 +3352,6 @@ BIND2(instance_set_exterior, RID, bool)
 
 BIND2(instance_set_extra_visibility_margin, RID, real_t)
 
-/* PORTALS */
-
-BIND2(instance_set_portal_mode, RID, InstancePortalMode)
-
-BIND0R(RID, ghost_create)
-BIND4(ghost_set_scenario, RID, RID, ObjectID, const AABB &)
-BIND2(ghost_update, RID, const AABB &)
-
-BIND0R(RID, portal_create)
-BIND2(portal_set_scenario, RID, RID)
-BIND3(portal_set_geometry, RID, const Vector<Vector3> &, real_t)
-BIND4(portal_link, RID, RID, RID, bool)
-BIND2(portal_set_active, RID, bool)
-
-/* ROOMGROUPS */
-
-BIND0R(RID, roomgroup_create)
-BIND2(roomgroup_prepare, RID, ObjectID)
-BIND2(roomgroup_set_scenario, RID, RID)
-BIND2(roomgroup_add_room, RID, RID)
-
 /* OCCLUDERS */
 
 BIND0R(RID, occluder_instance_create)
@@ -3402,26 +3366,6 @@ BIND2(occluder_resource_spheres_update, RID, const Vector<Plane> &)
 BIND2(occluder_resource_mesh_update, RID, const Geometry::OccluderMeshData &)
 BIND1(set_use_occlusion_culling, bool)
 BIND1RC(Geometry::MeshData, occlusion_debug_get_current_polys, RID)
-
-/* ROOMS */
-
-BIND0R(RID, room_create)
-BIND2(room_set_scenario, RID, RID)
-BIND4(room_add_instance, RID, RID, const AABB &, const Vector<Vector3> &)
-BIND3(room_add_ghost, RID, ObjectID, const AABB &)
-BIND5(room_set_bound, RID, ObjectID, const Vector<Plane> &, const AABB &, const Vector<Vector3> &)
-BIND2(room_prepare, RID, int32_t)
-BIND1(rooms_and_portals_clear, RID)
-BIND2(rooms_unload, RID, String)
-BIND8(rooms_finalize, RID, bool, bool, bool, bool, String, bool, bool)
-BIND4(rooms_override_camera, RID, bool, const Vector3 &, const Vector<Plane> *)
-BIND2(rooms_set_active, RID, bool)
-BIND3(rooms_set_params, RID, int, real_t)
-BIND3(rooms_set_debug_feature, RID, RoomsDebugFeature, bool)
-BIND2(rooms_update_gameplay_monitor, RID, const Vector<Vector3> &)
-
-// don't use this in a game
-BIND1RC(bool, rooms_is_loaded, RID)
 
 // Callbacks
 BIND1(callbacks_register, VisualServerCallbacks *)

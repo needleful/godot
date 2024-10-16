@@ -18,6 +18,7 @@ add_compile_definitions(
 		NP_PROFILER
 	>
 	$<$<CONFIG:Editor>:TOOLS_ENABLED>
+	MINIZIP_ENABLED
 )
 
 set(thirdparty_dir "${CMAKE_SOURCE_DIR}/thirdparty")
@@ -27,6 +28,7 @@ include_directories(
 	"${PROJECT_SOURCE_DIR}"
 	"${thirdparty_dir}/libpng"
 	"${thirdparty_dir}/glad"
+	"${thirdparty_dir}/brotli/include"
 	"${thirdparty_dir}/freetype/include"
 )
 if(WIN32)
@@ -94,6 +96,14 @@ set(builtin_libraries
 	zlib
 	zstd
 )
+
+if(zlib IN_LIST builtin_libraries)
+	include_directories(${thirdparty_dir}/zlib)
+endif()
+
+if(pcre2 IN_LIST builtin_libraries)
+	add_compile_definitions(PCRE2_CODE_UNIT_WIDTH=8)
+endif()
 
 add_subdirectory(core)
 add_subdirectory(drivers)

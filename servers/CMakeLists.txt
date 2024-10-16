@@ -1,6 +1,5 @@
 add_library(servers
 	audio_server.cpp
-	camera_server.cpp
 	navigation_2d_server.cpp
 	navigation_server.cpp
 	physics_2d_server.cpp

@@ -421,68 +421,6 @@ public:
 	JointSpatialGizmoPlugin();
 };
 
-class Room;
-
-class RoomSpatialGizmo : public EditorSpatialGizmo {
-	GDCLASS(RoomSpatialGizmo, EditorSpatialGizmo);
-
-	Room *_room = nullptr;
-
-public:
-	virtual String get_handle_name(int p_idx) const;
-	virtual Variant get_handle_value(int p_idx);
-	virtual void set_handle(int p_idx, Camera *p_camera, const Point2 &p_point);
-	virtual void commit_handle(int p_idx, const Variant &p_restore, bool p_cancel = false);
-	virtual void redraw();
-
-	RoomSpatialGizmo(Room *p_room = nullptr);
-};
-
-class RoomGizmoPlugin : public EditorSpatialGizmoPlugin {
-	GDCLASS(RoomGizmoPlugin, EditorSpatialGizmoPlugin);
-
-protected:
-	virtual bool has_gizmo(Spatial *p_spatial);
-	String get_name() const;
-	int get_priority() const;
-	Ref<EditorSpatialGizmo> create_gizmo(Spatial *p_spatial);
-
-public:
-	RoomGizmoPlugin();
-};
-
-class Portal;
-
-class PortalSpatialGizmo : public EditorSpatialGizmo {
-	GDCLASS(PortalSpatialGizmo, EditorSpatialGizmo);
-
-	Portal *_portal = nullptr;
-	Color _color_portal_front;
-	Color _color_portal_back;
-
-public:
-	virtual String get_handle_name(int p_idx) const;
-	virtual Variant get_handle_value(int p_idx);
-	virtual void set_handle(int p_idx, Camera *p_camera, const Point2 &p_point);
-	virtual void commit_handle(int p_idx, const Variant &p_restore, bool p_cancel = false);
-	virtual void redraw();
-
-	PortalSpatialGizmo(Portal *p_portal = nullptr);
-};
-
-class PortalGizmoPlugin : public EditorSpatialGizmoPlugin {
-	GDCLASS(PortalGizmoPlugin, EditorSpatialGizmoPlugin);
-
-protected:
-	virtual bool has_gizmo(Spatial *p_spatial);
-	String get_name() const;
-	int get_priority() const;
-	Ref<EditorSpatialGizmo> create_gizmo(Spatial *p_spatial);
-
-public:
-	PortalGizmoPlugin();
-};
-
 class Occluder;
 class OccluderShape;
 class OccluderShapeSphere;

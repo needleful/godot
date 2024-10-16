@@ -41,8 +41,6 @@
 #include "core/safe_refcount.h"
 #include "core/self_list.h"
 #include "drivers/gles_common/rasterizer_instance_base.h"
-#include "portals/portal_renderer.h"
-#include "servers/arvr/arvr_interface.h"
 
 class VisualServerScene {
 public:
@@ -51,8 +49,6 @@ public:
 		MAX_INSTANCE_CULL = 65536,
 		MAX_LIGHTS_CULLED = 4096,
 		MAX_REFLECTION_PROBES_CULLED = 4096,
-		MAX_ROOM_CULL = 32,
-		MAX_EXTERIOR_PORTALS = 128,
 	};
 
 	uint64_t render_pass;
@@ -192,100 +188,10 @@ public:
 
 	void instance_set_extra_visibility_margin(RID p_instance, real_t p_margin);
 
-	// Portals
-	void instance_set_portal_mode(RID p_instance, VisualServer::InstancePortalMode p_mode);
 	bool _instance_get_transformed_aabb(RID p_instance, AABB &r_aabb);
-	bool _instance_get_transformed_aabb_for_occlusion(VSInstance *p_instance, AABB &r_aabb) const {
-		r_aabb = ((RasterizerInstance *)p_instance)->transformed_aabb;
-		return ((RasterizerInstance *)p_instance)->portal_mode != VisualServer::INSTANCE_PORTAL_MODE_GLOBAL;
-	}
 	void *_instance_get_from_rid(RID p_instance);
-	bool _instance_cull_check(VSInstance *p_instance, uint32_t p_cull_mask) const {
-		uint32_t pairable_type = 1 << ((RasterizerInstance *)p_instance)->base_type;
-		return pairable_type & p_cull_mask;
-	}
-	ObjectID _instance_get_object_ID(VSInstance *p_instance) const {
-		if (p_instance) {
-			return ((RasterizerInstance *)p_instance)->object_id;
-		}
-		return 0;
-	}
-
-private:
-	void _instance_create_occlusion_rep(RasterizerInstance *p_instance);
-	void _instance_destroy_occlusion_rep(RasterizerInstance *p_instance);
 
 public:
-	struct Ghost : RID_Data {
-		// all interactions with actual ghosts are indirect, as the ghost is part of the scenario
-		RasterizerScenario *scenario = nullptr;
-		uint32_t object_id = 0;
-		RGhostHandle rghost_handle = 0; // handle in occlusion system (or 0)
-		AABB aabb;
-		virtual ~Ghost() {
-			if (scenario) {
-				if (rghost_handle) {
-					scenario->_portal_renderer.rghost_destroy(rghost_handle);
-					rghost_handle = 0;
-				}
-				scenario = nullptr;
-			}
-		}
-	};
-	RID_Owner<Ghost> ghost_owner;
-
-	RID ghost_create();
-	void ghost_set_scenario(RID p_ghost, RID p_scenario, ObjectID p_id, const AABB &p_aabb);
-	void ghost_update(RID p_ghost, const AABB &p_aabb);
-
-private:
-	void _ghost_create_occlusion_rep(Ghost *p_ghost);
-	void _ghost_destroy_occlusion_rep(Ghost *p_ghost);
-
-public:
-	/* PORTALS API */
-
-	struct Portal : RID_Data {
-		// all interactions with actual portals are indirect, as the portal is part of the scenario
-		uint32_t scenario_portal_id = 0;
-		RasterizerScenario *scenario = nullptr;
-		virtual ~Portal() {
-			if (scenario) {
-				scenario->_portal_renderer.portal_destroy(scenario_portal_id);
-				scenario = nullptr;
-				scenario_portal_id = 0;
-			}
-		}
-	};
-	RID_Owner<Portal> portal_owner;
-
-	RID portal_create();
-	void portal_set_scenario(RID p_portal, RID p_scenario);
-	void portal_set_geometry(RID p_portal, const Vector<Vector3> &p_points, real_t p_margin);
-	void portal_link(RID p_portal, RID p_room_from, RID p_room_to, bool p_two_way);
-	void portal_set_active(RID p_portal, bool p_active);
-
-	/* ROOMGROUPS API */
-
-	struct RoomGroup : RID_Data {
-		// all interactions with actual roomgroups are indirect, as the roomgroup is part of the scenario
-		uint32_t scenario_roomgroup_id = 0;
-		RasterizerScenario *scenario = nullptr;
-		virtual ~RoomGroup() {
-			if (scenario) {
-				scenario->_portal_renderer.roomgroup_destroy(scenario_roomgroup_id);
-				scenario = nullptr;
-				scenario_roomgroup_id = 0;
-			}
-		}
-	};
-	RID_Owner<RoomGroup> roomgroup_owner;
-
-	RID roomgroup_create();
-	void roomgroup_prepare(RID p_roomgroup, ObjectID p_roomgroup_object_id);
-	void roomgroup_set_scenario(RID p_roomgroup, RID p_scenario);
-	void roomgroup_add_room(RID p_roomgroup, RID p_room);
-
 	/* OCCLUDERS API */
 
 	struct OccluderInstance : RID_Data {
@@ -293,7 +199,6 @@ public:
 		RasterizerScenario *scenario = nullptr;
 		virtual ~OccluderInstance() {
 			if (scenario) {
-				scenario->_portal_renderer.occluder_instance_destroy(scenario_occluder_id);
 				scenario = nullptr;
 				scenario_occluder_id = 0;
 			}
@@ -303,10 +208,6 @@ public:
 
 	struct OccluderResource : RID_Data {
 		uint32_t occluder_resource_id = 0;
-		void destroy(PortalResources &r_portal_resources) {
-			r_portal_resources.occluder_resource_destroy(occluder_resource_id);
-			occluder_resource_id = 0;
-		}
 		virtual ~OccluderResource() {
 			DEV_ASSERT(occluder_resource_id == 0);
 		}
@@ -327,46 +228,6 @@ public:
 
 	// editor only .. slow
 	Geometry::MeshData occlusion_debug_get_current_polys(RID p_scenario) const;
-	const PortalResources &get_portal_resources() const {
-		return _portal_resources;
-	}
-	PortalResources &get_portal_resources() {
-		return _portal_resources;
-	}
-
-	/* ROOMS API */
-
-	struct Room : RID_Data {
-		// all interactions with actual rooms are indirect, as the room is part of the scenario
-		uint32_t scenario_room_id = 0;
-		RasterizerScenario *scenario = nullptr;
-		virtual ~Room() {
-			if (scenario) {
-				scenario->_portal_renderer.room_destroy(scenario_room_id);
-				scenario = nullptr;
-				scenario_room_id = 0;
-			}
-		}
-	};
-	RID_Owner<Room> room_owner;
-
-	RID room_create();
-	void room_set_scenario(RID p_room, RID p_scenario);
-	void room_add_instance(RID p_room, RID p_instance, const AABB &p_aabb, const Vector<Vector3> &p_object_pts);
-	void room_add_ghost(RID p_room, ObjectID p_object_id, const AABB &p_aabb);
-	void room_set_bound(RID p_room, ObjectID p_room_object_id, const Vector<Plane> &p_convex, const AABB &p_aabb, const Vector<Vector3> &p_verts);
-	void room_prepare(RID p_room, int32_t p_priority);
-	void rooms_and_portals_clear(RID p_scenario);
-	void rooms_unload(RID p_scenario, String p_reason);
-	void rooms_finalize(RID p_scenario, bool p_generate_pvs, bool p_cull_using_pvs, bool p_use_secondary_pvs, bool p_use_signals, String p_pvs_filename, bool p_use_simple_pvs, bool p_log_pvs_generation);
-	void rooms_override_camera(RID p_scenario, bool p_override, const Vector3 &p_point, const Vector<Plane> *p_convex);
-	void rooms_set_active(RID p_scenario, bool p_active);
-	void rooms_set_params(RID p_scenario, int p_portal_depth_limit, real_t p_roaming_expansion_margin);
-	void rooms_set_debug_feature(RID p_scenario, VisualServer::RoomsDebugFeature p_feature, bool p_active);
-	void rooms_update_gameplay_monitor(RID p_scenario, const Vector<Vector3> &p_camera_positions);
-
-	// don't use this in a game
-	bool rooms_is_loaded(RID p_scenario) const;
 
 	void callbacks_register(VisualServerCallbacks *p_callbacks);
 	VisualServerCallbacks *get_callbacks() const {
@@ -401,7 +262,6 @@ public:
 	void render_empty_scene(RID p_scenario, RID p_shadow_atlas);
 
 	void render_camera(RID p_camera, RID p_scenario, Size2 p_viewport_size, RID p_shadow_atlas);
-	void render_camera(Ref<ARVRInterface> &p_interface, ARVRInterface::Eyes p_eye, RID p_camera, RID p_scenario, Size2 p_viewport_size, RID p_shadow_atlas);
 	void update_dirty_instances();
 
 	// interpolation
@@ -416,7 +276,6 @@ public:
 private:
 	bool _use_bvh;
 	VisualServerCallbacks *_visual_server_callbacks;
-	PortalResources _portal_resources;
 
 public:
 	VisualServerScene();

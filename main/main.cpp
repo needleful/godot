@@ -62,9 +62,7 @@
 #include "scene/main/viewport.h"
 #include "scene/register_scene_types.h"
 #include "scene/resources/packed_scene.h"
-#include "servers/arvr_server.h"
 #include "servers/audio_server.h"
-#include "servers/camera_server.h"
 #include "servers/navigation_2d_server.h"
 #include "servers/navigation_server.h"
 #include "servers/physics_2d_server.h"
@@ -111,8 +109,6 @@ static MessageQueue *message_queue = nullptr;
 
 // Initialized in setup2()
 static AudioServer *audio_server = nullptr;
-static CameraServer *camera_server = nullptr;
-static ARVRServer *arvr_server = nullptr;
 static PhysicsServer *physics_server = nullptr;
 static Physics2DServer *physics_2d_server = nullptr;
 static VisualServerCallbacks *visual_server_callbacks = nullptr;
@@ -1419,9 +1415,6 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	audio_server = memnew(AudioServer);
 	audio_server->init();
 
-	// also init our arvr_server from here
-	arvr_server = memnew(ARVRServer);
-
 	// and finally setup this property under visual_server
 	VisualServer::get_singleton()->set_render_loop_enabled(!disable_render_loop);
 
@@ -1583,8 +1576,6 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 			Input::get_singleton()->set_custom_mouse_cursor(cursor, Input::CURSOR_ARROW, hotspot);
 		}
 	}
-
-	camera_server = CameraServer::create();
 
 	initialize_physics();
 	initialize_navigation_server();
@@ -2532,11 +2523,6 @@ void Main::cleanup(bool p_force) {
 	EditorNode::unregister_editor_types();
 #endif
 
-	if (arvr_server) {
-		// cleanup now before we pull the rug from underneath...
-		memdelete(arvr_server);
-	}
-
 	ImageLoader::cleanup();
 
 	unregister_driver_types();
@@ -2547,10 +2533,6 @@ void Main::cleanup(bool p_force) {
 	if (audio_server) {
 		audio_server->finish();
 		memdelete(audio_server);
-	}
-
-	if (camera_server) {
-		memdelete(camera_server);
 	}
 
 	OS::get_singleton()->finalize();

@@ -38,10 +38,6 @@ AABB VisualInstance::get_transformed_aabb() const {
 	return get_global_transform().xform(get_aabb());
 }
 
-void VisualInstance::_refresh_portal_mode() {
-	VisualServer::get_singleton()->instance_set_portal_mode(instance, (VisualServer::InstancePortalMode)get_portal_mode());
-}
-
 void VisualInstance::_update_visibility() {
 	if (!is_inside_tree()) {
 		return;

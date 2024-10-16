@@ -76,7 +76,6 @@ if(zlib IN_LIST builtin_libraries)
 			ZLIB_DEBUG
 		>
 	)
-	include_directories(${thirdparty_dir}/zlib)
 endif()
 
 if(zstd IN_LIST builtin_libraries)
@@ -128,8 +127,6 @@ list(APPEND thirdparty_sources
 	minizip/unzip.c
 	minizip/zip.c
 )
-
-add_compile_definitions("PCRE2_CODE_UNIT_WIDTH=8")
 
 list(TRANSFORM thirdparty_sources PREPEND ${thirdparty_dir}/)
 add_library(thirdparty ${thirdparty_sources})

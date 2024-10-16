@@ -65,7 +65,7 @@ static Transform2D _canvas_get_transform(VisualServerViewport::Viewport *p_viewp
 	return xf;
 }
 
-void VisualServerViewport::_draw_viewport(Viewport *p_viewport, ARVRInterface::Eyes p_eye) {
+void VisualServerViewport::_draw_viewport(Viewport *p_viewport) {
 	/* Camera should always be BEFORE any other 3D */
 
 	bool scenario_draw_canvas_bg = false; //draw canvas, or some layer of it, as BG for 3D instead of in front
@@ -182,14 +182,10 @@ void VisualServerViewport::_draw_viewport(Viewport *p_viewport, ARVRInterface::E
 			//VSG::canvas_render->reset_canvas();
 		}
 
-		VSG::rasterizer->restore_render_target(!scenario_draw_canvas_bg && can_draw_3d);
+		VSG::rasterizer->restore_render_target(!scenario_draw_canvas_bg);
 
 		if (scenario_draw_canvas_bg && canvas_map.front() && canvas_map.front()->key().get_layer() > scenario_canvas_max_layer) {
-			if (!can_draw_3d) {
-				VSG::scene->render_empty_scene(p_viewport->scenario, p_viewport->shadow_atlas);
-			} else {
-				_draw_3d(p_viewport, p_eye);
-			}
+			VSG::scene->render_empty_scene(p_viewport->scenario, p_viewport->shadow_atlas);
 			scenario_draw_canvas_bg = false;
 		}
 
@@ -213,22 +209,13 @@ void VisualServerViewport::_draw_viewport(Viewport *p_viewport, ARVRInterface::E
 			VSG::canvas->render_canvas(canvas, xform, canvas_lights, lights_with_mask, clip_rect, canvas_layer_id);
 
 			if (scenario_draw_canvas_bg && E->key().get_layer() >= scenario_canvas_max_layer) {
-				if (!can_draw_3d) {
-					VSG::scene->render_empty_scene(p_viewport->scenario, p_viewport->shadow_atlas);
-				} else {
-					_draw_3d(p_viewport, p_eye);
-				}
-
+				VSG::scene->render_empty_scene(p_viewport->scenario, p_viewport->shadow_atlas);
 				scenario_draw_canvas_bg = false;
 			}
 		}
 
 		if (scenario_draw_canvas_bg) {
-			if (!can_draw_3d) {
-				VSG::scene->render_empty_scene(p_viewport->scenario, p_viewport->shadow_atlas);
-			} else {
-				_draw_3d(p_viewport, p_eye);
-			}
+			VSG::scene->render_empty_scene(p_viewport->scenario, p_viewport->shadow_atlas);
 		}
 
 		//VSG::canvas_render->canvas_debug_viewport_shadows(lights_with_shadow);

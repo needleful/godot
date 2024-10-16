@@ -47,7 +47,6 @@
 #include "scene/3d/collision_shape.h"
 #include "scene/3d/mesh_instance.h"
 #include "scene/3d/physics_body.h"
-#include "scene/3d/room_manager.h"
 #include "scene/3d/visual_instance.h"
 #include "scene/gui/flow_container.h"
 #include "scene/gui/viewport_container.h"
@@ -780,11 +779,6 @@ void SpatialEditorViewport::_update_name() {
 	if (auto_orthogonal) {
 		// TRANSLATORS: This will be appended to the view name when Auto Orthogonal is enabled.
 		name += TTR(" [auto]");
-	}
-
-	if (RoomManager::static_rooms_get_active_and_loaded()) {
-		// TRANSLATORS: This will be appended to the view name when Portal Occulusion is enabled.
-		name += TTR(" [portals active]");
 	}
 
 	view_menu->set_text(name);
@@ -3226,7 +3220,6 @@ void SpatialEditorViewport::_init_gizmo_instance(int p_idx) {
 		VS::get_singleton()->instance_set_visible(move_gizmo_instance[i], false);
 		VS::get_singleton()->instance_geometry_set_cast_shadows_setting(move_gizmo_instance[i], VS::SHADOW_CASTING_SETTING_OFF);
 		VS::get_singleton()->instance_set_layer_mask(move_gizmo_instance[i], layer);
-		VS::get_singleton()->instance_set_portal_mode(move_gizmo_instance[i], VisualServer::INSTANCE_PORTAL_MODE_GLOBAL);
 
 		move_plane_gizmo_instance[i] = RID_PRIME(VS::get_singleton()->instance_create());
 		VS::get_singleton()->instance_set_base(move_plane_gizmo_instance[i], spatial_editor->get_move_plane_gizmo(i)->get_rid());
@@ -3234,7 +3227,6 @@ void SpatialEditorViewport::_init_gizmo_instance(int p_idx) {
 		VS::get_singleton()->instance_set_visible(move_plane_gizmo_instance[i], false);
 		VS::get_singleton()->instance_geometry_set_cast_shadows_setting(move_plane_gizmo_instance[i], VS::SHADOW_CASTING_SETTING_OFF);
 		VS::get_singleton()->instance_set_layer_mask(move_plane_gizmo_instance[i], layer);
-		VS::get_singleton()->instance_set_portal_mode(move_plane_gizmo_instance[i], VisualServer::INSTANCE_PORTAL_MODE_GLOBAL);
 
 		rotate_gizmo_instance[i] = RID_PRIME(VS::get_singleton()->instance_create());
 		VS::get_singleton()->instance_set_base(rotate_gizmo_instance[i], spatial_editor->get_rotate_gizmo(i)->get_rid());
@@ -3242,7 +3234,6 @@ void SpatialEditorViewport::_init_gizmo_instance(int p_idx) {
 		VS::get_singleton()->instance_set_visible(rotate_gizmo_instance[i], false);
 		VS::get_singleton()->instance_geometry_set_cast_shadows_setting(rotate_gizmo_instance[i], VS::SHADOW_CASTING_SETTING_OFF);
 		VS::get_singleton()->instance_set_layer_mask(rotate_gizmo_instance[i], layer);
-		VS::get_singleton()->instance_set_portal_mode(rotate_gizmo_instance[i], VisualServer::INSTANCE_PORTAL_MODE_GLOBAL);
 
 		scale_gizmo_instance[i] = RID_PRIME(VS::get_singleton()->instance_create());
 		VS::get_singleton()->instance_set_base(scale_gizmo_instance[i], spatial_editor->get_scale_gizmo(i)->get_rid());
@@ -3250,7 +3241,6 @@ void SpatialEditorViewport::_init_gizmo_instance(int p_idx) {
 		VS::get_singleton()->instance_set_visible(scale_gizmo_instance[i], false);
 		VS::get_singleton()->instance_geometry_set_cast_shadows_setting(scale_gizmo_instance[i], VS::SHADOW_CASTING_SETTING_OFF);
 		VS::get_singleton()->instance_set_layer_mask(scale_gizmo_instance[i], layer);
-		VS::get_singleton()->instance_set_portal_mode(scale_gizmo_instance[i], VisualServer::INSTANCE_PORTAL_MODE_GLOBAL);
 
 		scale_plane_gizmo_instance[i] = RID_PRIME(VS::get_singleton()->instance_create());
 		VS::get_singleton()->instance_set_base(scale_plane_gizmo_instance[i], spatial_editor->get_scale_plane_gizmo(i)->get_rid());
@@ -3258,7 +3248,6 @@ void SpatialEditorViewport::_init_gizmo_instance(int p_idx) {
 		VS::get_singleton()->instance_set_visible(scale_plane_gizmo_instance[i], false);
 		VS::get_singleton()->instance_geometry_set_cast_shadows_setting(scale_plane_gizmo_instance[i], VS::SHADOW_CASTING_SETTING_OFF);
 		VS::get_singleton()->instance_set_layer_mask(scale_plane_gizmo_instance[i], layer);
-		VS::get_singleton()->instance_set_portal_mode(scale_plane_gizmo_instance[i], VisualServer::INSTANCE_PORTAL_MODE_GLOBAL);
 	}
 
 	// Rotation white outline
@@ -4581,45 +4570,6 @@ void SpatialEditor::select_gizmo_highlight_axis(int p_axis) {
 	}
 }
 
-void SpatialEditor::show_advanced_portal_tools(bool p_show) {
-	// toolbar button
-	Button *const button = tool_button[TOOL_CONVERT_ROOMS];
-	if (p_show) {
-		button->set_text(TTR("Convert Rooms"));
-	} else {
-		button->set_text("");
-	}
-}
-
-void SpatialEditor::update_portal_tools() {
-	// just some protection against calling null pointers, hopefully not needed
-	if (view_menu && view_menu->get_popup()) {
-		// the view portal culling toggle
-		int view_portal_item_index = view_menu->get_popup()->get_item_index(MENU_VIEW_PORTAL_CULLING);
-		if (RoomManager::active_room_manager) {
-			view_menu->get_popup()->set_item_disabled(view_portal_item_index, false);
-
-			bool active = RoomManager::static_rooms_get_active();
-			view_menu->get_popup()->set_item_checked(view_portal_item_index, active);
-		} else {
-			view_menu->get_popup()->set_item_disabled(view_portal_item_index, true);
-		}
-
-		// toolbar button
-		Button *const button = tool_button[TOOL_CONVERT_ROOMS];
-
-		if (RoomManager::active_room_manager) {
-			button->show();
-		} else {
-			button->hide();
-		}
-
-		for (uint32_t i = 0; i < VIEWPORTS_COUNT; i++) {
-			viewports[i]->_update_name();
-		}
-	}
-}
-
 void SpatialEditor::update_transform_gizmo() {
 	List<Node *> &selection = editor_selection->get_selected_node_list();
 	AABB center;
@@ -5105,10 +5055,6 @@ void SpatialEditor::_menu_item_pressed(int p_option) {
 			update_transform_gizmo();
 
 		} break;
-		case MENU_TOOL_CONVERT_ROOMS: {
-			RoomManager::static_rooms_convert();
-			update_portal_tools();
-		} break;
 		case MENU_TRANSFORM_CONFIGURE_SNAP: {
 			snap_dialog->popup_centered(Size2(200, 180));
 		} break;
@@ -5214,11 +5160,6 @@ void SpatialEditor::_menu_item_pressed(int p_option) {
 
 			view_menu->get_popup()->set_item_checked(view_menu->get_popup()->get_item_index(p_option), grid_enabled);
 
-		} break;
-		case MENU_VIEW_PORTAL_CULLING: {
-			bool is_checked = view_menu->get_popup()->is_item_checked(view_menu->get_popup()->get_item_index(p_option));
-			RoomManager::static_rooms_set_active(!is_checked);
-			update_portal_tools();
 		} break;
 		case MENU_VIEW_OCCLUSION_CULLING: {
 			int checkbox_id = view_menu->get_popup()->get_item_index(p_option);
@@ -6260,7 +6201,6 @@ void SpatialEditor::_notification(int p_what) {
 		tool_button[SpatialEditor::TOOL_UNLOCK_SELECTED]->set_icon(get_icon("Unlock", "EditorIcons"));
 		tool_button[SpatialEditor::TOOL_GROUP_SELECTED]->set_icon(get_icon("Group", "EditorIcons"));
 		tool_button[SpatialEditor::TOOL_UNGROUP_SELECTED]->set_icon(get_icon("Ungroup", "EditorIcons"));
-		tool_button[SpatialEditor::TOOL_CONVERT_ROOMS]->set_icon(get_icon("RoomGroup", "EditorIcons"));
 
 		tool_option_button[SpatialEditor::TOOL_OPT_LOCAL_COORDS]->set_icon(get_icon("Object", "EditorIcons"));
 		tool_option_button[SpatialEditor::TOOL_OPT_USE_SNAP]->set_icon(get_icon("Snap", "EditorIcons"));
@@ -6685,15 +6625,6 @@ SpatialEditor::SpatialEditor(EditorNode *p_editor) {
 	tool_option_button[TOOL_OPT_OVERRIDE_CAMERA]->connect("toggled", this, "_menu_item_toggled", button_binds);
 	_update_camera_override_button(false);
 
-	tool_button[TOOL_CONVERT_ROOMS] = memnew(ToolButton);
-	main_menu_hbox->add_child(tool_button[TOOL_CONVERT_ROOMS]);
-	tool_button[TOOL_CONVERT_ROOMS]->set_toggle_mode(false);
-	tool_button[TOOL_CONVERT_ROOMS]->set_flat(true);
-	button_binds.write[0] = MENU_TOOL_CONVERT_ROOMS;
-	tool_button[TOOL_CONVERT_ROOMS]->connect("pressed", this, "_menu_item_pressed", button_binds);
-	tool_button[TOOL_CONVERT_ROOMS]->set_shortcut(ED_SHORTCUT("spatial_editor/convert_rooms", TTR("Convert Rooms"), KEY_MASK_ALT | KEY_C));
-	tool_button[TOOL_CONVERT_ROOMS]->set_tooltip(TTR("Converts rooms for portal culling."));
-
 	main_menu_hbox->add_child(memnew(VSeparator));
 
 	// Drag and drop support;
@@ -6775,7 +6706,6 @@ SpatialEditor::SpatialEditor(EditorNode *p_editor) {
 	p->add_separator();
 	p->add_check_shortcut(ED_SHORTCUT("spatial_editor/view_origin", TTR("View Origin")), MENU_VIEW_ORIGIN);
 	p->add_check_shortcut(ED_SHORTCUT("spatial_editor/view_grid", TTR("View Grid"), KEY_NUMBERSIGN), MENU_VIEW_GRID);
-	p->add_check_shortcut(ED_SHORTCUT("spatial_editor/view_portal_culling", TTR("View Portal Culling"), KEY_MASK_ALT | KEY_P), MENU_VIEW_PORTAL_CULLING);
 	p->add_check_shortcut(ED_SHORTCUT("spatial_editor/view_occlusion_culling", TTR("View Occlusion Culling")), MENU_VIEW_OCCLUSION_CULLING);
 
 	p->add_separator();
@@ -6951,10 +6881,6 @@ SpatialEditor::SpatialEditor(EditorNode *p_editor) {
 	EDITOR_DEF("editors/3d/navigation/show_viewport_rotation_gizmo", true);
 
 	over_gizmo_handle = -1;
-
-	// make sure the portal tools are off by default
-	// (when no RoomManager is present)
-	update_portal_tools();
 }
 
 SpatialEditor::~SpatialEditor() {

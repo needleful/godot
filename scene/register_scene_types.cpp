@@ -200,15 +200,11 @@
 #include "scene/3d/path.h"
 #include "scene/3d/physics_body.h"
 #include "scene/3d/physics_joint.h"
-#include "scene/3d/portal.h"
 #include "scene/3d/position_3d.h"
 #include "scene/3d/proximity_group.h"
 #include "scene/3d/ray_cast.h"
 #include "scene/3d/reflection_probe.h"
 #include "scene/3d/remote_transform.h"
-#include "scene/3d/room.h"
-#include "scene/3d/room_group.h"
-#include "scene/3d/room_manager.h"
 #include "scene/3d/shape_cast.h"
 #include "scene/3d/skeleton.h"
 #include "scene/3d/soft_body.h"
@@ -446,11 +442,7 @@ void register_scene_types() {
 	ClassDB::register_class<NavigationMeshInstance>();
 	ClassDB::register_class<NavigationMesh>();
 	ClassDB::register_class<Navigation>();
-	ClassDB::register_class<Room>();
-	ClassDB::register_class<RoomGroup>();
-	ClassDB::register_class<RoomManager>();
 	ClassDB::register_class<Occluder>();
-	ClassDB::register_class<Portal>();
 
 	ClassDB::register_class<RootMotionView>();
 	ClassDB::set_class_enabled("RootMotionView", false); //disabled by default, enabled by editor
@@ -698,7 +690,6 @@ void register_scene_types() {
 	ClassDB::register_class<GradientTexture2D>();
 	ClassDB::register_class<ProxyTexture>();
 	ClassDB::register_class<AnimatedTexture>();
-	ClassDB::register_class<CameraTexture>();
 	ClassDB::register_class<ExternalTexture>();
 	ClassDB::register_class<CubeMap>();
 	ClassDB::register_virtual_class<TextureLayered>();
