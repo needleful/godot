@@ -39,10 +39,9 @@ list(APPEND tp_sources
 set(prce_flags
 	PCRE2_STATIC
 	HAVE_CONFIG_H
-	SUPPORT_UNICODE
-	"PCRE2_CODE_UNIT_WIDTH=0")
+	SUPPORT_UNICODE)
 
-if(pcre_with_jit IN_LIST builtin_libraries)
+if(pcre2_with_jit IN_LIST builtin_libraries)
 	list(APPEND pcre_flags SUPPORT_JIT)
 endif()
 
@@ -57,4 +56,3 @@ add_dependencies(${PROJECT_NAME} modgen)
 
 target_include_directories(${PROJECT_NAME} PRIVATE "${base_dir}")
 target_compile_definitions(${PROJECT_NAME} PRIVATE ${pcre_flags})
-target_compile_definitions(thirdparty PRIVATE ${pcre_flags})

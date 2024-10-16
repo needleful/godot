@@ -129,6 +129,8 @@ list(APPEND thirdparty_sources
 	minizip/zip.c
 )
 
+add_compile_definitions("PCRE2_CODE_UNIT_WIDTH=8")
+
 list(TRANSFORM thirdparty_sources PREPEND ${thirdparty_dir}/)
 add_library(thirdparty ${thirdparty_sources})
 
