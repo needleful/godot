@@ -2388,19 +2388,24 @@ void RasterizerSceneGLES3::_add_geometry_with_material(RasterizerStorageGLES3::G
 		e->material->index = current_material_index++;
 	}
 
-	e->sort_key |= uint64_t(e->material->index) << RenderList::SORT_KEY_MATERIAL_INDEX_SHIFT;
+	e->sort_key |= uint64_t(e->material->index & RenderList::SORT_KEY_MATERIAL_INDEX_MASK) << RenderList::SORT_KEY_MATERIAL_INDEX_SHIFT;
 	e->sort_key |= uint64_t(e->instance->depth_layer) << RenderList::SORT_KEY_OPAQUE_DEPTH_LAYER_SHIFT;
 
 	if (!p_depth_pass) {
 		e->sort_key |= (uint64_t(p_material->render_priority) + 128) << RenderList::SORT_KEY_PRIORITY_SHIFT;
-	} else {
-		e->sort_key |= uint64_t(e->instance->depth_layer) << RenderList::SORT_KEY_OPAQUE_DEPTH_LAYER_SHIFT;
-		e->sort_key |= uint64_t(e->material->index) << RenderList::SORT_KEY_MATERIAL_INDEX_SHIFT;
+	}
+	if (p_material->shader->uses_stencil) {
+		//Want to be able to control render order for use with stencils
+		bool writes = p_material->shader->front_stencil.could_write() || p_material->shader->back_stencil.could_write();
+		bool reads = p_material->shader->front_stencil.could_read() || p_material->shader->back_stencil.could_read();
 
-		if (p_material->shader->uses_stencil) {
-			//Want to be able to control render order for use with stencils
-			e->sort_key |= uint64_t(p_material->render_priority + 128) << RenderList::SORT_KEY_PRIORITY_SHIFT;
+		uint64_t stencil_key = 0;
+		if (writes && !reads) {
+			stencil_key = 2;
+		} else if (writes && reads) {
+			stencil_key = 1;
 		}
+		e->sort_key |= stencil_key << RenderList::SORT_KEY_STENCIL_SHIFT;
 	}
 
 	/*
@@ -3273,7 +3278,7 @@ void RasterizerSceneGLES3::_prepare_depth_texture() {
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, storage->frame.current_rt->buffers.fbo);
 		glReadBuffer(GL_COLOR_ATTACHMENT0);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, storage->frame.current_rt->fbo);
-		glBlitFramebuffer(0, 0, storage->frame.current_rt->width, storage->frame.current_rt->height, 0, 0, storage->frame.current_rt->width, storage->frame.current_rt->height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+		glBlitFramebuffer(0, 0, storage->frame.current_rt->width, storage->frame.current_rt->height, 0, 0, storage->frame.current_rt->width, storage->frame.current_rt->height, GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, GL_NEAREST);
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 		state.prepared_depth_texture = true;

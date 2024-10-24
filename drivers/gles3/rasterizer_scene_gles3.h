@@ -669,21 +669,22 @@ public:
 			MAX_DIRECTIONAL_LIGHTS = 16,
 			DEFAULT_MAX_LIGHTS = 4096,
 			DEFAULT_MAX_REFLECTIONS = 1024,
-			DEFAULT_MAX_LIGHTS_PER_OBJECT = 32,
+			DEFAULT_MAX_LIGHTS_PER_OBJECT = 32
+		};
 
+		enum {
 			SORT_KEY_PRIORITY_SHIFT = 56,
 			SORT_KEY_PRIORITY_MASK = 0xFF,
 			//depth layer for opaque (56-52)
 			SORT_KEY_OPAQUE_DEPTH_LAYER_SHIFT = 52,
 			SORT_KEY_OPAQUE_DEPTH_LAYER_MASK = 0xF,
-//64 bits unsupported in MSVC
-#define SORT_KEY_UNSHADED_FLAG (uint64_t(1) << 50)
-#define SORT_KEY_NO_DIRECTIONAL_FLAG (uint64_t(1) << 49)
-#define SORT_KEY_GI_PROBES_FLAG (uint64_t(1) << 45)
-#define SORT_KEY_VERTEX_LIT_FLAG (uint64_t(1) << 44)
 			SORT_KEY_SHADING_SHIFT = 44,
 			SORT_KEY_SHADING_MASK = 127,
-			//44-28 material index
+			// 44-42: stencil writing/reading
+			SORT_KEY_STENCIL_SHIFT = 42,
+			SORT_KEY_STENCIL_MASK = 3,
+			//42-28 material index
+			SORT_KEY_MATERIAL_INDEX_MASK = 0x3FFF,
 			SORT_KEY_MATERIAL_INDEX_SHIFT = 28,
 			//28-8 geometry index
 			SORT_KEY_GEOMETRY_INDEX_SHIFT = 8,
@@ -695,6 +696,11 @@ public:
 			SORT_KEY_SKELETON_FLAG = 2,
 			SORT_KEY_MIRROR_FLAG = 1
 
+//64 bits unsupported in MSVC
+#define SORT_KEY_UNSHADED_FLAG (uint64_t(1) << 50)
+#define SORT_KEY_NO_DIRECTIONAL_FLAG (uint64_t(1) << 49)
+#define SORT_KEY_GI_PROBES_FLAG (uint64_t(1) << 45)
+#define SORT_KEY_VERTEX_LIT_FLAG (uint64_t(1) << 44)
 		};
 
 		int max_elements;

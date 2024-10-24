@@ -1359,6 +1359,7 @@ public:
 			bool effects_active;
 			GLuint fbo;
 			GLuint depth;
+			GLuint stencil;
 			GLuint specular;
 			GLuint diffuse;
 			GLuint normal_rough;
