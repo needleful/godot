@@ -851,7 +851,7 @@ void RasterizerCanvasGLES3::canvas_light_shadow_buffer_update(RID p_buffer, cons
 	glViewport(0, 0, cls->size, cls->height);
 	glClearDepth(1.0f);
 	glClearColor(1, 1, 1, 1);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 	VS::CanvasOccluderPolygonCullMode cull = VS::CANVAS_OCCLUDER_POLYGON_CULL_DISABLED;
 

@@ -7263,7 +7263,9 @@ void RasterizerStorageGLES3::_render_target_allocate(RenderTarget *rt) {
 				glClearBufferfv(GL_COLOR, 0, zero);
 				if (used_depth) {
 					glClearDepth(1.0);
-					glClear(GL_DEPTH_BUFFER_BIT);
+					glClearStencil(0);
+					glStencilMask(0xFF);
+					glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 				}
 			}
 
