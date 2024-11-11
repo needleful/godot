@@ -189,7 +189,7 @@ void RasterizerSceneGLES3::shadow_atlas_set_size(RID p_atlas, int p_size) {
 		glClearDepth(0.0f);
 		glClearStencil(0);
 		_set_stencil(false, ShaderLanguage::StencilTest(), ShaderLanguage::StencilTest());
-		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		glClear(GL_DEPTH_BUFFER_BIT);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
@@ -4146,6 +4146,7 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 
 	state.scene_shader.set_conditional(SceneShaderGLES3::USE_SHADOW, use_shadows);
 	state.scene_shader.set_conditional(SceneShaderGLES3::SHADOW_DEPTH_BIAS, false);
+	_set_stencil(false, ShaderLanguage::StencilTest(), ShaderLanguage::StencilTest());
 
 	if (use_shadows) {
 		glActiveTexture(GL_TEXTURE0 + storage->config.max_texture_image_units - 6);
@@ -4237,7 +4238,6 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 		glColorMask(0, 0, 0, 0);
 		glClearDepth(1.0f);
 		glClearStencil(0);
-		_set_stencil(false, ShaderLanguage::StencilTest(), ShaderLanguage::StencilTest());
 		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 		render_list.clear();
@@ -4358,8 +4358,7 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 	if (!fb_cleared) {
 		glClearDepth(1.0f);
 		glClearStencil(0);
-		_set_stencil(false, ShaderLanguage::StencilTest(), ShaderLanguage::StencilTest());
-		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		glClear(GL_DEPTH_BUFFER_BIT);
 	}
 
 	Color clear_color(0, 0, 0, 0);
@@ -4573,7 +4572,7 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, storage->frame.current_rt->buffers.fbo);
 			glReadBuffer(GL_COLOR_ATTACHMENT0);
 			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, storage->frame.current_rt->effects.mip_maps[0].sizes[0].fbo);
-			glBlitFramebuffer(0, 0, storage->frame.current_rt->width, storage->frame.current_rt->height, 0, 0, storage->frame.current_rt->width, storage->frame.current_rt->height, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, GL_NEAREST);
+			glBlitFramebuffer(0, 0, storage->frame.current_rt->width, storage->frame.current_rt->height, 0, 0, storage->frame.current_rt->width, storage->frame.current_rt->height, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 			_blur_effect_buffer();
@@ -4862,8 +4861,7 @@ void RasterizerSceneGLES3::render_shadow(RID p_light, RID p_shadow_atlas, int p_
 	glEnable(GL_SCISSOR_TEST);
 	glClearDepth(1.0f);
 	glClearStencil(0);
-	_set_stencil(false, ShaderLanguage::StencilTest(), ShaderLanguage::StencilTest());
-	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glClear(GL_DEPTH_BUFFER_BIT);
 	glDisable(GL_SCISSOR_TEST);
 
 	state.ubo_data.z_offset = bias;
@@ -4925,8 +4923,7 @@ void RasterizerSceneGLES3::render_shadow(RID p_light, RID p_shadow_atlas, int p_
 			glScissor(local_x, local_y, local_width, local_height);
 			glEnable(GL_SCISSOR_TEST);
 			glClearDepth(1.0f);
-			_set_stencil(false, ShaderLanguage::StencilTest(), ShaderLanguage::StencilTest());
-			glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+			glClear(GL_DEPTH_BUFFER_BIT);
 			glDisable(GL_SCISSOR_TEST);
 			//glDisable(GL_DEPTH_TEST);
 			glDisable(GL_BLEND);
