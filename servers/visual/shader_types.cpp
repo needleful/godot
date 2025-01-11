@@ -143,6 +143,7 @@ ShaderTypes::ShaderTypes() {
 	shader_modes[VS::SHADER_SPATIAL].functions["fragment"].built_ins["SHADOW_NORMAL_OFFSET"] = ShaderLanguage::TYPE_FLOAT;
 	shader_modes[VS::SHADER_SPATIAL].functions["fragment"].built_ins["SHADOW_NORMAL_PARALLEL"] = ShaderLanguage::TYPE_FLOAT;
 	shader_modes[VS::SHADER_SPATIAL].functions["fragment"].built_ins["AMBIENT_LIGHT"] = ShaderLanguage::TYPE_VEC3;
+	shader_modes[VS::SHADER_SPATIAL].functions["fragment"].built_ins["REFLECTION_COLOR"] = ShaderLanguage::TYPE_VEC3;
 	shader_modes[VS::SHADER_SPATIAL].functions["fragment"].built_ins["FRONT_FACING"] = constt(ShaderLanguage::TYPE_BOOL);
 	shader_modes[VS::SHADER_SPATIAL].functions["fragment"].built_ins["EMISSION_FACTOR"] = ShaderLanguage::TYPE_FLOAT;
 

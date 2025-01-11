@@ -1673,6 +1673,7 @@ void main() {
 #endif //ubershader-runtime
 
 	float emission_factor = float(emission_enabled);
+	vec3 reflection_color = vec3(1.0);
 	ambient_light *= ambient_energy;
 
 	{
@@ -1757,9 +1758,9 @@ FRAGMENT_SHADER_CODE
 	}
 
 	if (reflection_accum.a > 0.0) {
-		specular_light += reflection_accum.rgb / reflection_accum.a;
+		specular_light += reflection_accum.rgb*reflection_color / reflection_accum.a;
 	} else {
-		specular_light += env_reflection_light;
+		specular_light += env_reflection_light*reflection_color;
 	}
 	if (ambient_accum.a > 0.0) {
 		ambient_light = ambient_accum.rgb / ambient_accum.a;
