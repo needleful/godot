@@ -37,6 +37,7 @@
 #include "core/io/file_access_encrypted.h"
 #include "core/os/file_access.h"
 #include "core/os/os.h"
+#include "core/print_string.h"
 #include "core/project_settings.h"
 
 #include "main/main.h"
@@ -1058,9 +1059,9 @@ void _add_reload_node() {
 }
 
 void NativeScriptLanguage::init() {
-#if defined(TOOLS_ENABLED) && defined(DEBUG_METHODS_ENABLED)
-
+#ifdef TOOLS_ENABLED
 	List<String> args = OS::get_singleton()->get_cmdline_args();
+	print_line("GDNative: Generating C API...");
 
 	List<String>::Element *E = args.find("--gdnative-generate-json-api");
 
@@ -1071,10 +1072,8 @@ void NativeScriptLanguage::init() {
 		Main::cleanup(true);
 		exit(0);
 	}
-#endif
-
-#ifdef TOOLS_ENABLED
 	EditorNode::add_init_callback(&_add_reload_node);
+	print_line("GDNative: Generated.");
 #endif
 }
 String NativeScriptLanguage::get_type() const {

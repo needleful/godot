@@ -19,7 +19,6 @@ Export("env_gdnative")
 SConscript("pluginscript/SCsub")
 SConscript("videodecoder/SCsub")
 
-
 from methods import get_cmdline_bool
 from platform_methods import run_in_subprocess
 import gdnative_builders
