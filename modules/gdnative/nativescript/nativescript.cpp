@@ -1061,19 +1061,21 @@ void _add_reload_node() {
 void NativeScriptLanguage::init() {
 #ifdef TOOLS_ENABLED
 	List<String> args = OS::get_singleton()->get_cmdline_args();
-	print_line("GDNative: Generating C API...");
 
 	List<String>::Element *E = args.find("--gdnative-generate-json-api");
 
 	if (E && E->next()) {
+		print_line("GDNative: Generating C API...");
 		if (generate_c_api(E->next()->get()) != OK) {
 			ERR_PRINT("Failed to generate C API\n");
+		}
+		else {
+			print_line("GDNative: Generated.");
 		}
 		Main::cleanup(true);
 		exit(0);
 	}
 	EditorNode::add_init_callback(&_add_reload_node);
-	print_line("GDNative: Generated.");
 #endif
 }
 String NativeScriptLanguage::get_type() const {

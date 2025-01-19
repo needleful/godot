@@ -486,6 +486,7 @@ Variant GDNative::call_native(StringName p_native_call_type, StringName p_proced
 		ERR_PRINT((String("No handler for native call type \"" + p_native_call_type) + "\" found").utf8().get_data());
 		return Variant();
 	}
+	ERR_FAIL_COND_V_MSG(!native_handle, Variant(), "No native handle");
 
 	void *procedure_handle;
 
