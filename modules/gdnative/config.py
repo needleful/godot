@@ -8,7 +8,6 @@ def configure(env):
 
 def get_doc_classes():
     return [
-        "ARVRInterfaceGDNative",
         "GDNative",
         "GDNativeLibrary",
         "MultiplayerPeerGDNative",
@@ -17,8 +16,6 @@ def get_doc_classes():
         "PluginScript",
         "StreamPeerGDNative",
         "VideoStreamGDNative",
-        "WebRTCPeerConnectionGDNative",
-        "WebRTCDataChannelGDNative",
     ]
 
 
