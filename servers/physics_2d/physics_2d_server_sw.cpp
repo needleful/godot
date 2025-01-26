@@ -34,6 +34,7 @@
 #include "broad_phase_2d_hash_grid.h"
 #include "collision_solver_2d_sw.h"
 #include "core/os/os.h"
+#include "core/profiler.h"
 #include "core/project_settings.h"
 #include "core/script_language.h"
 
@@ -1236,6 +1237,7 @@ void Physics2DServerSW::sync() {
 };
 
 void Physics2DServerSW::flush_queries() {
+	PROFILE;
 	if (!active) {
 		return;
 	}

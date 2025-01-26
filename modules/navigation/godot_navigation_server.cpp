@@ -31,6 +31,7 @@
 #include "godot_navigation_server.h"
 
 #include "core/os/mutex.h"
+#include "core/profiler.h"
 
 #ifndef _3D_DISABLED
 #include "navigation_mesh_generator.h"
@@ -47,6 +48,7 @@
 		(T_0 p_d_0) :                                      \
 				d_0(p_d_0) {}                              \
 		virtual void exec(GodotNavigationServer *server) { \
+			ProfileMarker _mk(#F_NAME);                    \
 			server->MERGE(_cmd_, F_NAME)(d_0);             \
 		}                                                  \
 	};                                                     \
@@ -68,6 +70,7 @@
 				d_0(p_d_0),                                      \
 				d_1(p_d_1) {}                                    \
 		virtual void exec(GodotNavigationServer *server) {       \
+			ProfileMarker _mk(#F_NAME);                          \
 			server->MERGE(_cmd_, F_NAME)(d_0, d_1);              \
 		}                                                        \
 	};                                                           \
@@ -96,6 +99,7 @@
 				d_2(p_d_2),                                                        \
 				d_3(p_d_3) {}                                                      \
 		virtual void exec(GodotNavigationServer *server) {                         \
+			ProfileMarker _mk(#F_NAME);                                            \
 			server->MERGE(_cmd_, F_NAME)(d_0, d_1, d_2, d_3);                      \
 		}                                                                          \
 	};                                                                             \
@@ -311,6 +315,7 @@ RID GodotNavigationServer::region_create() const {
 }
 
 COMMAND_2(region_set_map, RID, p_region, RID, p_map) {
+	PROFILE;
 	NavRegion *region = region_owner.getornull(p_region);
 	ERR_FAIL_COND(region == nullptr);
 
@@ -333,6 +338,7 @@ COMMAND_2(region_set_map, RID, p_region, RID, p_map) {
 }
 
 COMMAND_2(region_set_transform, RID, p_region, Transform, p_transform) {
+	PROFILE;
 	NavRegion *region = region_owner.getornull(p_region);
 	ERR_FAIL_COND(region == nullptr);
 
@@ -340,6 +346,7 @@ COMMAND_2(region_set_transform, RID, p_region, Transform, p_transform) {
 }
 
 COMMAND_2(region_set_enter_cost, RID, p_region, real_t, p_enter_cost) {
+	PROFILE;
 	NavRegion *region = region_owner.getornull(p_region);
 	ERR_FAIL_COND(region == nullptr);
 	ERR_FAIL_COND(p_enter_cost < 0.0);
@@ -355,6 +362,7 @@ real_t GodotNavigationServer::region_get_enter_cost(RID p_region) const {
 }
 
 COMMAND_2(region_set_travel_cost, RID, p_region, real_t, p_travel_cost) {
+	PROFILE;
 	NavRegion *region = region_owner.getornull(p_region);
 	ERR_FAIL_COND(region == nullptr);
 	ERR_FAIL_COND(p_travel_cost < 0.0);
@@ -380,6 +388,7 @@ bool GodotNavigationServer::region_owns_point(RID p_region, const Vector3 &p_poi
 }
 
 COMMAND_2(region_set_navigation_layers, RID, p_region, uint32_t, p_navigation_layers) {
+	PROFILE;
 	NavRegion *region = region_owner.getornull(p_region);
 	ERR_FAIL_COND(region == nullptr);
 
@@ -387,6 +396,7 @@ COMMAND_2(region_set_navigation_layers, RID, p_region, uint32_t, p_navigation_la
 }
 
 uint32_t GodotNavigationServer::region_get_navigation_layers(RID p_region) const {
+	PROFILE;
 	NavRegion *region = region_owner.getornull(p_region);
 	ERR_FAIL_COND_V(region == nullptr, 0);
 
@@ -394,6 +404,7 @@ uint32_t GodotNavigationServer::region_get_navigation_layers(RID p_region) const
 }
 
 COMMAND_2(region_set_navmesh, RID, p_region, Ref<NavigationMesh>, p_nav_mesh) {
+	PROFILE;
 	NavRegion *region = region_owner.getornull(p_region);
 	ERR_FAIL_COND(region == nullptr);
 
@@ -401,6 +412,7 @@ COMMAND_2(region_set_navmesh, RID, p_region, Ref<NavigationMesh>, p_nav_mesh) {
 }
 
 void GodotNavigationServer::region_bake_navmesh(Ref<NavigationMesh> r_mesh, Node *p_node) const {
+	PROFILE;
 	ERR_FAIL_COND(r_mesh.is_null());
 	ERR_FAIL_COND(p_node == nullptr);
 
@@ -411,6 +423,7 @@ void GodotNavigationServer::region_bake_navmesh(Ref<NavigationMesh> r_mesh, Node
 }
 
 int GodotNavigationServer::region_get_connections_count(RID p_region) const {
+	PROFILE;
 	NavRegion *region = region_owner.getornull(p_region);
 	ERR_FAIL_COND_V(!region, 0);
 
@@ -616,6 +629,7 @@ void GodotNavigationServer::set_active(bool p_active) const {
 }
 
 void GodotNavigationServer::flush_queries() {
+	PROFILE;
 	// In C++ we can't be sure that this is performed in the main thread
 	// even with mutable functions.
 	MutexLock lock(commands_mutex);
@@ -637,6 +651,7 @@ void GodotNavigationServer::map_force_update(RID p_map) {
 }
 
 void GodotNavigationServer::process(real_t p_delta_time) {
+	PROFILE;
 	flush_queries();
 
 	if (!active) {
@@ -646,7 +661,7 @@ void GodotNavigationServer::process(real_t p_delta_time) {
 	// In c++ we can't be sure that this is performed in the main thread
 	// even with mutable functions.
 	MutexLock lock(operations_mutex);
-
+	ProfileMarker smark("GodotNavigationServer::active map processing");
 	for (uint32_t i(0); i < active_maps.size(); i++) {
 		active_maps[i]->sync();
 		active_maps[i]->step(p_delta_time);

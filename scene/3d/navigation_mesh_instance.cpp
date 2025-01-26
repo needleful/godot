@@ -32,6 +32,7 @@
 
 #include "core/os/os.h"
 #include "core/os/thread.h"
+#include "core/profiler.h"
 #include "mesh_instance.h"
 #include "navigation.h"
 #include "servers/navigation_server.h"
@@ -108,6 +109,7 @@ RID NavigationMeshInstance::get_region_rid() const {
 /////////////////////////////
 
 void NavigationMeshInstance::_notification(int p_what) {
+	PROFILE;
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE: {
 			Spatial *c = this;

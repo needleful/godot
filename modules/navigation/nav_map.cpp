@@ -30,6 +30,7 @@
 
 #include "nav_map.h"
 
+#include "core/profiler.h"
 #include "nav_region.h"
 #include "rvo_agent.h"
 
@@ -519,6 +520,7 @@ void NavMap::remove_agent_as_controlled(RvoAgent *agent) {
 }
 
 void NavMap::sync() {
+	PROFILE;
 	// Check if we need to update the links.
 	if (regenerate_polygons) {
 		for (uint32_t r = 0; r < regions.size(); r++) {
@@ -688,6 +690,7 @@ void NavMap::compute_single_step(uint32_t index, RvoAgent **agent) {
 }
 
 void NavMap::step(real_t p_deltatime) {
+	PROFILE;
 	deltatime = p_deltatime;
 	if (controlled_agents.size() > 0) {
 #ifndef NO_THREADS
@@ -709,6 +712,7 @@ void NavMap::step(real_t p_deltatime) {
 }
 
 void NavMap::dispatch_callbacks() {
+	PROFILE;
 	for (int i(0); i < static_cast<int>(controlled_agents.size()); i++) {
 		controlled_agents[i]->dispatch_callback();
 	}

@@ -30,6 +30,7 @@
 
 #include "main_loop.h"
 
+#include "core/profiler.h"
 #include "core/script_language.h"
 
 void MainLoop::_bind_methods() {
@@ -100,6 +101,7 @@ void MainLoop::init() {
 	}
 }
 bool MainLoop::iteration(float p_time) {
+	PROFILE;
 	if (get_script_instance()) {
 		return get_script_instance()->call("_iteration", p_time);
 	}
