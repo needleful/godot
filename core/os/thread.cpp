@@ -38,6 +38,7 @@
 #if !defined(NO_THREADS)
 
 #include "core/safe_refcount.h"
+#include <chrono>
 
 Error (*Thread::set_name_func)(const String &) = nullptr;
 void (*Thread::set_priority_func)(Thread::Priority) = nullptr;
@@ -62,6 +63,10 @@ void Thread::_set_platform_funcs(
 	Thread::set_priority_func = p_set_priority_func;
 	Thread::init_func = p_init_func;
 	Thread::term_func = p_term_func;
+}
+
+void Thread::sleep_msec(uint64_t msec) {
+	std::this_thread::sleep_for(std::chrono::milliseconds(msec));
 }
 
 void Thread::callback(Thread *p_self, const Settings &p_settings, Callback p_callback, void *p_userdata) {

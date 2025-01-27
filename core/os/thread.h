@@ -99,6 +99,8 @@ public:
 
 	static Error set_name(const String &p_name);
 
+	static void sleep_msec(uint64_t msec);
+
 	void start(Thread::Callback p_callback, void *p_user, const Settings &p_settings = Settings());
 	bool is_started() const;
 	///< waits until thread is finished, and deallocates it.

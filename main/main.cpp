@@ -2323,7 +2323,6 @@ bool Main::iteration() {
 			break;
 		}
 
-		NavigationServer::get_singleton_mut()->process(advance.physics_step * time_scale);
 		message_queue->flush();
 
 		PhysicsServer::get_singleton()->step(advance.physics_step * time_scale);

@@ -31,6 +31,7 @@
 #ifndef GODOT_NAVIGATION_SERVER_H
 #define GODOT_NAVIGATION_SERVER_H
 
+#include "core/os/thread.h"
 #include "core/rid.h"
 #include "servers/navigation_server.h"
 
@@ -63,6 +64,7 @@ struct SetCommand {
 };
 
 class GodotNavigationServer : public NavigationServer {
+	Thread processing_thread;
 	Mutex commands_mutex;
 	/// Mutex used to make any operation threadsafe.
 	Mutex operations_mutex;
@@ -155,6 +157,7 @@ public:
 
 	void flush_queries();
 	virtual void process(real_t p_delta_time);
+	static void process_loop(void *data);
 };
 
 #undef COMMAND_1

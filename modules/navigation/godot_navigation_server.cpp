@@ -626,6 +626,9 @@ void GodotNavigationServer::set_active(bool p_active) const {
 	GodotNavigationServer *mut_this = const_cast<GodotNavigationServer *>(this);
 	MutexLock lock(mut_this->operations_mutex);
 	mut_this->active = p_active;
+	if (mut_this->active && !mut_this->processing_thread.is_started()) {
+		mut_this->processing_thread.start(&GodotNavigationServer::process_loop, (void *)mut_this);
+	}
 }
 
 void GodotNavigationServer::flush_queries() {
@@ -673,6 +676,15 @@ void GodotNavigationServer::process(real_t p_delta_time) {
 			emit_signal("map_changed", active_maps[i]->get_self());
 			active_maps_update_id[i] = new_map_update_id;
 		}
+	}
+}
+
+void GodotNavigationServer::process_loop(void *data) {
+	GodotNavigationServer *self = (GodotNavigationServer *)data;
+	while (self->active) {
+		// Process at ~20 FPS (Do I do anything with delta time?)
+		self->process(0.05);
+		Thread::sleep_msec(50);
 	}
 }
 
