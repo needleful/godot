@@ -635,13 +635,23 @@ void GodotNavigationServer::flush_queries() {
 	PROFILE;
 	// In C++ we can't be sure that this is performed in the main thread
 	// even with mutable functions.
-	MutexLock lock(commands_mutex);
-	MutexLock lock2(operations_mutex);
 	for (size_t i(0); i < commands.size(); i++) {
-		commands[i]->exec(this);
-		memdelete(commands[i]);
+		SetCommand *com;
+		{
+			MutexLock lock(commands_mutex);
+			MutexLock lock2(operations_mutex);
+			com = commands[i];
+		}
+		com->exec(this);
 	}
-	commands.clear();
+	{
+		MutexLock lock(commands_mutex);
+		MutexLock lock2(operations_mutex);
+		for (size_t i(0); i < commands.size(); i++) {
+			memdelete(commands[i]);
+		}
+		commands.clear();
+	}
 }
 
 void GodotNavigationServer::map_force_update(RID p_map) {
@@ -663,9 +673,9 @@ void GodotNavigationServer::process(real_t p_delta_time) {
 
 	// In c++ we can't be sure that this is performed in the main thread
 	// even with mutable functions.
-	MutexLock lock(operations_mutex);
 	ProfileMarker smark("GodotNavigationServer::active map processing");
 	for (uint32_t i(0); i < active_maps.size(); i++) {
+		MutexLock lock(operations_mutex);
 		active_maps[i]->sync();
 		active_maps[i]->step(p_delta_time);
 		active_maps[i]->dispatch_callbacks();
@@ -682,9 +692,9 @@ void GodotNavigationServer::process(real_t p_delta_time) {
 void GodotNavigationServer::process_loop(void *data) {
 	GodotNavigationServer *self = (GodotNavigationServer *)data;
 	while (self->active) {
-		// Process at ~20 FPS (Do I do anything with delta time?)
-		self->process(0.05);
-		Thread::sleep_msec(50);
+		// Process at ~50 FPS (Do I do anything with delta time?)
+		self->process(0.02);
+		Thread::sleep_msec(20);
 	}
 }
 

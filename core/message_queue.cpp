@@ -30,6 +30,7 @@
 
 #include "message_queue.h"
 
+#include "core/profiler.h"
 #include "core/project_settings.h"
 #include "core/script_language.h"
 
@@ -245,6 +246,11 @@ void MessageQueue::_call_function(Object *p_target, const StringName &p_func, co
 }
 
 void MessageQueue::flush() {
+	ProfileMarker mq("MessageQueue::flush");
+	ProfileTimer func_timer("MessageQueue _call_function");
+	ProfileTimer note_timer("MessageQueue _notification");
+	ProfileTimer set_timer("MessageQueue set");
+
 	if (buffer_end > buffer_max_used) {
 		buffer_max_used = buffer_end;
 	}
@@ -280,20 +286,23 @@ void MessageQueue::flush() {
 					Variant *args = (Variant *)(message + 1);
 
 					// messages don't expect a return value
-
+					func_timer.start();
 					_call_function(target, message->target, args, message->args, message->type & FLAG_SHOW_ERROR);
+					func_timer.stop();
 
 				} break;
 				case TYPE_NOTIFICATION: {
 					// messages don't expect a return value
+					note_timer.start();
 					target->notification(message->notification);
-
+					note_timer.stop();
 				} break;
 				case TYPE_SET: {
+					set_timer.start();
 					Variant *arg = (Variant *)(message + 1);
 					// messages don't expect a return value
 					target->set(message->target, *arg);
-
+					set_timer.stop();
 				} break;
 			}
 		}

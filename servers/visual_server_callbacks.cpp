@@ -31,6 +31,7 @@
 #include "visual_server_callbacks.h"
 
 #include "core/object.h"
+#include "core/profiler.h"
 
 void VisualServerCallbacks::lock() {
 	mutex.lock();
@@ -41,6 +42,7 @@ void VisualServerCallbacks::unlock() {
 }
 
 void VisualServerCallbacks::flush() {
+	ProfileMarker mk("VisualServerCallbacks::flush");
 	// should be ok without a lock ..
 	// is the most common case and should be quicker
 	if (!messages.size()) {
