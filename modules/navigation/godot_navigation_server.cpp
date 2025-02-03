@@ -30,7 +30,6 @@
 
 #include "godot_navigation_server.h"
 
-#include "core/os/mutex.h"
 #include "core/profiler.h"
 
 #ifndef _3D_DISABLED
@@ -122,8 +121,7 @@ GodotNavigationServer::~GodotNavigationServer() {
 void GodotNavigationServer::add_command(SetCommand *command) const {
 	GodotNavigationServer *mut_this = const_cast<GodotNavigationServer *>(this);
 	{
-		MutexLock lock(commands_mutex);
-		mut_this->commands.push_back(command);
+		mut_this->commands.push(command);
 	}
 }
 
@@ -141,7 +139,6 @@ Array GodotNavigationServer::get_maps() const {
 
 RID GodotNavigationServer::map_create() const {
 	GodotNavigationServer *mut_this = const_cast<GodotNavigationServer *>(this);
-	MutexLock lock(mut_this->operations_mutex);
 	NavMap *space = memnew(NavMap);
 	RID rid = map_owner.make_rid(space);
 	space->set_self(rid);
@@ -307,7 +304,6 @@ RID GodotNavigationServer::agent_get_map(RID p_agent) const {
 
 RID GodotNavigationServer::region_create() const {
 	GodotNavigationServer *mut_this = const_cast<GodotNavigationServer *>(this);
-	MutexLock lock(mut_this->operations_mutex);
 	NavRegion *reg = memnew(NavRegion);
 	RID rid = region_owner.make_rid(reg);
 	reg->set_self(rid);
@@ -446,7 +442,6 @@ Vector3 GodotNavigationServer::region_get_connection_pathway_end(RID p_region, i
 
 RID GodotNavigationServer::agent_create() const {
 	GodotNavigationServer *mut_this = const_cast<GodotNavigationServer *>(this);
-	MutexLock lock(mut_this->operations_mutex);
 	RvoAgent *agent = memnew(RvoAgent());
 	RID rid = agent_owner.make_rid(agent);
 	agent->set_self(rid);
@@ -624,7 +619,6 @@ COMMAND_1(free, RID, p_object) {
 
 void GodotNavigationServer::set_active(bool p_active) const {
 	GodotNavigationServer *mut_this = const_cast<GodotNavigationServer *>(this);
-	MutexLock lock(mut_this->operations_mutex);
 	mut_this->active = p_active;
 	if (mut_this->active && !mut_this->processing_thread.is_started()) {
 		mut_this->processing_thread.start(&GodotNavigationServer::process_loop, (void *)mut_this);
@@ -633,24 +627,11 @@ void GodotNavigationServer::set_active(bool p_active) const {
 
 void GodotNavigationServer::flush_queries() {
 	PROFILE;
-	// In C++ we can't be sure that this is performed in the main thread
-	// even with mutable functions.
-	for (size_t i(0); i < commands.size(); i++) {
+	while (!commands.empty()) {
 		SetCommand *com;
-		{
-			MutexLock lock(commands_mutex);
-			MutexLock lock2(operations_mutex);
-			com = commands[i];
-		}
+		commands.pop(com);
 		com->exec(this);
-	}
-	{
-		MutexLock lock(commands_mutex);
-		MutexLock lock2(operations_mutex);
-		for (size_t i(0); i < commands.size(); i++) {
-			memdelete(commands[i]);
-		}
-		commands.clear();
+		memdelete(com);
 	}
 }
 
@@ -675,7 +656,6 @@ void GodotNavigationServer::process(real_t p_delta_time) {
 	// even with mutable functions.
 	ProfileMarker smark("GodotNavigationServer::active map processing");
 	for (uint32_t i(0); i < active_maps.size(); i++) {
-		MutexLock lock(operations_mutex);
 		active_maps[i]->sync();
 		active_maps[i]->step(p_delta_time);
 		active_maps[i]->dispatch_callbacks();

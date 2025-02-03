@@ -35,6 +35,7 @@
 #include "core/rid.h"
 #include "servers/navigation_server.h"
 
+#include "concurrent_queue.h"
 #include "nav_map.h"
 #include "nav_region.h"
 #include "rvo_agent.h"
@@ -65,11 +66,8 @@ struct SetCommand {
 
 class GodotNavigationServer : public NavigationServer {
 	Thread processing_thread;
-	Mutex commands_mutex;
-	/// Mutex used to make any operation threadsafe.
-	Mutex operations_mutex;
 
-	LocalVector<SetCommand *> commands;
+	ConcurrentQueue<SetCommand *> commands;
 
 	mutable RID_Owner<NavMap> map_owner;
 	mutable RID_Owner<NavRegion> region_owner;
