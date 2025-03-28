@@ -30,6 +30,8 @@
 
 #include "navigation_server.h"
 
+#include "core/method_bind_ext.gen.inc"
+
 NavigationServer *NavigationServer::singleton = nullptr;
 
 void NavigationServer::_bind_methods() {
@@ -47,6 +49,12 @@ void NavigationServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("map_set_edge_connection_margin", "map", "margin"), &NavigationServer::map_set_edge_connection_margin);
 	ClassDB::bind_method(D_METHOD("map_get_edge_connection_margin", "map"), &NavigationServer::map_get_edge_connection_margin);
 	ClassDB::bind_method(D_METHOD("map_get_path", "map", "origin", "destination", "optimize", "navigation_layers"), &NavigationServer::map_get_path, DEFVAL(1));
+	ClassDB::bind_method(
+		D_METHOD("map_get_path_with_callback", "object", "method", "map", "origin", "destination", "optimize", "navigation_layers", "udata"), 
+		&NavigationServer::map_get_path_with_callback,
+		DEFVAL(false),
+		DEFVAL(1),
+		DEFVAL(Variant()));
 	ClassDB::bind_method(D_METHOD("map_get_closest_point_to_segment", "map", "start", "end", "use_collision"), &NavigationServer::map_get_closest_point_to_segment, DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("map_get_closest_point", "map", "to_point"), &NavigationServer::map_get_closest_point);
 	ClassDB::bind_method(D_METHOD("map_get_closest_point_normal", "map", "to_point"), &NavigationServer::map_get_closest_point_normal);

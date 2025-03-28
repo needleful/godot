@@ -103,6 +103,14 @@ public:
 
 	virtual Vector<Vector3> map_get_path(RID p_map, Vector3 p_origin, Vector3 p_destination, bool p_optimize, uint32_t p_layers = 1) const;
 
+	virtual void map_get_path_with_callback(Object *p_receiver, StringName p_method, 
+		RID p_map, Vector3 p_start, Vector3 p_destination, bool p_optimize, uint32_t p_navigation_layers = 1, 
+		Variant udata = Variant()) const;
+
+	void _cmd_map_get_path_with_callback(Object *p_receiver, StringName p_method, 
+		RID p_map, Vector3 p_start, Vector3 p_destination, bool p_optimize, uint32_t p_navigation_layers = 1, 
+		Variant udata = Variant());
+
 	virtual Vector3 map_get_closest_point_to_segment(RID p_map, const Vector3 &p_from, const Vector3 &p_to, const bool p_use_collision = false) const;
 	virtual Vector3 map_get_closest_point(RID p_map, const Vector3 &p_point) const;
 	virtual Vector3 map_get_closest_point_normal(RID p_map, const Vector3 &p_point) const;
@@ -161,5 +169,6 @@ public:
 #undef COMMAND_1
 #undef COMMAND_2
 #undef COMMAND_4_DEF
+#undef COMMAND_8
 
 #endif // GODOT_NAVIGATION_SERVER_H

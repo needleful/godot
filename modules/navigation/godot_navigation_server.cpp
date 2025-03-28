@@ -112,6 +112,85 @@
 	}                                                                              \
 	void GodotNavigationServer::MERGE(_cmd_, F_NAME)(T_0 D_0, T_1 D_1, T_2 D_2, T_3 D_3)
 
+#define COMMAND_4(F_NAME, T_0, D_0, T_1, D_1, T_2, D_2, T_3, D_3)                  \
+	struct MERGE(F_NAME, _command) : public SetCommand {                           \
+		T_0 d_0;                                                                   \
+		T_1 d_1;                                                                   \
+		T_2 d_2;                                                                   \
+		T_3 d_3;                                                                   \
+		MERGE(F_NAME, _command)                                                    \
+		(                                                                          \
+				T_0 p_d_0,                                                         \
+				T_1 p_d_1,                                                         \
+				T_2 p_d_2,                                                         \
+				T_3 p_d_3) :                                                       \
+				d_0(p_d_0),                                                        \
+				d_1(p_d_1),                                                        \
+				d_2(p_d_2),                                                        \
+				d_3(p_d_3) {}                                                      \
+		virtual void exec(GodotNavigationServer *server) {                         \
+			ProfileMarker _mk(#F_NAME);                                            \
+			server->MERGE(_cmd_, F_NAME)(d_0, d_1, d_2, d_3);                      \
+		}                                                                          \
+	};                                                                             \
+	void GodotNavigationServer::F_NAME(T_0 D_0, T_1 D_1, T_2 D_2, T_3 D_3) const { \
+		auto cmd = memnew(MERGE(F_NAME, _command)(                                 \
+				D_0,                                                               \
+				D_1,                                                               \
+				D_2,                                                               \
+				D_3));                                                             \
+		add_command(cmd);                                                          \
+	}                                                                              \
+	void GodotNavigationServer::MERGE(_cmd_, F_NAME)(T_0 D_0, T_1 D_1, T_2 D_2, T_3 D_3)
+
+#define COMMAND_8(F_NAME, T_0, D_0, T_1, D_1, T_2, D_2, T_3, D_3, T_4, D_4, T_5, D_5, T_6, D_6, T_7, D_7) \
+	struct MERGE(F_NAME, _command) : public SetCommand {                           \
+		T_0 d_0;                                                                   \
+		T_1 d_1;                                                                   \
+		T_2 d_2;                                                                   \
+		T_3 d_3;                                                                   \
+		T_4 d_4;                                                                   \
+		T_5 d_5;                                                                   \
+		T_6 d_6;                                                                   \
+		T_7 d_7;                                                                   \
+		MERGE(F_NAME, _command)                                                    \
+		(                                                                          \
+				T_0 p_d_0,                                                         \
+				T_1 p_d_1,                                                         \
+				T_2 p_d_2,                                                         \
+				T_3 p_d_3,                                                         \
+				T_4 p_d_4,                                                         \
+				T_5 p_d_5,                                                         \
+				T_6 p_d_6,                                                         \
+				T_7 p_d_7) :                                                       \
+				d_0(p_d_0),                                                        \
+				d_1(p_d_1),                                                        \
+				d_2(p_d_2),                                                        \
+				d_3(p_d_3),                                                        \
+				d_4(p_d_4),                                                        \
+				d_5(p_d_5),                                                        \
+				d_6(p_d_6),                                                        \
+				d_7(p_d_7) {}                                                      \
+		virtual void exec(GodotNavigationServer *server) {                         \
+			ProfileMarker _mk(#F_NAME);                                            \
+			server->MERGE(_cmd_, F_NAME)(d_0, d_1, d_2, d_3, d_4, d_5, d_6, d_7);  \
+		}                                                                          \
+	};                                                                             \
+	void GodotNavigationServer::F_NAME(T_0 D_0, T_1 D_1, T_2 D_2, T_3 D_3,         \
+		T_4 D_4, T_5 D_5, T_6 D_6, T_7 D_7) const {                                \
+		auto cmd = memnew(MERGE(F_NAME, _command)(                                 \
+				D_0,                                                               \
+				D_1,                                                               \
+				D_2,                                                               \
+				D_3,                                                               \
+				D_4,                                                               \
+				D_5,                                                               \
+				D_6,                                                               \
+				D_7));                                                             \
+		add_command(cmd);                                                          \
+	}                                                                              \
+	void GodotNavigationServer::MERGE(_cmd_, F_NAME)(T_0 D_0, T_1 D_1, T_2 D_2, T_3 D_3,T_4 D_4, T_5 D_5, T_6 D_6, T_7 D_7)
+
 GodotNavigationServer::GodotNavigationServer() {}
 
 GodotNavigationServer::~GodotNavigationServer() {
@@ -230,6 +309,26 @@ Vector<Vector3> GodotNavigationServer::map_get_path(RID p_map, Vector3 p_origin,
 	ERR_FAIL_COND_V(map == nullptr, Vector<Vector3>());
 
 	return map->get_path(p_origin, p_destination, p_optimize, p_layers);
+}
+
+COMMAND_8(map_get_path_with_callback, 
+	Object*, p_receiver,
+	StringName, p_method, 
+	RID, p_map,
+	Vector3, p_start,
+	Vector3, p_destination,
+	bool, p_optimize,
+	uint32_t, p_navigation_layers, 
+	Variant, udata)
+{
+	ERR_FAIL_COND(p_receiver == nullptr);
+	Vector<Vector3> path = map_get_path(p_map, p_start, p_destination, p_optimize, p_navigation_layers);
+	if (udata != Variant()) {
+		p_receiver->call_deferred(p_method, udata, path);
+	}
+	else {
+		p_receiver->call_deferred(p_method, path);
+	}
 }
 
 Vector3 GodotNavigationServer::map_get_closest_point_to_segment(RID p_map, const Vector3 &p_from, const Vector3 &p_to, const bool p_use_collision) const {
@@ -681,3 +780,4 @@ void GodotNavigationServer::process_loop(void *data) {
 #undef COMMAND_1
 #undef COMMAND_2
 #undef COMMAND_4
+#undef COMMAND_8
