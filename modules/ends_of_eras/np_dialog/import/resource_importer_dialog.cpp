@@ -47,3 +47,7 @@ Error ResourceImporterDialog::import(const String &p_source_file, const String &
 }
 
 ResourceImporterDialog::ResourceImporterDialog() {}
+
+static void ResourceImporterDialog::_bind_methods() {
+	
+}
