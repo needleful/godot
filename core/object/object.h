@@ -807,7 +807,12 @@ public:
 		// The reason is that we can assume no virtual and multiple inheritance.
 		static_assert(std::is_base_of_v<Object, T>, "T must be derived from Object");
 		static_assert(std::is_same_v<std::decay_t<T>, typename T::self_type>, "T must use GDCLASS or GDSOFTCLASS");
-		return p_object && p_object->is_class_ptr(T::get_class_ptr_static()) ? static_cast<T *>(p_object) : nullptr;
+		if (!p_object) {
+			return nullptr;
+		} else {
+			bool castable = p_object->is_class_ptr(T::get_class_ptr_static());
+			return castable ? static_cast<T *>(p_object) : nullptr;
+		}
 	}
 
 	template <typename T>
